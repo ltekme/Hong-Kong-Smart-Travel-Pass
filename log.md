@@ -10,7 +10,7 @@ Not enough RAM on WSL to load BUS.json
 
 Tried playsound package, did not work
 
-PyAudio is too system specific and I can't get it working on WSL.
+<!-- PyAudio is too system specific and I can't get it working on WSL, but working now as WSL need to install pause audio -->
 
 ## Done
 
@@ -20,6 +20,7 @@ Tested google vertex ai chat api
 
 Tested google vertex Ai TTS
 
+Wroking pyaudio audio player
 
 ## TODO
 
