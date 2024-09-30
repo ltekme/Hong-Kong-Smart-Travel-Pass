@@ -10,6 +10,8 @@ Not enough RAM on WSL to load BUS.json
 
 Tried playsound package, did not work
 
+PyAudio is too system specific and I can't get it working on WSL.
+
 ## Done
 
 Prototype on langchain document load
@@ -17,6 +19,7 @@ Prototype on langchain document load
 Tested google vertex ai chat api
 
 Tested google vertex Ai TTS
+
 
 ## TODO
 
