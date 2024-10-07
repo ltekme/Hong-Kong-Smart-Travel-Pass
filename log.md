@@ -14,6 +14,8 @@ Tried playsound package, did not work
 
 Langchain chroma vertex store demo on OpenAI, failed to replicated on Vertex AI
 
+Failed ipykernal, keeps crashing causing data to not be displayed, debugged for a few days
+
 ## Done
 
 Prototype on langchain document load
@@ -26,6 +28,8 @@ Wroking pyaudio audio player
 
 Tested Vector DataStore with Chroma
 
+Verified Data are loaded into chroma db with vertexex
+
 ## TODO
 
 Langchain document use wth Vertex AI <!-- Written 1/10/2024 -->
@@ -37,6 +41,20 @@ Find sutable google speach to text API
 Localise Vertex AI DB from Chroma
 
 Test Google Cloud MatchingEngine for vectorStore
+
+Figure out why Vertex ai cannot find the revelent documents in the db
+
+Possabele make interface with tkinger as most source code is in python(Eaier then port to React JS as web interface)
+
+Look into other possable ai
+
+Figure out why can't the google vertex ai embedding supported model be used.
+
+Make tk user interface prototype
+
+Merge sing27's source code to the user interface.
+
+Try clone google demo
 
 ## 1/10/2024 - Log Submission
 
