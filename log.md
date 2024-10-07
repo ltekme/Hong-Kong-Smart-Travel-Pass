@@ -30,19 +30,21 @@ Tested Vector DataStore with Chroma
 
 Verified Data are loaded into chroma db with vertexex
 
+got vector store simularity_search working
+
+Localise Vertex AI DB from Chroma
+
+Find sutable google speach to text API  
+
+Figure out why Vertex ai cannot find the revelent documents in the db
+
 ## TODO
 
 Langchain document use wth Vertex AI <!-- Written 1/10/2024 -->
 
 Try MongoDB Atlos with langchain because BUS.json is a MongoDB from thid party API
 
-Find sutable google speach to text API  
-
-Localise Vertex AI DB from Chroma
-
-Test Google Cloud MatchingEngine for vectorStore
-
-Figure out why Vertex ai cannot find the revelent documents in the db
+<!-- Test Google Cloud MatchingEngine for vectorStore --> Scrapped
 
 Possabele make interface with tkinger as most source code is in python(Eaier then port to React JS as web interface)
 
