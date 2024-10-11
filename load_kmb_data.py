@@ -5,38 +5,10 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 import json
 
 
-kmb_loaded = json.load(open('./bus.json', encoding='utf-8-sig'))
+kmb_loaded = json.load(open('./b.json', encoding='utf-8-sig'))
 
-kmb_loaded = kmb_loaded['features']
 
-stops = [f"""KMB Bus Stop Info
-Coordinates: {s['geometry']['coordinates']}
-RouteId: {s['properties']['routeId']}
-Company: {s['properties']['companyCode']}
-Route Name: {s['properties']['routeNameE']}
-Route Type: {s['properties']['routeNameE']}
-District: {s['properties']['district']},
-Service Mode: {s['properties']['serviceMode']}
-Special Type: {s['properties']['specialType']}
-Journey Time: {s['properties']['journeyTime']}
-Route Start Location(English): {s['properties']['locStartNameE'].lower()}
-Route Start Location(Chinese): {s['properties']['locStartNameC']}
-Route Start Location(Simplified Chinese): {s['properties']['locStartNameS']}
-Route End Location(English): {s['properties']['locEndNameE'].lower()}
-Route End Location(Chinese): {s['properties']['locEndNameC']}
-Route End Location(Simplified Chinese): {s['properties']['locEndNameS']}
-Route Hyperlink(Chinese): {s['properties']['hyperlinkC']}
-Route Hyperlink(Simplified Chinese): {s['properties']['hyperlinkS']}
-Route Hyperlink(English): {s['properties']['hyperlinkE'].lower()}
-Full Fare: {s['properties']['fullFare']}
-Last Update Date: {s['properties']['lastUpdateDate']}
-Route Sequence: {s['properties']['routeSeq']}
-Stop Sequence: {s['properties']['stopSeq']}
-Stop ID: {s['properties']['stopId']}
-Stop Pick Drop: {s['properties']['stopPickDrop']}
-Stop Name(English): {s['properties']['stopNameE'].lower()}
-Stop Name(Chinese): {s['properties']['stopNameC']}
-Stop Name(Simplified Chinese): {s['properties']['stopNameS']}""" for s in kmb_loaded]
+
 print("Total number of bus stops: ", len(stops))
 
 

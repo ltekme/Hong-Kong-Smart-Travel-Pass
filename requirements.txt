@@ -1,0 +1,7 @@
+chromadb
+langchain
+langchain_core
+langchain_chroma
+langchain_community
+langchain_text_splitters
+langchain_google_vertexai
