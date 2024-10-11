@@ -1,6 +1,6 @@
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
-from langchain.vectorstores import Chroma
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
+from langchain_chroma import Chroma
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_vertexai import (
     VertexAIEmbeddings,
@@ -31,8 +31,7 @@ prompt = ChatPromptTemplate.from_messages(
             "system",
             "You are very powerful assistant, but don't know current events, Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know.",
         ),
-        ("user", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ("user", "Context: {Context}\nQuestion:{input}"),
     ]
 )
 
@@ -50,38 +49,23 @@ llm = ChatVertexAI(
 
 llm_with_tools = load_tools(["wikipedia"], llm=llm)
 
-# prompt_template = PromptTemplate.from_template(
-#     template=(
-#         "You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. "
-#         "Use three sentences maximum and keep the answer concise. "
-#         "You can provide information in the context directly.\n"
-#         "Please provide a step-by-step reasoning process to arrive at the answer.\n"
-#         "Question: {question}\n"
-#         "Context: {context}\n"
-#         "Answer:"
-#     ),
-#     partial_variables={"context": "context", "question": "question"}
-# )
-
-# Define the question
 question_data = {
     "question": "What routes are available at the Amoy Gardens station?"}
 
-# Perform similarity search
 documents = vector_store.similarity_search(question_data.get("question"), k=12)
 documents_page_content = " ".join([doc.page_content for doc in documents])
 
 agent = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    {"context": documents_page_content, "question": RunnablePassthrough()}
     | prompt
-    | llm_with_tools
+    | llm
     | StrOutputParser()
 )
 
 if question_data.get("question"):
     print('-' * 100 + '\n')
-    result = agent.invoke({"input": question_data.get("question"), "context": documents_page_content})
     print("Question: " + question_data.get("question"))
+    result = agent.invoke(question_data.get("question"))
     print(result)
     print('\n' + '-' * 100)
     exit()

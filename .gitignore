@@ -1,2 +1,3 @@
 *.json
 chroma_db*
+node_modules
