@@ -6,3 +6,14 @@ langchain_community
 langchain_text_splitters
 langchain_google_vertexai
 jq
+google
+google-api-core
+google-auth
+google-cloud-aiplatform
+google-cloud-bigquery
+google-cloud-core
+google-cloud-resource-manager
+google-cloud-storage
+google-crc32c
+google-resumable-media
+googleapis-common-protos

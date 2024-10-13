@@ -7,7 +7,8 @@ from langchain_google_vertexai import (
     ChatVertexAI
 )
 from google.oauth2.service_account import Credentials
-from langchain.agents import load_tools, initialize_agent, AgentType
+from langchain_community.agent_toolkits.load_tools import load_tools 
+from langchain.agents import initialize_agent, AgentType, AgentExecutor
 
 credentials = Credentials.from_service_account_file(
     "ive-fyp-436703-3a208c6d96a0.json")
@@ -24,17 +25,6 @@ vector_store = Chroma(
     embedding_function=vertex_ai_embeddings
 )
 
-
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You are very powerful assistant, but don't know current events, Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know.",
-        ),
-        ("user", "Context: {Context}\nQuestion:{input}"),
-    ]
-)
-
 llm = ChatVertexAI(
     model="gemini-1.0-pro-vision",
     temperature=0.9,
@@ -47,25 +37,22 @@ llm = ChatVertexAI(
     region="us-central1",
 )
 
-llm_with_tools = load_tools(["wikipedia"], llm=llm)
+template = ChatPromptTemplate([
+    ("system", "You are a helpful AI bot. You should answer the user's questions based on the contextinformatino given"),
+    ("placeholder", "{conversation}")
+])
 
-question_data = {
-    "question": "What routes are available at the Amoy Gardens station?"}
 
-documents = vector_store.similarity_search(question_data.get("question"), k=12)
-documents_page_content = " ".join([doc.page_content for doc in documents])
-
-agent = (
-    {"context": documents_page_content, "question": RunnablePassthrough()}
-    | prompt
-    | llm
-    | StrOutputParser()
-)
-
-if question_data.get("question"):
-    print('-' * 100 + '\n')
-    print("Question: " + question_data.get("question"))
-    result = agent.invoke(question_data.get("question"))
-    print(result)
-    print('\n' + '-' * 100)
-    exit()
+while True:
+    print("-"*80 + "\n")
+    user_input = input("Message: ")
+    if user_input == "exit":
+        break
+    converstaion = [("human", user_input)]
+    prompt = template.invoke({"conversation": converstaion})
+    agent = (
+        prompt
+        | llm
+        | StrOutputParser()
+    )
+    print(agent.invoke())
