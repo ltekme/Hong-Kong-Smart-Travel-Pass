@@ -50,7 +50,11 @@ export const searchOpenRiceApi = async ({ whatwere, from, n, districtId }) => {
         throw new Error('Please provide either whatwere or districtId')
     }
 
-    let response = await fetch(apiBaseUrl + params, headers)
+    let response = await fetch(apiBaseUrl + params, {
+        headers: headers,
+        body: null,
+        method: "GET",
+    });
     if (!response.ok) {
         throw new Error('Cannot fetch api')
     }
