@@ -59,7 +59,7 @@ export const getDistrictIdfromName = async (districtName, lang) => {
 // https://www.openrice.com/api/v2/metadata/country/all
 export const processPriceRange = async () => {
     console.log('Processing price range data...');
-    if (!fs.existsSync(rawPriceRangeDataPath)) {
+    if (!await fs.existsSync(rawPriceRangeDataPath)) {
         await createFolderIfNotExist(baseDataPath);
         console.error('Price range data not found. Fetching from API.');
         let data = await fetchDataFromUrl(rawPriceRangeApiUrl);

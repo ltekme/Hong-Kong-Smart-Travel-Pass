@@ -1,3 +1,5 @@
-*.json
+gcp_cred*.json
+*_data
+data*
 chroma_db*
 node_modules
