@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 
+export const langOption = ['tc', 'en', 'sc'];
+
 export const getPriceRangeTextFromId = async (priceRangeId) => {
     const priceRange = await JSON.parse(fs.readFileSync('./data/openrice_priceRange_processed.json', 'utf8'));
     return priceRange.find(priceRange => priceRange.priceRangeId === priceRangeId);
@@ -8,6 +10,20 @@ export const getPriceRangeTextFromId = async (priceRangeId) => {
 export const getDistrictNameFromId = async (districtId) => {
     const district = await JSON.parse(fs.readFileSync('./data/openrice_district_processed.json', 'utf8'));
     return district.find(district => district.districtId === districtId);
+}
+
+// https://www.google.com/maps/place/22.2814411,114.1564406
+export const convertLatitudeLongitudeToGoogleMapUrl = (mapLatitude, mapLongitude) => {
+    const googleMapPlaceUrl = "https://www.google.com/maps/place/"
+    return `${googleMapPlaceUrl}${mapLatitude},${mapLongitude}`;
+}
+
+export const getDistrictIdfromName = async (districtName, lang) => {
+    if (langOption.indexOf(lang) === -1) {
+        throw new Error('Invalid language option: ' + lang);
+    }
+    const district = await JSON.parse(fs.readFileSync('./data/openrice_district_processed.json', 'utf8'));
+    return district.find(district => district.nameLangDict[lang] === districtName).districtId;
 }
 
 // https://www.openrice.com/api/v2/metadata/country/all

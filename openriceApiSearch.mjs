@@ -19,19 +19,28 @@ export const headers = {
 export const formatResonseRestaurant = async (restaurant) => {
     return {
         name: restaurant.name,
+        faviconUrl: restaurant.doorPhoto.url,
         address: restaurant.address,
-        mapLatitude: restaurant.mapLatitude,
-        mapLongitude: restaurant.mapLongitude,
-        phones: restaurant.phones,
-        priceRangeText: (await getPriceRangeTextFromId(restaurant.priceRangeId)).nameLangDict.tc,
-        priceRangeId: restaurant.priceRangeId,
-        districtId: restaurant.district.districtId,
-        districtName: (await getDistrictNameFromId(restaurant.district.districtId)).nameLangDict.tc,
-        phones: restaurant.phones,
+        loction: {
+            latitude: restaurant.mapLatitude,
+            longitude: restaurant.mapLongitude,
+        },
+        priceRange: {
+            text: (await getPriceRangeTextFromId(restaurant.priceRangeId)).nameLangDict.tc,
+            id: restaurant.priceRangeId,
+        },
+        district: {
+            id: restaurant.district.districtId,
+            text: (await getDistrictNameFromId(restaurant.district.districtId)).nameLangDict.tc,
+        },
+        contectInfo: {
+            openRiceShortUrl: restaurant.shortenUrl,
+            phones: restaurant.phones,
+        },
     }
 }
 
-export const searchOpenRiceApi = async (whatwere, from, n, districtId) => {
+export const searchOpenRiceApi = async ({ whatwere, from, n, districtId }) => {
     let params = ''
     params += from ? `&startAt=${from}` : `&startAt=0`
     params += n ? `&rows=${n}` : `&rows=3`
