@@ -12,7 +12,7 @@ def create_folder_if_not_exists(folder_path):
 
 class OpenriceApi(object):
 
-    SEARCH_BASE_API_URL: str = "https://www.openrice.com/api/v2/search?uiLang=zh&uiCity=hongkong&regionId=0&pageToken=CONST_DUMMY_TOKEN"
+    SEARCH_BASE_API_URL: str = "https://www.openrice.com/api/v2/search?uiCity=hongkong&regionId=0&pageToken=CONST_DUMMY_TOKEN"
     DISTRICT_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/region/all?uiLang=zh&uiCity=hongkong"
     PRICE_RANGE_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/country/all"
 
@@ -188,9 +188,6 @@ class OpenriceApi(object):
         #     "district_lang": district language -> "tc",
         #     "lang": language in lang_dict_options-> "tc",
         # }
-        if "keyword" not in params and "district" not in params:
-            return None
-
         params["lang"] = params.get("lang", "tc")
         if params["lang"] not in self.lang_dict_options:
             raise ValueError(
@@ -236,6 +233,22 @@ class OpenriceApi(object):
             },
         }for raw_data in search_data["paginationResult"]["results"]]
 
+    def pretty_print_result(self, restaurant):
+        print('-' * 100)
+        print(f"Name: {restaurant.get('name', 'N/A')}")
+        print(f"Address: {restaurant.get('address', 'N/A')}")
+        print(f"Price Range: {restaurant.get(
+            'priceRange', {}).get('text', 'N/A')}")
+        print(f"District: {restaurant.get('district', {}).get('text', 'N/A')}")
+        print(f"Phone: {', '.join(restaurant.get(
+            'contectInfo', {}).get('phones', []))}")
+        print(f"Google Map Url: {self.convert_loc_to_google_map_url(restaurant.get(
+            'loction', {}).get('latitude', 0), restaurant.get('loction', {}).get('longitude', 0))}")
+        print(f"OpenRice Short Url: {restaurant.get(
+            'contectInfo', {}).get('openRiceShortUrl', 'N/A')}")
+        print(f"Cover Image Url: {restaurant.get('faviconUrl', 'N/A')}")
+        print('-' * 100)
+
     def __init__(self,
                  base_data_path="./openrice_data",
                  force_fetch=False,
@@ -250,16 +263,18 @@ class OpenriceApi(object):
             create_folder_if_not_exists(self.data_base_dir)
 
     def __repr__(self) -> str:
-        return f"OpenriceApi(base_data_path={self.base_data_path}, store_data={self.store_data})"
+        return f"OpenriceApi"
 
 
 if __name__ == "__main__":
     openriceApi = OpenriceApi()
-    resault = openriceApi.search_restaurants({
-        "keyword": "麵包",
+    resaults = openriceApi.search_restaurants({
+        # "keyword": "麵包",
         "start": "0",
         "count": 3,
-        "district": "中環",
-        "district_lang": "tc",
+        # "district": "中環",
+        # "district_lang": "tc",
+        "lang": "tc",
     })
-    print(resault)
+    for resault in resaults:
+        openriceApi.pretty_print_result(resault)

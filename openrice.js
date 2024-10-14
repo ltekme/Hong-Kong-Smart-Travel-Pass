@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 
 // get from chrome dev tools
-fetch("https://www.openrice.com/api/v2/search?uiLang=zh&uiCity=hongkong&regionId=0&whatwhere=cow&startAt=0&rows=15&pageToken=CONST_DUMMY_TOKEN", {
+fetch("https://www.openrice.com/api/v2/search?uiLang=en&regionId=0&startAt=0&rows=15&pageToken=CONST_DUMMY_TOKEN", {
     "headers": {
         "accept": "*/*",
         "accept-language": "en,en-US;q=0.9,en-GB;q=0.8,en-HK;q=0.7,zh-HK;q=0.6,zh;q=0.5",
