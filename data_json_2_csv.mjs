@@ -11,7 +11,9 @@ let csvRows = [];
 const transformToCsv = async (file) => {
     const fileData = (JSON.parse(await fs.readFileSync(file, 'utf8'))).features;
     console.log(`Transforming \x1b[33m${file}\x1b[0m to CSV, item count: \x1b[33m${fileData.length}\x1b[0m`);
-    
+
+    let thisCsvRows = [];
+
     // Write headers
     let headers = [];
     Object.keys(fileData[0].properties).forEach(key => {
@@ -19,7 +21,7 @@ const transformToCsv = async (file) => {
         headers.push(key);
     });
     headers.push("longitude", "latitude");
-    csvRows.push(headers.join(','));
+    thisCsvRows.push(headers.join(','));
 
     // Write data
     fileData.forEach(data => {
@@ -43,9 +45,10 @@ const transformToCsv = async (file) => {
         });
         row.push(data.geometry.coordinates[0], data.geometry.coordinates[1]);
         csvRows.push(row.join(','));
+        thisCsvRows.push(row.join(','));
     });
 
-    await fs.writeFileSync(file.replace('.json', '.csv').replace('JSON_', 'CSV_'), csvRows.join('\n'));
+    await fs.writeFileSync(file.replace('.json', '.csv').replace('JSON_', 'CSV_'), thisCsvRows.join('\n'));
     console.log(`Transformed \x1b[31m${file}\x1b[0m -> \x1b[32m${file.replace('.json', '.csv').replace('JSON_', 'CSV_')}\x1b[0m`);
 };
 
