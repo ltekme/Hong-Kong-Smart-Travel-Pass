@@ -6,43 +6,54 @@ const transportDataPathFiles = await fs.readdirSync(transportDataPath);
 const transportDataFiles = transportDataPathFiles.filter(file => file.startsWith('JSON') && file.endsWith('.json'));
 console.log(`Loading files: \x1b[32m${transportDataFiles.join('\x1b[0m, \x1b[32m')}\x1b[0m`);
 
+let csvRows = [];
+
 const transformToCsv = async (file) => {
     const fileData = (JSON.parse(await fs.readFileSync(file, 'utf8'))).features;
     console.log(`Transforming \x1b[33m${file}\x1b[0m to CSV, item count: \x1b[33m${fileData.length}\x1b[0m`);
-    let csvRow = '';
-
+    
     // Write headers
-    Object.keys(fileData[0].properties).forEach(async key => {
+    let headers = [];
+    Object.keys(fileData[0].properties).forEach(key => {
         if (key.startsWith('hyperlink')) return;
-        csvRow += key + ',';
+        headers.push(key);
     });
-    csvRow += "longitude,latitude\n";
+    headers.push("longitude", "latitude");
+    csvRows.push(headers.join(','));
 
     // Write data
     fileData.forEach(data => {
+        let row = [];
         Object.keys(data.properties).forEach(key => {
             if (key.startsWith('hyperlink')) return;
-            if (data.properties[key].toString().includes(',')) {
-                data.properties[key] = `"${data.properties[key].replace(',', '-')}"`;
+            let value = data.properties[key].toString();
+            if (value.includes(',')) {
+                value = `"${value.replace(',', '-')}"`;
             }
-            if (data.properties[key].toString().includes('\n')) {
-                data.properties[key] = `"${data.properties[key].replace('\n', ' ')}"`;
+            if (value.includes('\n')) {
+                value = `"${value.replace('\n', ' ')}"`;
             }
-            if (data.properties[key].toString().includes('\r')) {
-                data.properties[key] = `"${data.properties[key].replace('\r', ' ')}"`;
+            if (value.includes('\r')) {
+                value = `"${value.replace('\r', ' ')}"`;
             }
-            if (data.properties[key] === '') {
-                data.properties[key] = 'N/A';
+            if (value === '') {
+                value = 'N/A';
             }
-            csvRow += `${data.properties[key]},`;
+            row.push(value);
         });
-        csvRow += `${data.geometry.coordinates[0]},${data.geometry.coordinates[1]}\n`;
+        row.push(data.geometry.coordinates[0], data.geometry.coordinates[1]);
+        csvRows.push(row.join(','));
     });
 
-    await fs.writeFileSync(file.replace('.json', '.csv').replace('JSON_', 'CSV_'), csvRow);
+    await fs.writeFileSync(file.replace('.json', '.csv').replace('JSON_', 'CSV_'), csvRows.join('\n'));
     console.log(`Transformed \x1b[31m${file}\x1b[0m -> \x1b[32m${file.replace('.json', '.csv').replace('JSON_', 'CSV_')}\x1b[0m`);
 };
+
 let job = [];
 transportDataFiles.map(file => job.push(transformToCsv(transportDataPath + '/' + file)));
 
-Promise.all(job)
+await Promise.all(job);
+
+// Write combined CSV
+await fs.writeFileSync(transportDataPath + '/combined.csv', csvRows.join('\n'));
+console.log(`Combined CSV written to \x1b[32mcombined.csv\x1b[0m`);

@@ -25,26 +25,26 @@ const requestBody = {
   imageOption: { width: 568, height: 320 },
   requestSource: 'activity',
   destination: { keyword: 'kowloon' },
-  filtered: { pageIndex: 1, sort: '1', pageSize: 20, tab: 'Ticket2', items: [] },
+  filtered: { pageIndex: 1, sort: '1', pageSize: 20, },//tab: 'Ticket2', items: [] },
   productOption: {
     needBasicInfo: true,
     needComment: true,
     needPrice: true,
     needRanking: true,
     needVendor: true,
-    tagOption: [
-      'PRODUCT_TAG',
-      'IS_AD_TAG',
-      'PROMOTION_TAG',
-      'FAVORITE_TAG',
-      'GIFT_TAG',
-      'COMMENT_TAG',
-      'IS_GLOBALHOT_TAG'
-    ]
+    // tagOption: [
+    //   'PRODUCT_TAG',
+    //   'IS_AD_TAG',
+    //   'PROMOTION_TAG',
+    //   'FAVORITE_TAG',
+    //   'GIFT_TAG',
+    //   'COMMENT_TAG',
+    //   'IS_GLOBALHOT_TAG'
+    // ]
   },
   searchOption: {
     filters: [],
-    needAdProduct: true,
+    needAdProduct: false,
     returnMode: 'all',
     needUpStream: false
   },
@@ -62,7 +62,7 @@ const requestBody = {
     // },
     locale: 'zh-HK',
     currency: 'HKD',
-    // channel: 118,
+    channel: 118,
     // cid: '1728913602112.4736Rgli22JR',
     // trace: '8fbc3fa8-3d17-dd07-4091-172891c41825',
     // extras: { client_locatedDistrictId: 'undefined', client_districtId: '38' }
