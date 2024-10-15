@@ -34,18 +34,10 @@ const transformToCsv = async (file) => {
         Object.keys(data.properties).forEach(key => {
             if (key.startsWith('hyperlink')) return;
             let value = data.properties[key].toString();
-            if (value.includes(',')) {
-                value = `"${value.replace(',', '-')}"`;
-            }
-            if (value.includes('\n')) {
-                value = `"${value.replace('\n', ' ')}"`;
-            }
-            if (value.includes('\r')) {
-                value = `"${value.replace('\r', ' ')}"`;
-            }
-            if (value === '') {
-                value = 'N/A';
-            }
+            value = value.includes(',') ? value.replace(',', '-') : value;
+            value = value.includes('\n') ? value.replace('\n', ' ') : value;
+            value = value.includes('\r') ? value.replace('\r', ' ') : value;
+            value = value === "" ? 'N/A' : value;
             row.push(value);
         });
         row.push(data.geometry.coordinates[0], data.geometry.coordinates[1]);
