@@ -7,6 +7,7 @@ const transportDataFiles = transportDataPathFiles.filter(file => file.startsWith
 console.log(`Loading files: \x1b[32m${transportDataFiles.join('\x1b[0m, \x1b[32m')}\x1b[0m`);
 
 let csvRows = [];
+let headersWritten = false;
 
 const transformToCsv = async (file) => {
     const fileData = (JSON.parse(await fs.readFileSync(file, 'utf8'))).features;
@@ -22,6 +23,10 @@ const transformToCsv = async (file) => {
     });
     headers.push("longitude", "latitude");
     thisCsvRows.push(headers.join(','));
+    if (!headersWritten) {
+        headersWritten = true;
+        csvRows.push(headers.join(','));
+    };
 
     // Write data
     fileData.forEach(data => {
@@ -53,8 +58,8 @@ const transformToCsv = async (file) => {
 };
 
 let job = [];
-transportDataFiles.map(file => job.push(transformToCsv(transportDataPath + '/' + file)));
 
+transportDataFiles.map(file => job.push(transformToCsv(transportDataPath + '/' + file)));
 await Promise.all(job);
 
 // Write combined CSV
