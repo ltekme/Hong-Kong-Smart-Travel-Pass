@@ -8,19 +8,19 @@ console.log(`Loading files: \x1b[32m${transportDataFiles.join('\x1b[0m, \x1b[32m
 
 const transformToCsv = async (file) => {
     const fileData = (JSON.parse(await fs.readFileSync(file, 'utf8'))).features;
-    console.log(`Transforming \x1b[33m${file}\x1b[0m to CSV`);
+    console.log(`Transforming \x1b[33m${file}\x1b[0m to CSV, item count: \x1b[33m${fileData.length}\x1b[0m`);
     let csvRow = '';
 
     // Write headers
-    await Object.keys(fileData[0].properties).forEach(async key => {
+    Object.keys(fileData[0].properties).forEach(async key => {
         if (key.startsWith('hyperlink')) return;
         csvRow += key + ',';
     });
     csvRow += "longitude,latitude\n";
 
     // Write data
-    await fileData.forEach(async data => {
-        await Object.keys(data.properties).forEach(key => {
+    fileData.forEach(data => {
+        Object.keys(data.properties).forEach(key => {
             if (key.startsWith('hyperlink')) return;
             if (data.properties[key].toString().includes(',')) {
                 data.properties[key] = `"${data.properties[key].replace(',', '-')}"`;
