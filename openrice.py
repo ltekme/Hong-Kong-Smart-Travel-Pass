@@ -273,8 +273,8 @@ if __name__ == "__main__":
         "start": "0",
         "count": 3,
         # "district": "中環",
-        # "district_lang": "tc",
-        "lang": "tc",
+        # "district_lang": "tc", # used to specify the language of the district query
+        "lang": "en", # used to specify the language of the resaults
     })
     for resault in resaults:
         openriceApi.pretty_print_result(resault)

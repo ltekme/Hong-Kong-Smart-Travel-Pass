@@ -1,5 +1,6 @@
 gcp_cred*.json
 *_data
 data*
+!data*.mjs
 chroma_db*
 node_modules
