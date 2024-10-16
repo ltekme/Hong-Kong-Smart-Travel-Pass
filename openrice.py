@@ -179,7 +179,14 @@ class OpenriceApi(object):
                 return district["districtId"]
         return None
 
-    def search_restaurants(self, params) -> list | None:
+    def search_restaurants(self,
+                           keywords=None,
+                           district=None,
+                           district_lang=None,
+                           lang="tc",
+                           start=0,
+                           count=3,
+                           ) -> list | None:
         # params: {
         #     "keyword": restaurant keyword,
         #     "start": strating pagination index -> 0,
@@ -188,26 +195,15 @@ class OpenriceApi(object):
         #     "district_lang": district language -> "tc",
         #     "lang": language in lang_dict_options-> "tc",
         # }
-        params["lang"] = params.get("lang", "tc")
-        if params["lang"] not in self.lang_dict_options:
-            raise ValueError(
-                f"Language option not supported. Options: {self.lang_dict_options}")
-
+        lang = lang if lang in self.lang_dict_options else "tc"
         search_params = ""
-        search_params += f"&startAt={params['start']
-                                     }" if "start" in params else "&startAt=0"
-        search_params += f"&rows={params['count']
-                                  }" if "count" in params else "&rows=3"
-        search_params += f"&whatwhere={params['keyword']
-                                       }" if "keyword" in params else ""
-
-        if "district" in params:
-            if "district_lang" not in params:
-                params["district_lang"] = "tc"
-            district_id = self.get_district_id_from_text(
-                params["district"], params["district_lang"])
-            if district_id is not None:
-                search_params += f"&districtId={district_id}"
+        search_params += f"&startAt={start}" if start != None else "&startAt=0"
+        search_params += f"&rows={count}" if count != None else "&rows=3"
+        search_params += f"&whatwhere={keywords}" if keywords != None else ""
+        district_lang = district_lang if district_lang and district_lang in self.lang_dict_options else "tc"
+        search_params += f"&districtId={
+            self.get_district_id_from_text(district, district_lang)
+        }" if district != None else ""
 
         search_data = self.fetch(self.SEARCH_BASE_API_URL + search_params)
 
@@ -220,11 +216,11 @@ class OpenriceApi(object):
                 "longitude": raw_data["mapLongitude"],
             },
             "priceRange": {
-                "text": self.get_price_range_text_from_id(raw_data["priceRangeId"], params["lang"]),
+                "text": self.get_price_range_text_from_id(raw_data["priceRangeId"], lang),
                 "id": raw_data["priceRangeId"],
             },
             "district": {
-                "text": self.get_district_text_from_id(raw_data["district"]["districtId"], params["lang"]),
+                "text": self.get_district_text_from_id(raw_data["district"]["districtId"], lang),
                 "id": raw_data["district"]["districtId"],
             },
             "contectInfo": {
@@ -274,7 +270,7 @@ if __name__ == "__main__":
         "count": 3,
         # "district": "中環",
         # "district_lang": "tc", # used to specify the language of the district query
-        "lang": "en", # used to specify the language of the resaults
+        "lang": "en",  # used to specify the language of the resaults
     })
     for resault in resaults:
         openriceApi.pretty_print_result(resault)
