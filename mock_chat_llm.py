@@ -31,7 +31,7 @@ class ChatMessage:
         message = roles.get(self.role, None)
         if not message:
             raise ValueError(f"role must be one of {roles.keys()}")
-        return message(self.message)
+        return message(content=self.message)
 
     def to_dict(self):
         return {
@@ -115,77 +115,19 @@ class ChatMessages:
 
 
 class LLMChainToos:
-    def get_weather(self, location: str):
-        return ChatPromptTemplate(
-            prompt="What is the weather in {location}?",
-            placeholders=MessagesPlaceholder(location=location),
-            output_parser=StrOutputParser(),
-        )
+
+    @staticmethod
+    def get_weather(location: str) -> str:
+        return "sunny"
 
     weather_tool = Tool(
         name="get_current_weather",
         func=get_weather,
-        description="Used to get the current weather in a location.",
+        description="Used to get the current weather from loacation.",
     )
 
 
 class LLMChainModel:
-
-    agent_template = '''espond to the human as helpfully and accurately as possible. You have access to the following tools:
-
-{tools}
-
-Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
-
-Valid "action" values: "Final Answer" or {tool_names}
-
-Provide only ONE action per $JSON_BLOB, as shown:
-
-```
-
-{{
-
-  "action": $TOOL_NAME,
-
-  "action_input": $INPUT
-
-}}
-
-```
-
-Follow this format:
-
-Question: input question to answer
-
-Thought: consider previous and subsequent steps
-
-Action:
-
-```
-
-$JSON_BLOB
-
-```
-
-Observation: action result
-
-... (repeat Thought/Action/Observation N times)
-
-Thought: I know what to respond
-
-Action:
-
-```
-
-{{
-
-  "action": "Final Answer",
-
-  "action_input": "Final response to human"
-
-}}
-
-Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation'''
 
     def __init__(self,
                  credentials: Credentials,
@@ -206,42 +148,40 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         self.tools = [LLMChainToos.weather_tool]
 
     def invoke(self, messages: ChatMessages) -> ChatMessage:
-
         prompt = hub.pull("hwchase17/structured-chat-agent")
-
-        self.agent = create_structured_chat_agent(
+        agent = create_structured_chat_agent(
             llm=self.llm,
             tools=self.tools,
             prompt=prompt,
         )
-
-        history = ChatMessageHistory()
-        history.messages = messages.as_list_of_lcMessages
-        print(history)
-
-        memory = ConversationBufferMemory(chat_memory=history)
-
+        memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True,
+            chat_memory=ChatMessageHistory(
+                messages=messages.as_list_of_lcMessages
+            )
+        )
         agent_executor = AgentExecutor.from_agent_and_tools(
-            agent=self.agent,
+            agent=agent,
             tools=self.tools,
-            verbose=True,
+            # verbose=True,
             memory=memory,
             handle_parsing_errors=True,  # Handle any parsing errors gracefully
         )
-
         resault = agent_executor.invoke(
-            {"input": messages.as_list[-1].message})
-
+            {"input": messages.as_list_of_lcMessages[-1].content, })
         return ChatMessage('ai', resault['output'])
 
 
 class ChatLLM:
 
     chatRecords = ChatMessages(
-        system_message_string="""You are a very powerful AI. 
-        Context maybe given to assist the assistant in providing better responses.
-        Answer the questions to the best of your ability.
-        If you don't know the answer, just say you don't know."""
+        system_message_string=(
+            "You are a very powerful AI. "
+            "Context maybe given to assist the assistant in providing better responses. "
+            "Answer the questions to the best of your ability. "
+            "If you don't know the answer, just say you don't know. "
+        )
     )
     chatRecordFolderPath = './chat_data'
     store_chat_records = True
