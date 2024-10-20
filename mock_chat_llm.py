@@ -3,15 +3,10 @@ import json
 import uuid
 import typing as t
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.runnables import RunnableParallel, RunnablePassthrough
-from langchain.memory import ConversationBufferMemory, ChatMessageHistory
-from langchain_chroma import Chroma
-from langchain import hub
-from langchain_core.output_parsers import StrOutputParser
 from langchain_google_vertexai import ChatVertexAI
-from langchain.agents import tool, Tool, create_react_agent, create_structured_chat_agent, AgentExecutor
+from langchain.agents import Tool, create_structured_chat_agent, AgentExecutor
 
 from google.oauth2.service_account import Credentials
 
@@ -33,7 +28,8 @@ class ChatMessage:
             raise ValueError(f"role must be one of {roles.keys()}")
         return message(content=self.message)
 
-    def to_dict(self):
+    @property
+    def as_dict(self):
         return {
             "role": self.role,
             "content": self.message,
@@ -53,9 +49,6 @@ class ChatMessages:
             self._chat_messages.append(
                 ChatMessage('system', system_message_string))
 
-    def get_all_as_dict(self) -> list:
-        return [chatMessage.to_dict() for chatMessage in self._chat_messages]
-
     @property
     def as_list(self) -> list[ChatMessage]:
         return self._chat_messages
@@ -73,7 +66,7 @@ class ChatMessages:
         if not os.path.exists(os.path.dirname(file_path)):
             os.makedirs(os.path.dirname(file_path))
         with open(file_path, 'w') as f:
-            json.dump([chatMessage.to_dict()
+            json.dump([chatMessage.as_dict
                       for chatMessage in self._chat_messages], f, indent=4)
 
     def get_from_file(self, file_path: str) -> list:
@@ -100,18 +93,6 @@ class ChatMessages:
             if system_message:
                 self._chat_messages.append(system_message)
             return self._chat_messages
-
-    def add_system_prompt(self, message: str) -> ChatMessage:
-        if len(self._chat_messages) > 0 and self._chat_messages[0].role == 'system':
-            self._chat_messages[0].message = message
-            return self._chat_messages[0]
-        system_message = ChatMessage('system', message)
-        self._chat_messages.insert(0, system_message)
-        return system_message
-
-    @property
-    def like_messages_representation(self) -> list[t.Tuple[t.Literal['ai', 'system', 'user'], str]]:
-        return [(chatMessage.role, chatMessage.message) for chatMessage in self._chat_messages]
 
 
 class LLMChainToos:
@@ -201,22 +182,16 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             tools=self.tools,
             prompt=self.prompt,
         )
-        memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True,
-            chat_memory=ChatMessageHistory(
-                messages=messages.as_list_of_lcMessages
-            )
-        )
         agent_executor = AgentExecutor.from_agent_and_tools(
             agent=agent,
             tools=self.tools,
-            # verbose=True,
-            memory=memory,
+            verbose=True,
             handle_parsing_errors=True,  # Handle any parsing errors gracefully
         )
-        resault = agent_executor.invoke(
-            {"input": messages.as_list_of_lcMessages[-1].content, })
+        resault = agent_executor.invoke({
+            "input": messages.as_list_of_lcMessages[-1].content,
+            "chat_history": messages.as_list_of_lcMessages[0:-1]
+        })
         return ChatMessage('ai', resault['output'])
 
 
@@ -274,8 +249,6 @@ class ChatLLM:
         if not message:
             return ChatMessage('', "Please provide a message.")
         self.chatRecords.append(ChatMessage('user', message))
-
-        # print(self.chatRecords.get_all_as_dict())
 
         resault = self.llm.invoke(self.chatRecords)
 
