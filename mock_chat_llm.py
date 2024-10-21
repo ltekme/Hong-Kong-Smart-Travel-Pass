@@ -1,23 +1,25 @@
 import os
 import json
 import uuid
+import copy
 import typing as t
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_google_vertexai import ChatVertexAI
 from langchain.agents import Tool, create_structured_chat_agent, AgentExecutor
 
 from google.oauth2.service_account import Credentials
 
-
 class ChatMessage:
 
-    def __init__(self, role: str, content: str, **kwargs) -> None:
+    def __init__(self, role: str, content: str, images: list = list[None], **kwargs) -> None:
         self.role = role
         self.message = content
+        self.images = images
 
-    def prompt_message(self):
+    @property
+    def prompt_message(self) -> HumanMessage | AIMessage | SystemMessage:
         roles = {
             "user": HumanMessage,
             "ai": AIMessage,
@@ -55,7 +57,7 @@ class ChatMessages:
 
     @property
     def as_list_of_lcMessages(self) -> list[HumanMessage | AIMessage | SystemMessage]:
-        return [chatMessage.prompt_message() for chatMessage in self._chat_messages]
+        return [chatMessage.prompt_message for chatMessage in self._chat_messages]
 
     def append(self, chatMessage: ChatMessage) -> None:
         if chatMessage.role not in ['user', 'ai']:
@@ -94,6 +96,24 @@ class ChatMessages:
                 self._chat_messages.append(system_message)
             return self._chat_messages
 
+    @property
+    def system_message(self) -> ChatMessage | None:
+        if len(self._chat_messages) > 0 and self._chat_messages[0].role == 'system':
+            return self._chat_messages[0]
+        return None
+
+    @system_message.setter
+    def system_message(self, value: str) -> None:
+        if len(self._chat_messages) > 0 and self._chat_messages[0].role == 'system':
+            self._chat_messages[0].message = value
+        else:
+            self._chat_messages.insert(0, ChatMessage('system', value))
+
+    def remove_system_message(self):
+        if len(self._chat_messages) > 0 and self._chat_messages[0].role == 'system':
+            self._chat_messages.pop(0)
+        return None
+
 
 class LLMChainToos:
 
@@ -101,63 +121,20 @@ class LLMChainToos:
     def get_weather(location: str) -> str:
         return "sunny"
 
-    weather_tool = Tool(
-        name="get_current_weather",
-        func=get_weather,
-        description="Used to get the current weather from loacation.",
-    )
+    all: list[Tool] = [
+        Tool(
+            name="get_current_weather",
+            func=get_weather,
+            description="Used to get the current weather from loacation.",
+        )
+    ]
 
 
 class LLMChainModel:
 
-    # prompt = hub.pull("hwchase17/structured-chat-agent")
-    # Clone from hum as I can't be bothered to create another API key
-    prompt = ChatPromptTemplate(messages=[
-        ("system", """Respond to the human as helpfully and accurately as possible. You have access to the following tools:
+    agent_system_message_template_string = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n"""
 
-{tools}
-
-Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
-
-Valid "action" values: "Final Answer" or {tool_names}
-
-Provide only ONE action per $JSON_BLOB, as shown:
-
-```
-{{
-  "action": $TOOL_NAME,
-  "action_input": $INPUT
-}}
-```
-
-Follow this format:
-
-Question: input question to answer
-Thought: consider previous and subsequent steps
-Action:
-```
-$JSON_BLOB
-```
-Observation: action result
-... (repeat Thought/Action/Observation N times)
-Thought: I know what to respond
-Action:
-```
-{{
-  "action": "Final Answer",
-  "action_input": "Final response to human"
-}}
-
-Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation"""),
-        MessagesPlaceholder("chat_history"),
-        ("user", """{input}
-
-{agent_scratchpad}
-
- (reminder to respond in a JSON blob no matter what)"""),
-    ])
-
-    tools = [LLMChainToos.weather_tool]
+    tools = LLMChainToos.all
 
     def __init__(self,
                  credentials: Credentials,
@@ -177,21 +154,41 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         )
 
     def invoke(self, messages: ChatMessages) -> ChatMessage:
-        agent = create_structured_chat_agent(
-            llm=self.llm,
-            tools=self.tools,
-            prompt=self.prompt,
-        )
-        agent_executor = AgentExecutor.from_agent_and_tools(
-            agent=agent,
+        messages_copy: ChatMessages = copy.deepcopy(messages)
+
+        system_message_content = None
+        last_user_message = messages_copy.as_list[-1]
+        messages_copy.as_list.pop(-1)
+
+        if messages_copy.as_list[0].role == 'system':
+            system_message_content = messages_copy.system_message.content
+            messages_copy.remove_system_message()
+
+        messages = [
+            ("system", self.agent_system_message_template_string + system_message_content),
+            messages_copy.as_list_of_lcMessages,
+            ("user", [
+                {
+                    "type": "text",
+                    "text": last_user_message.content + "\n\n{agent_scratchpad}\n\n(reminder to respond in a JSON blob no matter what)"
+                },
+                # {
+                #     "type": "image_url",
+                #     "image_url": {"url": f"data:image/jpeg;base64,{image_data}"},
+                # },
+            ]),
+        ]
+
+        resault = AgentExecutor.from_agent_and_tools(
+            agent=create_structured_chat_agent(
+                llm=self.llm,
+                tools=self.tools,
+                prompt=ChatPromptTemplate(messages=messages),
+            ),
             tools=self.tools,
             verbose=True,
             handle_parsing_errors=True,  # Handle any parsing errors gracefully
-        )
-        resault = agent_executor.invoke({
-            "input": messages.as_list_of_lcMessages[-1].content,
-            "chat_history": messages.as_list_of_lcMessages[0:-1]
-        })
+        ).invoke({})
         return ChatMessage('ai', resault['output'])
 
 
@@ -231,17 +228,17 @@ class ChatLLM:
         if store_chat_records:
             self.chatRecords.get_from_file(self.chatRecordFilePath)
 
-    @property
+    @ property
     def chatId(self) -> str:
         return self._chatId
 
-    @chatId.setter
+    @ chatId.setter
     def chatId(self, value: str) -> None:
         self._chatId = value
         if self.store_chat_records:
             self.chatRecords.get_from_file(self.chatRecordFilePath)
 
-    @property
+    @ property
     def chatRecordFilePath(self) -> str:
         return self.chatRecordFolderPath + "/" + self._chatId + ".json"
 
