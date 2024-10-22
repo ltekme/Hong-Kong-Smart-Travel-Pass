@@ -204,6 +204,15 @@ class Chat:
             self._chat_messages.pop(0)
         return None
 
+    @property
+    def last_message(self) -> Message:
+        return self._chat_messages[-1] if len(self._chat_messages) > 0 and self._chat_messages[-1].role != 'system' else None
+
+    def remove_last_message(self):
+        if len(self._chat_messages) > 0 and self._chat_messages[-1].role != 'system':
+            self._chat_messages.pop(-1)
+        return None
+
 
 class LLMChainToos:
 
@@ -247,8 +256,8 @@ class LLMChainModel:
         messages_copy: Chat = copy.deepcopy(messages)
 
         system_message_content = None
-        last_user_message: Message = messages_copy.as_list[-1]
-        messages_copy.as_list.pop(-1)
+        last_user_message = messages_copy.last_message
+        messages_copy.remove_last_message()
 
         if messages_copy.system_message:
             system_message_content = messages_copy.system_message.content
