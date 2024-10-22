@@ -367,26 +367,18 @@ if __name__ == "__main__":
             break
 
         response = None
-        images = []
         images_content = []
         if ':image' in msg:
             while True:
                 image_path = input("Image Path: ")
                 if image_path == "DONE":
                     break
-                images.append(image_path)
+                with open(image_path, 'rb') as f:
+                    images_content.append(
+                        MessageContentImage(
+                            format=image_path.split('.')[-1],
+                            data=base64.b64encode(f.read()).decode('ASCII')))
             msg.replace(':image', '')
 
-        for image_path in images:
-            with open(image_path, 'rb') as f:
-                image_data = base64.b64encode(f.read())
-                image_format = image_path.split('.')[-1]
-                images_content.append(
-                    MessageContentImage(format=image_format, data=image_data.decode('ASCII')))
-
-        if images_content != []:
-            response = chatLLM.new_message(msg, images_content)
-        else:
-            response = chatLLM.new_message(msg)
-
+        response = chatLLM.new_message(msg, images_content)
         print(f"AI({chatLLM.chatId}): " + response.content.text)
