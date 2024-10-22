@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import copy
+import base64
 import typing as t
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
@@ -26,9 +27,11 @@ class MessageContentImage:
         """Return the image uri in the format of JS data as URL"""
         return f"data:image/{self.format};base64,{self.data}"
 
-    def from_uri(self) -> None:
-        self.format = self.uri.split(';')[0].split('/')[1]
-        self.data = self.uri.split(',')[1]
+    @staticmethod
+    def from_uri(uri: str) -> None:
+        format = uri.split(';')[0].split('/')[1]
+        data = uri.split(',')[1]
+        return MessageContentImage(format=format, data=data)
 
     @property
     def as_lcMessageDict(self) -> dict:
@@ -161,7 +164,7 @@ class Chat:
                     if content['type'] == 'image_url':
                         message_content_images.append(
                             MessageContentImage.from_uri(
-                                content['image_url']['url'])
+                                uri=content['image_url']['url'])
                         )
 
                 messages.append(Message(
@@ -253,6 +256,7 @@ class LLMChainModel:
 
         # print(type(last_user_message))
 
+        print(last_user_message.content.images)
         messages = [
             ("system", self.agent_system_message_template_string +
              system_message_content.text)
@@ -332,10 +336,14 @@ class ChatLLM:
     def chatRecordFilePath(self) -> str:
         return self.chatRecordFolderPath + "/" + self._chatId + ".json"
 
-    def new_message(self, message: str) -> Message:
+    def new_message(self, message: str, images: list[MessageContentImage] = []) -> Message:
         if not message:
             return Message('', "Please provide a message.")
-        self.chatRecords.append(Message('human', message))
+        if images != []:
+            self.chatRecords.append(
+                Message('human', MessageContent(message, images)))
+        else:
+            self.chatRecords.append(Message('human', message))
 
         resault = self.llm.invoke(self.chatRecords)
 
@@ -352,10 +360,33 @@ if __name__ == "__main__":
     credentials = Credentials.from_service_account_file(
         credentialsFiles[0])
     chatLLM = ChatLLM(credentials)
-    chatLLM.chatId = "af2c2d13-e429-49af-8eeb-d0dac45810ce"
+    chatLLM.chatId = "c0b8b2ce-8ba7-49b1-882f-a87eb4c10c1d"
     while True:
         msg = input("Human: ")
-        if msg == "exit":
+        if msg == "EXIT":
             break
-        print(f"AI({chatLLM.chatId}): " +
-              chatLLM.new_message(msg).content.text)
+
+        response = None
+        images = []
+        images_content = []
+        if ':image' in msg:
+            while True:
+                image_path = input("Image Path: ")
+                if image_path == "DONE":
+                    break
+                images.append(image_path)
+            msg.replace(':image', '')
+
+        for image_path in images:
+            with open(image_path, 'rb') as f:
+                image_data = base64.b64encode(f.read())
+                image_format = image_path.split('.')[-1]
+                images_content.append(
+                    MessageContentImage(format=image_format, data=image_data.decode('ASCII')))
+
+        if images_content != []:
+            response = chatLLM.new_message(msg, images_content)
+        else:
+            response = chatLLM.new_message(msg)
+
+        print(f"AI({chatLLM.chatId}): " + response.content.text)
