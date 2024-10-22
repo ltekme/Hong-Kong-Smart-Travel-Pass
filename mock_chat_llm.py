@@ -11,93 +11,180 @@ from langchain.agents import Tool, create_structured_chat_agent, AgentExecutor
 
 from google.oauth2.service_account import Credentials
 
-class ChatMessage:
 
-    def __init__(self, role: str, content: str, images: list = list[None], **kwargs) -> None:
-        self.role = role
-        self.message = content
+class MessageContentImage:
+    def __init__(self, format: str, data: str) -> None:
+        """ Message content image class
+        format: string representation of image format => ['jpg', 'png', ...]
+        data: string representation of image data in base64 fomat => ['8nascCaAX==']
+        """
+        self.format = format
+        self.data = data
+
+    @property
+    def uri(self) -> str:
+        """Return the image uri in the format of JS data as URL"""
+        return f"data:image/{self.format};base64,{self.data}"
+
+    def from_uri(self) -> None:
+        self.format = self.uri.split(';')[0].split('/')[1]
+        self.data = self.uri.split(',')[1]
+
+    @property
+    def as_lcMessageDict(self) -> dict:
+        return {
+            "type": "image_url",
+            "image_url": {"url": self.uri}
+        }
+
+
+class MessageContent:
+    def __init__(self, text: str, images: list[MessageContentImage] = []) -> None:
+        self.text = text
         self.images = images
 
     @property
-    def prompt_message(self) -> HumanMessage | AIMessage | SystemMessage:
-        roles = {
-            "user": HumanMessage,
-            "ai": AIMessage,
-            "system": SystemMessage,
-        }
-        message = roles.get(self.role, None)
-        if not message:
-            raise ValueError(f"role must be one of {roles.keys()}")
-        return message(content=self.message)
+    def as_list(self) -> list[dict[str, str]]:
+        return [{"type": "text", "text": self.text}].extend([image for image in self.images])
 
-    @property
-    def as_dict(self):
+    # @property
+    # def as_list(self) -> t.Tuple[str, list[MessageContentImage]]:
+    #     return [{"type": "text", "text": self.text}].extend(
+    #         [{"type": "image_url", "image_url": {"url": image.uri}, } for image in self.images])
+
+
+class Message:
+    def __init__(self, role: t.Literal["ai", "human", "system"], content: MessageContent | str) -> None:
+        self.role: t.Literal["ai", "human", "system"] = role
+        if type(content) == str:
+            self.content: MessageContent = MessageContent(content)
+        else:
+            self.content: MessageContent = content
+
+    def to_dict(self) -> dict:
         return {
             "role": self.role,
-            "content": self.message,
+            "content": self.content.as_list
         }
 
     @property
-    def content(self) -> str:
-        return self.message
-
-
-class ChatMessages:
-
-    _chat_messages: t.List[ChatMessage] = []
-
-    def __init__(self, system_message_string: str | None = None) -> None:
-        if system_message_string:
-            self._chat_messages.append(
-                ChatMessage('system', system_message_string))
+    def message_list(self) -> list[dict[str, str]]:
+        """Return the human message list in the format of langchain template message"""
+        return [{
+            "type": "text",
+            "text": self.content.text
+        }] + [image.as_lcMessageDict for image in self.content.images]
 
     @property
-    def as_list(self) -> list[ChatMessage]:
+    @staticmethod
+    def lcMessageMapping(self) -> dict[str, t.Union[AIMessage, SystemMessage, HumanMessage]]:
+        """Mapping of role text to Langchain message object"""
+        return {
+            "ai": AIMessage,
+            "system": SystemMessage,
+            "human": HumanMessage
+        }
+
+    @property
+    def lcMessage(self):
+        """Return langchain message object based on the role
+        => AIMessage, SystemMessage, HumanMessage
+        => AIMessage(content="Hello, How can I help you?")
+        """
+        if self.role == "human":
+            return HumanMessage(content=self.message_list)
+        return self.lcMessageMapping[self.role](content=self.content.text)
+
+    @property
+    def lcMessageLikeRepresentation(self) -> t.Tuple[str, t.Union[str, t.List[t.Dict[str, str]]]]:
+        """Return a tuple of role and content in the format of langchain template message
+        => (role, content)
+        => ("ai", "Hello, How can I help you?")
+        => ("human", [{"type": "text","text": "what is in this image"},{"type": "image_url", "image_url": "data:image/jpeg;base64,8nascCaAX=="}])
+        """
+        if self.role == 'ai':
+            return ("ai", self.content.text)
+        if self.role == 'system':
+            return ("system", self.content.text)
+        if self.role == 'human':
+            return ("human", self.message_list)
+
+
+class Chat:
+
+    _chat_messages: list[Message] = []
+
+    def __init__(self, system_message_string: str | None = None) -> None:
+        """Chat class to store chat messages
+        system_message_string: string representation of system message
+        """
+        if system_message_string:
+            # Append System Messaeg
+            system_message_content = MessageContent(system_message_string)
+            system_message = Message('system', system_message_content)
+            self._chat_messages.append(system_message)
+
+    @property
+    def as_list(self) -> list[Message]:
         return self._chat_messages
 
     @property
     def as_list_of_lcMessages(self) -> list[HumanMessage | AIMessage | SystemMessage]:
-        return [chatMessage.prompt_message for chatMessage in self._chat_messages]
+        return [msg.lcMessage for msg in self._chat_messages]
 
-    def append(self, chatMessage: ChatMessage) -> None:
-        if chatMessage.role not in ['user', 'ai']:
-            raise ValueError("role must be one of ['user', 'ai']")
+    def append(self, chatMessage: Message) -> None:
         self._chat_messages.append(chatMessage)
 
     def save_to_file(self, file_path: str) -> None:
         if not os.path.exists(os.path.dirname(file_path)):
             os.makedirs(os.path.dirname(file_path))
         with open(file_path, 'w') as f:
-            json.dump([chatMessage.as_dict
-                      for chatMessage in self._chat_messages], f, indent=4)
+            json.dump([{
+                "role": msg.role,
+                "content": msg.message_list
+            }for msg in self._chat_messages], f, indent=4)
 
     def get_from_file(self, file_path: str) -> list:
-        system_message = None
-        if len(self._chat_messages) > 0 and self._chat_messages[0].role == 'system':
-            system_message = self._chat_messages[0]
-        if not os.path.exists(file_path) or not os.path.isfile(file_path):
-            self._chat_messages = []
-            if system_message:
-                self._chat_messages.append(system_message)
-            return self._chat_messages
+        system_message_copy = self.system_message
         try:
             with open(file_path, 'r') as f:
                 data_in_file = json.load(f)
-            self._chat_messages = [ChatMessage(**msg) for msg in data_in_file]
-            if len(self._chat_messages) > 0 and system_message:
-                if self._chat_messages[0].role != 'system':
-                    self._chat_messages.insert(0, system_message)
-                if self._chat_messages[0].role == 'system' and self._chat_messages[0].message != system_message.message:
-                    self._chat_messages[0].message = system_message.message
-            return self._chat_messages
-        except json.JSONDecodeError:
-            self._chat_messages = []
-            if system_message:
-                self._chat_messages.append(system_message)
+
+            messages = []
+            for msg in data_in_file:
+                message_content_text = None
+                message_content_images = []
+
+                for content in msg['content']:
+                    if content['type'] == 'text':
+                        message_content_text = content['text']
+                    if content['type'] == 'image_url':
+                        message_content_images.append(
+                            MessageContentImage.from_uri(
+                                content['image_url']['url'])
+                        )
+
+                messages.append(Message(
+                    role=msg['role'],
+                    content=MessageContent(
+                        text=message_content_text if message_content_text else '',
+                        images=message_content_images
+                    ))
+                )
+
+            self._chat_messages = messages
             return self._chat_messages
 
-    @property
-    def system_message(self) -> ChatMessage | None:
+        except FileNotFoundError:
+            self._chat_messages = [system_message_copy]
+            return self._chat_messages
+
+        except json.JSONDecodeError:
+            self._chat_messages = [system_message_copy]
+            return self._chat_messages
+
+    @ property
+    def system_message(self) -> Message | None:
         if len(self._chat_messages) > 0 and self._chat_messages[0].role == 'system':
             return self._chat_messages[0]
         return None
@@ -105,9 +192,9 @@ class ChatMessages:
     @system_message.setter
     def system_message(self, value: str) -> None:
         if len(self._chat_messages) > 0 and self._chat_messages[0].role == 'system':
-            self._chat_messages[0].message = value
+            self._chat_messages[0].content = value
         else:
-            self._chat_messages.insert(0, ChatMessage('system', value))
+            self._chat_messages.insert(0, Message('system', value))
 
     def remove_system_message(self):
         if len(self._chat_messages) > 0 and self._chat_messages[0].role == 'system':
@@ -117,7 +204,7 @@ class ChatMessages:
 
 class LLMChainToos:
 
-    @staticmethod
+    @ staticmethod
     def get_weather(location: str) -> str:
         return "sunny"
 
@@ -153,31 +240,34 @@ class LLMChainModel:
             region="us-central1",
         )
 
-    def invoke(self, messages: ChatMessages) -> ChatMessage:
-        messages_copy: ChatMessages = copy.deepcopy(messages)
+    def invoke(self, messages: Chat) -> Message:
+        messages_copy: Chat = copy.deepcopy(messages)
 
         system_message_content = None
-        last_user_message = messages_copy.as_list[-1]
+        last_user_message: Message = messages_copy.as_list[-1]
         messages_copy.as_list.pop(-1)
 
-        if messages_copy.as_list[0].role == 'system':
+        if messages_copy.system_message:
             system_message_content = messages_copy.system_message.content
             messages_copy.remove_system_message()
 
+        # print(type(last_user_message))
+
         messages = [
-            ("system", self.agent_system_message_template_string + system_message_content),
-            messages_copy.as_list_of_lcMessages,
+            ("system", self.agent_system_message_template_string +
+             system_message_content.text)
+        ] + messages_copy.as_list_of_lcMessages
+        messages.append(
             ("user", [
                 {
                     "type": "text",
-                    "text": last_user_message.content + "\n\n{agent_scratchpad}\n\n(reminder to respond in a JSON blob no matter what)"
+                    "text": last_user_message.content.text + "\n\n{agent_scratchpad}\n\n(reminder to respond in a JSON blob no matter what)"
                 },
-                # {
-                #     "type": "image_url",
-                #     "image_url": {"url": f"data:image/jpeg;base64,{image_data}"},
-                # },
-            ]),
-        ]
+            ] + [img.as_lcMessageDict for img in last_user_message.content.images]
+            )
+        )
+
+        print(messages)
 
         resault = AgentExecutor.from_agent_and_tools(
             agent=create_structured_chat_agent(
@@ -189,12 +279,12 @@ class LLMChainModel:
             verbose=True,
             handle_parsing_errors=True,  # Handle any parsing errors gracefully
         ).invoke({})
-        return ChatMessage('ai', resault['output'])
+        return Message('ai', resault['output'])
 
 
 class ChatLLM:
 
-    chatRecords = ChatMessages(
+    chatRecords = Chat(
         system_message_string=(
             "You are a very powerful AI. "
             "Context maybe given to assist the assistant in providing better responses. "
@@ -228,32 +318,32 @@ class ChatLLM:
         if store_chat_records:
             self.chatRecords.get_from_file(self.chatRecordFilePath)
 
-    @ property
+    @property
     def chatId(self) -> str:
         return self._chatId
 
-    @ chatId.setter
+    @chatId.setter
     def chatId(self, value: str) -> None:
         self._chatId = value
         if self.store_chat_records:
             self.chatRecords.get_from_file(self.chatRecordFilePath)
 
-    @ property
+    @property
     def chatRecordFilePath(self) -> str:
         return self.chatRecordFolderPath + "/" + self._chatId + ".json"
 
-    def new_message(self, message: str) -> ChatMessage:
+    def new_message(self, message: str) -> Message:
         if not message:
-            return ChatMessage('', "Please provide a message.")
-        self.chatRecords.append(ChatMessage('user', message))
+            return Message('', "Please provide a message.")
+        self.chatRecords.append(Message('human', message))
 
         resault = self.llm.invoke(self.chatRecords)
 
-        self.chatRecords.append(ChatMessage('ai', resault.content))
+        self.chatRecords.append(Message('ai', resault.content))
 
         if self.store_chat_records:
             self.chatRecords.save_to_file(self.chatRecordFilePath)
-        return ChatMessage('ai', resault.content)
+        return Message('ai', resault.content)
 
 
 if __name__ == "__main__":
@@ -262,9 +352,10 @@ if __name__ == "__main__":
     credentials = Credentials.from_service_account_file(
         credentialsFiles[0])
     chatLLM = ChatLLM(credentials)
-    # chatLLM.chatId = "0779b6cf-0d3a-4ab1-aaeb-86ff51e09f04"
+    chatLLM.chatId = "af2c2d13-e429-49af-8eeb-d0dac45810ce"
     while True:
         msg = input("Human: ")
         if msg == "exit":
             break
-        print(f"AI({chatLLM.chatId}): " + chatLLM.new_message(msg).message)
+        print(f"AI({chatLLM.chatId}): " +
+              chatLLM.new_message(msg).content.text)
