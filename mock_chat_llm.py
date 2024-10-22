@@ -110,10 +110,10 @@ class Chat:
         if not os.path.exists(os.path.dirname(file_path)):
             os.makedirs(os.path.dirname(file_path))
         with open(file_path, 'w') as f:
-            json.dump([{
-                "role": msg.role,
-                "content": msg.message_list
-            } for msg in self._chat_messages], f, indent=4)
+            messages = [
+                {"role": msg.role, "content": msg.message_list}
+                for msg in self._chat_messages]
+            json.dump(messages, f, indent=4)
 
     def get_from_file(self, file_path: str) -> list:
         system_message_copy = self.system_message
@@ -131,9 +131,7 @@ class Chat:
                         message_content_text = content['text']
                     if content['type'] == 'image_url':
                         message_content_images.append(
-                            MessageContentImage.from_uri(
-                                uri=content['image_url']['url'])
-                        )
+                            MessageContentImage.from_uri(content['image_url']['url']))
 
                 messages.append(Message(
                     role=msg['role'],
@@ -218,52 +216,9 @@ The Following is the JSON api response to get the forcasted weather for the next
 
 class LLMChainModel:
 
-    system_prompt_template = """Assistant is a large language model trained by Google.
-
-Assistant is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. As a language model, Assistant is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
-
-Assistant is constantly learning and improving, and its capabilities are constantly evolving. It is able to process and understand large amounts of text, and can use this knowledge to provide accurate and informative responses to a wide range of questions. Additionally, Assistant is able to generate its own text based on the input it receives, allowing it to engage in discussions and provide explanations and descriptions on a wide range of topics.
-
-Overall, Assistant is a powerful tool that can help with a wide range of tasks and provide valuable insights and information on a wide range of topics. Whether you need help with a specific question or just want to have a conversation about a particular topic, Assistant is here to assist.
-
-{existing_system_prompt}
-
-TOOLS:
-
-------
-
-Assistant has access to the following tools:
-
-{tools}
-
-To use a tool, please use the following format:
-
-```
-
-Thought: Do I need to use a tool? Yes
-
-Action: the action to take, should be one of [{tool_names}]
-
-Action Input: the input to the action
-
-Observation: the result of the action
-
-```
-
-When you have a response to say to the Human, or if you do not need to use a tool, you MUST use the format:
-
-```
-
-Thought: Do I need to use a tool? No
-
-Final Answer: [your response here]
-
-```
-
-Begin!
-
-Previous conversation history:
-"""
+    # prompt = hub.pull("hwchase17/structured-chat-agent")
+    # Clone from hum as I can't be bothered to create another API key
+    system_prompt_template = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n{existing_system_prompt}"""
 
     tools = LLMChainToos.all
 
@@ -288,33 +243,35 @@ Previous conversation history:
         messages_copy: Chat = copy.deepcopy(messages)
 
         system_message_content = None
-        last_user_message = messages_copy.last_message
-        messages_copy.remove_last_message()
-
         if messages_copy.system_message:
             system_message_content = messages_copy.system_message.content
             messages_copy.remove_system_message()
 
-        messages = [("system", self.system_prompt_template)] + \
-            messages_copy.as_list_of_lcMessages
-        messages.append(("user", [{
-            "type": "text",
-            "text": "New input: {question}\n\n{agent_scratchpad}"
-        }] + [img.as_lcMessageDict for img in last_user_message.content.images]),
-        )
+        last_user_message = messages_copy.last_message
+        messages_copy.remove_last_message()
+
+        prompt = ChatPromptTemplate([
+            ("system", self.system_prompt_template),
+            MessagesPlaceholder('chat_history'),
+            ("user", [{
+                "type": "text",
+                "text": "New input: {question}\n\n{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what)"
+            }] + [img.as_lcMessageDict for img in last_user_message.content.images])
+        ])
 
         # Debugging
         # print(messages)
 
+        agent = create_structured_chat_agent(self.llm, self.tools, prompt)
         executor = AgentExecutor.from_agent_and_tools(
-            agent=create_react_agent(
-                self.llm, self.tools, ChatPromptTemplate(messages)),
+            agent=agent,
             tools=self.tools,
-            # verbose=True,  # See thoughts
+            verbose=True,  # See thoughts
             handle_parsing_errors=True,  # Handle any parsing errors gracefully
         )
         resault = executor.invoke({
             "existing_system_prompt": system_message_content.text,
+            "chat_history": messages_copy.as_list_of_lcMessages,
             "question": last_user_message.content.text
         })
         # Debugging
