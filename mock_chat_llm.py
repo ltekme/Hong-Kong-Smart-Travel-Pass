@@ -9,7 +9,7 @@ import typing as t
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_google_vertexai import ChatVertexAI
-from langchain.agents import Tool, create_structured_chat_agent, AgentExecutor
+from langchain.agents import Tool, create_structured_chat_agent, AgentExecutor, create_react_agent
 
 from google.oauth2.service_account import Credentials
 
@@ -55,6 +55,8 @@ class Message:
             self.content: MessageContent = MessageContent(content)
         if type(content) == MessageContent:
             self.content: MessageContent = content
+        if not self.content.text:
+            self.content = MessageContent("No input")
 
     @property
     def message_list(self) -> list[dict[str, str]]:
@@ -75,7 +77,7 @@ class Message:
         }
 
     @property
-    def lcMessage(self):
+    def lcMessage(self) -> t.Union[AIMessage, SystemMessage, HumanMessage]:
         """Return langchain message object based on the role
         => AIMessage, SystemMessage, HumanMessage
         => AIMessage(content="Hello, How can I help you?")
@@ -111,7 +113,7 @@ class Chat:
             json.dump([{
                 "role": msg.role,
                 "content": msg.message_list
-            }for msg in self._chat_messages], f, indent=4)
+            } for msg in self._chat_messages], f, indent=4)
 
     def get_from_file(self, file_path: str) -> list:
         system_message_copy = self.system_message
@@ -216,7 +218,52 @@ The Following is the JSON api response to get the forcasted weather for the next
 
 class LLMChainModel:
 
-    agent_system_message_template_string = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n"""
+    system_prompt_template = """Assistant is a large language model trained by Google.
+
+Assistant is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. As a language model, Assistant is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
+
+Assistant is constantly learning and improving, and its capabilities are constantly evolving. It is able to process and understand large amounts of text, and can use this knowledge to provide accurate and informative responses to a wide range of questions. Additionally, Assistant is able to generate its own text based on the input it receives, allowing it to engage in discussions and provide explanations and descriptions on a wide range of topics.
+
+Overall, Assistant is a powerful tool that can help with a wide range of tasks and provide valuable insights and information on a wide range of topics. Whether you need help with a specific question or just want to have a conversation about a particular topic, Assistant is here to assist.
+
+{existing_system_prompt}
+
+TOOLS:
+
+------
+
+Assistant has access to the following tools:
+
+{tools}
+
+To use a tool, please use the following format:
+
+```
+
+Thought: Do I need to use a tool? Yes
+
+Action: the action to take, should be one of [{tool_names}]
+
+Action Input: the input to the action
+
+Observation: the result of the action
+
+```
+
+When you have a response to say to the Human, or if you do not need to use a tool, you MUST use the format:
+
+```
+
+Thought: Do I need to use a tool? No
+
+Final Answer: [your response here]
+
+```
+
+Begin!
+
+Previous conversation history:
+"""
 
     tools = LLMChainToos.all
 
@@ -248,33 +295,30 @@ class LLMChainModel:
             system_message_content = messages_copy.system_message.content
             messages_copy.remove_system_message()
 
-        messages = [
-            ("system", self.agent_system_message_template_string +
-             system_message_content.text)
-        ] + messages_copy.as_list_of_lcMessages
-        messages.append(
-            ("user", [
-                {
-                    "type": "text",
-                    "text": last_user_message.content.text + "\n\n{agent_scratchpad}\n\n(reminder to respond in a JSON blob no matter what)"
-                },
-            ] + [img.as_lcMessageDict for img in last_user_message.content.images]
-            )
+        messages = [("system", self.system_prompt_template)] + \
+            messages_copy.as_list_of_lcMessages
+        messages.append(("user", [{
+            "type": "text",
+            "text": "New input: {question}\n\n{agent_scratchpad}"
+        }] + [img.as_lcMessageDict for img in last_user_message.content.images]),
         )
 
         # Debugging
         # print(messages)
 
-        resault = AgentExecutor.from_agent_and_tools(
-            agent=create_structured_chat_agent(
-                llm=self.llm,
-                tools=self.tools,
-                prompt=ChatPromptTemplate(messages=messages),
-            ),
+        executor = AgentExecutor.from_agent_and_tools(
+            agent=create_react_agent(
+                self.llm, self.tools, ChatPromptTemplate(messages)),
             tools=self.tools,
-            verbose=True,
+            # verbose=True,  # See thoughts
             handle_parsing_errors=True,  # Handle any parsing errors gracefully
-        ).invoke({})
+        )
+        resault = executor.invoke({
+            "existing_system_prompt": system_message_content.text,
+            "question": last_user_message.content.text
+        })
+        # Debugging
+        # print(messages)
         return Message('ai', resault['output'])
 
 
@@ -296,7 +340,7 @@ class ChatLLM:
     def __init__(self,
                  credentials: Credentials,
                  model: str = "gemini-1.5-pro",
-                 temperature: float = 0.9,
+                 temperature: float = 0.5,
                  max_tokens: int = 4096,
                  chatRecordFolderPath: str = './chat_data',
                  chatId: str = None,
@@ -340,11 +384,11 @@ class ChatLLM:
 
         resault = self.llm.invoke(self.chatRecords)
 
-        self.chatRecords.append(Message('ai', resault.content))
+        self.chatRecords.append(resault)
 
         if self.store_chat_records:
             self.chatRecords.save_to_file(self.chatRecordFilePath)
-        return Message('ai', resault.content)
+        return Message('ai', resault.content.text)
 
 
 if __name__ == "__main__":
@@ -353,12 +397,15 @@ if __name__ == "__main__":
     credentials = Credentials.from_service_account_file(
         credentialsFiles[0])
     chatLLM = ChatLLM(credentials)
-    # chatLLM.chatId = "c0b8b2ce-8ba7-49b1-882f-a87eb4c10c1d"
+    chatLLM.chatId = "7b5bb9e7-ceff-42a1-abc4-af6198f96390"
     while True:
         msg = input("Human: ")
         if msg == "EXIT":
             break
+        if not msg:
+            pass
 
+        # process image
         response = None
         images_content = []
         if ':image' in msg:
@@ -374,4 +421,6 @@ if __name__ == "__main__":
             msg.replace(':image', '')
 
         response = chatLLM.new_message(msg, images_content)
+        print("ChatID: " + chatLLM.chatId)
+        # print(response.lcMessage.pretty_print())
         print(f"AI({chatLLM.chatId}): " + response.content.text)
