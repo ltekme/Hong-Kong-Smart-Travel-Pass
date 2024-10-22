@@ -46,29 +46,14 @@ class MessageContent:
         self.text = text
         self.images = images
 
-    @property
-    def as_list(self) -> list[dict[str, str]]:
-        return [{"type": "text", "text": self.text}].extend([image for image in self.images])
-
-    # @property
-    # def as_list(self) -> t.Tuple[str, list[MessageContentImage]]:
-    #     return [{"type": "text", "text": self.text}].extend(
-    #         [{"type": "image_url", "image_url": {"url": image.uri}, } for image in self.images])
-
 
 class Message:
     def __init__(self, role: t.Literal["ai", "human", "system"], content: MessageContent | str) -> None:
         self.role: t.Literal["ai", "human", "system"] = role
         if type(content) == str:
             self.content: MessageContent = MessageContent(content)
-        else:
+        if type(content) == MessageContent:
             self.content: MessageContent = content
-
-    def to_dict(self) -> dict:
-        return {
-            "role": self.role,
-            "content": self.content.as_list
-        }
 
     @property
     def message_list(self) -> list[dict[str, str]]:
@@ -94,23 +79,7 @@ class Message:
         => AIMessage, SystemMessage, HumanMessage
         => AIMessage(content="Hello, How can I help you?")
         """
-        if self.role == "human":
-            return HumanMessage(content=self.message_list)
-        return self.lcMessageMapping[self.role](content=self.content.text)
-
-    @property
-    def lcMessageLikeRepresentation(self) -> t.Tuple[str, t.Union[str, t.List[t.Dict[str, str]]]]:
-        """Return a tuple of role and content in the format of langchain template message
-        => (role, content)
-        => ("ai", "Hello, How can I help you?")
-        => ("human", [{"type": "text","text": "what is in this image"},{"type": "image_url", "image_url": "data:image/jpeg;base64,8nascCaAX=="}])
-        """
-        if self.role == 'ai':
-            return ("ai", self.content.text)
-        if self.role == 'system':
-            return ("system", self.content.text)
-        if self.role == 'human':
-            return ("human", self.message_list)
+        return self.lcMessageMapping[self.role](content=self.message_list)
 
 
 class Chat:
@@ -126,10 +95,6 @@ class Chat:
             system_message_content = MessageContent(system_message_string)
             system_message = Message('system', system_message_content)
             self._chat_messages.append(system_message)
-
-    @property
-    def as_list(self) -> list[Message]:
-        return self._chat_messages
 
     @property
     def as_list_of_lcMessages(self) -> list[HumanMessage | AIMessage | SystemMessage]:
@@ -280,7 +245,8 @@ class LLMChainModel:
             )
         )
 
-        print(messages)
+        # Debugging
+        # print(messages)
 
         resault = AgentExecutor.from_agent_and_tools(
             agent=create_structured_chat_agent(
