@@ -3,6 +3,7 @@ import json
 import uuid
 import copy
 import base64
+import requests
 import typing as t
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
@@ -181,15 +182,34 @@ class Chat:
 
 class LLMChainToos:
 
-    @ staticmethod
-    def get_weather(location: str) -> str:
-        return "sunny"
+    @staticmethod
+    def fetch_data(url: str, methoad: t.Literal['POST', 'GET'] = 'GET') -> requests.Response:
+        return requests.request(method=methoad, url=url)
+
+    @staticmethod
+    def get_weather(location: str = None) -> str:
+        lang = "en"
+        tempectureUrlMapping = {
+            "en": "https://rss.weather.gov.hk/rss/CurrentWeather.xml",
+            "tc": "https://rss.weather.gov.hk/rss/CurrentWeather_uc.xml"
+        }
+        nineDatForcastUrl = f"https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang={
+            lang}"
+        tempecture = LLMChainToos.fetch_data(tempectureUrlMapping[lang])
+        nineDatForcast = LLMChainToos.fetch_data(nineDatForcastUrl)
+        return f"""The Following is XML information on the current tempecture and weather Status
+
+{tempecture.content.decode()}
+
+The Following is the JSON api response to get the forcasted weather for the next 9 days
+
+{nineDatForcast.content.decode()}"""
 
     all: list[Tool] = [
         Tool(
             name="get_current_weather",
             func=get_weather,
-            description="Used to get the current weather from loacation.",
+            description="Used to get the current weather from loacation. Default Hong Kong. Input should be a single string for the location",
         )
     ]
 
@@ -228,9 +248,6 @@ class LLMChainModel:
             system_message_content = messages_copy.system_message.content
             messages_copy.remove_system_message()
 
-        # print(type(last_user_message))
-
-        print(last_user_message.content.images)
         messages = [
             ("system", self.agent_system_message_template_string +
              system_message_content.text)
@@ -269,6 +286,7 @@ class ChatLLM:
             "Context maybe given to assist the assistant in providing better responses. "
             "Answer the questions to the best of your ability. "
             "If you don't know the answer, just say you don't know. "
+            "For now you and the user is in Hong Kong"
         )
     )
     chatRecordFolderPath = './chat_data'
@@ -335,7 +353,7 @@ if __name__ == "__main__":
     credentials = Credentials.from_service_account_file(
         credentialsFiles[0])
     chatLLM = ChatLLM(credentials)
-    chatLLM.chatId = "c0b8b2ce-8ba7-49b1-882f-a87eb4c10c1d"
+    # chatLLM.chatId = "c0b8b2ce-8ba7-49b1-882f-a87eb4c10c1d"
     while True:
         msg = input("Human: ")
         if msg == "EXIT":
