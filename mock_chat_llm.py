@@ -182,34 +182,50 @@ class Chat:
 
 class LLMChainToos:
 
-    @staticmethod
-    def fetch_data(url: str, methoad: t.Literal['POST', 'GET'] = 'GET') -> requests.Response:
-        return requests.request(method=methoad, url=url)
+    lang = "en"
 
     @staticmethod
-    def get_weather(location: str = None) -> str:
+    def fetch_data(url: str, methoad: t.Literal['POST', 'GET'] = 'GET') -> str:
+        return requests.request(method=methoad, url=url).content.decode('utf-8')
+
+    @staticmethod
+    def get_weather_forcast(location: str = None) -> str:
         lang = "en"
+        nineDatForcastUrl = f"https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang={
+            lang}"
+        nineDatForcast = LLMChainToos.fetch_data(nineDatForcastUrl)
+        return nineDatForcast
+
+    @staticmethod
+    def get_weather_temperture(location: str = None) -> str:
         tempectureUrlMapping = {
             "en": "https://rss.weather.gov.hk/rss/CurrentWeather.xml",
             "tc": "https://rss.weather.gov.hk/rss/CurrentWeather_uc.xml"
         }
-        nineDatForcastUrl = f"https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang={
-            lang}"
-        tempecture = LLMChainToos.fetch_data(tempectureUrlMapping[lang])
-        nineDatForcast = LLMChainToos.fetch_data(nineDatForcastUrl)
-        return f"""The Following is XML information on the current tempecture and weather Status
-
-{tempecture.content.decode()}
-
-The Following is the JSON api response to get the forcasted weather for the next 9 days
-
-{nineDatForcast.content.decode()}"""
+        tempecture = LLMChainToos.fetch_data(
+            tempectureUrlMapping[LLMChainToos.lang])
+        data = str(tempecture)
+        desc_start_string = '<description>\n        <![CDATA['
+        desc_start_index = data.index(
+            desc_start_string) + len(desc_start_string)
+        desc_end_index = data[desc_start_index:].index('</description>')
+        return data[desc_start_index:][:desc_end_index]
 
     all: list[Tool] = [
         Tool(
             name="get_current_weather",
-            func=get_weather,
+            func=get_weather_temperture,
             description="Used to get the current weather from loacation. Default Hong Kong. Input should be a single string for the location",
+        ),
+        Tool(
+            name="get_weather_forcast",
+            func=get_weather_forcast,
+            description="Used to get the 9 day weather forcast from loacation. Default Hong Kong. Input should be a single string for the location",
+        ),
+        Tool(
+            name="get_content_from_url",
+            func=fetch_data,
+            description="Used to get the content from a url. Input should be a single string for the url",
         )
     ]
 
@@ -255,7 +271,7 @@ class LLMChainModel:
             MessagesPlaceholder('chat_history'),
             ("user", [{
                 "type": "text",
-                "text": "New input: {question}\n\n{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what)"
+                "text": "Input: {question}\n\n{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what)"
             }] + [img.as_lcMessageDict for img in last_user_message.content.images])
         ])
 
@@ -263,10 +279,10 @@ class LLMChainModel:
         # print(messages)
 
         agent = create_structured_chat_agent(self.llm, self.tools, prompt)
-        executor = AgentExecutor.from_agent_and_tools(
+        executor = AgentExecutor(
             agent=agent,
             tools=self.tools,
-            verbose=True,  # See thoughts
+            # verbose=True,  # See thoughts
             handle_parsing_errors=True,  # Handle any parsing errors gracefully
         )
         resault = executor.invoke({
@@ -354,7 +370,7 @@ if __name__ == "__main__":
     credentials = Credentials.from_service_account_file(
         credentialsFiles[0])
     chatLLM = ChatLLM(credentials)
-    chatLLM.chatId = "7b5bb9e7-ceff-42a1-abc4-af6198f96390"
+    # chatLLM.chatId = "7b5bb9e7-ceff-42a1-abc4-af6198f96390"
     while True:
         msg = input("Human: ")
         if msg == "EXIT":
@@ -378,6 +394,6 @@ if __name__ == "__main__":
             msg.replace(':image', '')
 
         response = chatLLM.new_message(msg, images_content)
-        print("ChatID: " + chatLLM.chatId)
+        # print("ChatID: " + chatLLM.chatId)
         # print(response.lcMessage.pretty_print())
         print(f"AI({chatLLM.chatId}): " + response.content.text)
