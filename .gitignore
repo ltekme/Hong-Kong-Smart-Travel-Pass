@@ -4,3 +4,4 @@ data*
 !data*.mjs
 chroma_db*
 node_modules
+**__pycache__

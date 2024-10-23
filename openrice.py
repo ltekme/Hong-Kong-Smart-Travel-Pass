@@ -32,7 +32,7 @@ class OpenriceApi(object):
         "Referrer-Policy": "strict-origin-when-cross-origin"
     }
 
-    lang_dict_options: dict = ["tc", "en", "sc"]
+    lang_dict_options: dict = ["en", "en", "sc"]
 
     base_data_path = "./openrice_data/"
     raw_price_range_data_path: str = base_data_path + "openrice_priceRange_raw.json"
@@ -158,21 +158,21 @@ class OpenriceApi(object):
         # https://www.google.com/maps/place/22.2814411,114.1564406
         return f"https://www.google.com/maps/place/{lat},{lng}"
 
-    def get_price_range_text_from_id(self, price_range_id: int, lang: str = "tc") -> str | None:
+    def get_price_range_text_from_id(self, price_range_id: int, lang: str = "en") -> str | None:
         price_range_data = self.get_price_range_data()
         for price_range in price_range_data:
             if price_range["rangeId"] == price_range_id:
                 return price_range["nameLangDict"][lang]
         return None
 
-    def get_district_text_from_id(self, district_id: int, lang: str = "tc") -> str | None:
+    def get_district_text_from_id(self, district_id: int, lang: str = "en") -> str | None:
         district_data = self.get_district_data()
         for district in district_data:
             if district["districtId"] == district_id:
                 return district["nameLangDict"][lang]
         return None
 
-    def get_district_id_from_text(self, district_text: int, lang: str = "tc") -> str | None:
+    def get_district_id_from_text(self, district_text: int, lang: str = "en") -> str | None:
         district_data = self.get_district_data()
         for district in district_data:
             if district["nameLangDict"][lang] == district_text:
@@ -181,9 +181,8 @@ class OpenriceApi(object):
 
     def search_restaurants(self,
                            keywords=None,
-                           district=None,
-                           district_lang=None,
-                           lang="tc",
+                           district_id=None,
+                           lang="en",
                            start=0,
                            count=3,
                            ) -> list | None:
@@ -192,18 +191,18 @@ class OpenriceApi(object):
         #     "start": strating pagination index -> 0,
         #     "count": number of resaults -> 3,
         #     "district": district as text,
-        #     "district_lang": district language -> "tc",
-        #     "lang": language in lang_dict_options-> "tc",
+        #     "district_lang": district language -> "en",
+        #     "lang": language in lang_dict_options-> "en",
         # }
-        lang = lang if lang in self.lang_dict_options else "tc"
+        lang = lang if lang in self.lang_dict_options else "en"
         search_params = ""
         search_params += f"&startAt={start}" if start != None else "&startAt=0"
         search_params += f"&rows={count}" if count != None else "&rows=3"
         search_params += f"&whatwhere={keywords}" if keywords != None else ""
-        district_lang = district_lang if district_lang and district_lang in self.lang_dict_options else "tc"
-        search_params += f"&districtId={
-            self.get_district_id_from_text(district, district_lang)
-        }" if district != None else ""
+        district_text = self.get_district_text_from_id(
+            district_id, lang)
+        if district_text != None:
+            search_params += f"&districtId={district_id}"
 
         search_data = self.fetch(self.SEARCH_BASE_API_URL + search_params)
 
@@ -264,13 +263,13 @@ class OpenriceApi(object):
 
 if __name__ == "__main__":
     openriceApi = OpenriceApi()
-    resaults = openriceApi.search_restaurants({
-        # "keyword": "麵包",
-        "start": "0",
-        "count": 3,
-        # "district": "中環",
-        # "district_lang": "tc", # used to specify the language of the district query
-        "lang": "en",  # used to specify the language of the resaults
-    })
+    resaults = openriceApi.search_restaurants(
+        # keyword = "麵包",
+        start=0,
+        count=3,
+        # district = "中環",
+        # district_lang = "en", # used to specify the language of the district query
+        lang="en",  # used to specify the language of the resaults
+    )
     for resault in resaults:
         openriceApi.pretty_print_result(resault)

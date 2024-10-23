@@ -6,12 +6,17 @@ import base64
 import requests
 import typing as t
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.tools import StructuredTool, Tool
 from langchain_google_vertexai import ChatVertexAI
-from langchain.agents import Tool, create_structured_chat_agent, AgentExecutor, create_react_agent
+from langchain.agents import create_structured_chat_agent, AgentExecutor
+
+from pydantic import BaseModel
 
 from google.oauth2.service_account import Credentials
+
+from openrice import OpenriceApi
 
 
 class MessageContentImage:
@@ -181,7 +186,6 @@ class Chat:
 
 
 class LLMChainToos:
-
     lang = "en"
 
     @staticmethod
@@ -211,6 +215,33 @@ class LLMChainToos:
         desc_end_index = data[desc_start_index:].index('</description>')
         return data[desc_start_index:][:desc_end_index]
 
+    class OpenriceRecommendationArgs(BaseModel):
+        district_id: t.Optional[int] = None
+        keyword: t.Optional[str] = None
+        number_of_results: t.Optional[int] = 5
+        starting_resault_index: t.Optional[int] = 0
+        lang: t.Optional[str] = "en"
+
+    @staticmethod
+    def get_openrice_restaurant_recommendation(**kwargs) -> str:
+        openrice = OpenriceApi()
+        return openrice.search_restaurants(
+            district_id=kwargs.get('district_id'),
+            keywords=kwargs.get('keyword'),
+            count=kwargs.get('number_of_results', 5),
+            start=kwargs.get('starting_resault_index', 0),
+            lang=kwargs.get('lang', 'en')
+        )
+
+    class OpenriceDistrictsFilterListArgs(BaseModel):
+        pass
+
+    @staticmethod
+    def get_openrice_districts_filter_list(**kwargs) -> list[dict[int, str]]:
+        openrice = OpenriceApi()
+        district_filters = openrice.get_district_data()
+        return [{district['districtId']: district['nameLangDict']['en']} for district in district_filters]
+
     all: list[Tool] = [
         Tool(
             name="get_current_weather",
@@ -226,6 +257,18 @@ class LLMChainToos:
             name="get_content_from_url",
             func=fetch_data,
             description="Used to get the content from a url. Input should be a single string for the url",
+        ),
+        StructuredTool(
+            name="get_openrice_restaurant_recommendation",
+            func=get_openrice_restaurant_recommendation,
+            description="Used to get the restaurant recommendation from openrice. Default Hong Kong with no District. The district_id can be obtained from get_openrice_districts_filter_list. Input can be optional, district_id, keyword, number_of_results, starting_resault_index, lang. Default number_of_results=5, starting_resault_index=0, lang=en. Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool. Don't input any value for district_id to get general recommendataions, the keyword arg can be used to narrow down the search for the restarant keywords. When the user asked for it, also provide the openRiceShortUrl",
+            args_schema=OpenriceRecommendationArgs
+        ),
+        StructuredTool(
+            name="get_openrice_districts_filter_list",
+            func=get_openrice_districts_filter_list,
+            description="Used to get the list of districts from openrice to be used as district filter on get_openrice_restaurant_recommendation. Default Hong Kong. No Input Should be provided",
+            args_schema=OpenriceDistrictsFilterListArgs
         )
     ]
 
@@ -282,7 +325,7 @@ class LLMChainModel:
         executor = AgentExecutor(
             agent=agent,
             tools=self.tools,
-            # verbose=True,  # See thoughts
+            verbose=True,  # See thoughts
             handle_parsing_errors=True,  # Handle any parsing errors gracefully
         )
         resault = executor.invoke({
@@ -303,7 +346,7 @@ class ChatLLM:
             "Context maybe given to assist the assistant in providing better responses. "
             "Answer the questions to the best of your ability. "
             "If you don't know the answer, just say you don't know. "
-            "For now you and the user is in Hong Kong"
+            "For now you and the user is in Hong Kong. "
         )
     )
     chatRecordFolderPath = './chat_data'
