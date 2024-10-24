@@ -11,12 +11,15 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.tools import StructuredTool, Tool
 from langchain_google_vertexai import ChatVertexAI
 from langchain.agents import create_structured_chat_agent, AgentExecutor
+from langchain_google_community import GoogleSearchAPIWrapper
 
 from pydantic import BaseModel
-
 from google.oauth2.service_account import Credentials
 
 from openrice import OpenriceApi
+
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class MessageContentImage:
@@ -225,13 +228,13 @@ class LLMChainToos:
     @staticmethod
     def get_openrice_restaurant_recommendation(**kwargs) -> str:
         openrice = OpenriceApi()
-        return openrice.search_restaurants(
+        return [openrice.prettify_result(restaurant) + '\n\n' for restaurant in openrice.search_restaurants(
             district_id=kwargs.get('district_id'),
             keywords=kwargs.get('keyword'),
             count=kwargs.get('number_of_results', 5),
             start=kwargs.get('starting_resault_index', 0),
             lang=kwargs.get('lang', 'en')
-        )
+        )]
 
     class OpenriceDistrictsFilterListArgs(BaseModel):
         pass
@@ -242,33 +245,61 @@ class LLMChainToos:
         district_filters = openrice.get_district_data()
         return [{district['districtId']: district['nameLangDict']['en']} for district in district_filters]
 
+    class PerformGoogleSearchArgs(BaseModel):
+        query: str
+
+    @staticmethod
+    def perform_google_search(*args, **kwargs) -> str:
+        google_api_key = os.getenv("GOOGLE_SEARCH_API_KEY")
+        google_cse_id = os.getenv("GOOGLE_CSE_ID")
+        if not google_api_key or not google_cse_id:
+            return 'Google API Key or Google CSE ID is not provided. Cannot Perform Google Search'
+        search = GoogleSearchAPIWrapper(
+            google_api_key=google_api_key, 
+            google_cse_id=google_cse_id
+        )
+        # Assuming the first positional argument is the query
+        query = args[0] if args else kwargs.get('query')
+        if not query:
+            return 'No query provided for Google Search'
+        return search.run(query)
+
     all: list[Tool] = [
-        Tool(
+        Tool.from_function(
             name="get_current_weather",
             func=get_weather_temperture,
             description="Used to get the current weather from loacation. Default Hong Kong. Input should be a single string for the location",
+            return_direct=True,
         ),
-        Tool(
+        Tool.from_function(
             name="get_weather_forcast",
             func=get_weather_forcast,
             description="Used to get the 9 day weather forcast from loacation. Default Hong Kong. Input should be a single string for the location",
+            return_direct=True,
         ),
-        Tool(
+        Tool.from_function(
             name="get_content_from_url",
             func=fetch_data,
             description="Used to get the content from a url. Input should be a single string for the url",
+            return_direct=True,
         ),
         StructuredTool(
             name="get_openrice_restaurant_recommendation",
             func=get_openrice_restaurant_recommendation,
-            description="Used to get the restaurant recommendation from openrice. Default Hong Kong with no District. The district_id can be obtained from get_openrice_districts_filter_list. Input can be optional, district_id, keyword, number_of_results, starting_resault_index, lang. Default number_of_results=5, starting_resault_index=0, lang=en. Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool. Don't input any value for district_id to get general recommendataions, the keyword arg can be used to narrow down the search for the restarant keywords. When the user asked for it, also provide the openRiceShortUrl",
+            description="Used to get the restaurant recommendation from openrice. Default Hong Kong with no District. The district_id can be obtained from get_openrice_districts_filter_list. Input can be optional, district_id, keyword, number_of_results, starting_resault_index, lang. Default number_of_results=5, starting_resault_index=0, lang=en. Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool. Don't input any value for district_id to get general recommendataions, the keyword arg can be used to narrow down the search for the restarant keywords, the keyword is not a search engine, it is used to filter restauract info. When the user asked for it, also provide the openRiceShortUrl when asked for a specific restaurant.",
             args_schema=OpenriceRecommendationArgs
         ),
         StructuredTool(
             name="get_openrice_districts_filter_list",
             func=get_openrice_districts_filter_list,
-            description="Used to get the list of districts from openrice to be used as district filter on get_openrice_restaurant_recommendation. Default Hong Kong. No Input Should be provided",
+            description="Used to get the list of districts from openrice to be used as district filter on get_openrice_restaurant_recommendation. Default Hong Kong. No Input Should be provided. This list is limited to Openrice search districts. When no matching district werre found, try google searching the district around the location. see if it exists in this list. e.g. Tiu Keng Ling is near Tseung Kwan O. Google Search it.",
             args_schema=OpenriceDistrictsFilterListArgs
+        ),
+        StructuredTool(
+            name="google_search",
+            func=perform_google_search,
+            description="Search Google for recent results.",
+            args_schema=PerformGoogleSearchArgs
         )
     ]
 

@@ -228,21 +228,23 @@ class OpenriceApi(object):
             },
         }for raw_data in search_data["paginationResult"]["results"]]
 
-    def pretty_print_result(self, restaurant):
-        print('-' * 100)
-        print(f"Name: {restaurant.get('name', 'N/A')}")
-        print(f"Address: {restaurant.get('address', 'N/A')}")
-        print(f"Price Range: {restaurant.get(
+    def prettify_result(self, restaurant):
+        print_resault = (f"Name: {restaurant.get('name', 'N/A')}")
+        print_resault += "\n" + \
+            (f"Address: {restaurant.get('address', 'N/A')}")
+        print_resault += "\n" + (f"Price Range: {restaurant.get(
             'priceRange', {}).get('text', 'N/A')}")
-        print(f"District: {restaurant.get('district', {}).get('text', 'N/A')}")
-        print(f"Phone: {', '.join(restaurant.get(
+        print_resault += "\n" + \
+            (f"District: {restaurant.get('district', {}).get('text', 'N/A')}")
+        print_resault += "\n" + (f"Phone: {', '.join(restaurant.get(
             'contectInfo', {}).get('phones', []))}")
-        print(f"Google Map Url: {self.convert_loc_to_google_map_url(restaurant.get(
+        print_resault += "\n" + (f"Google Map Url: {self.convert_loc_to_google_map_url(restaurant.get(
             'loction', {}).get('latitude', 0), restaurant.get('loction', {}).get('longitude', 0))}")
-        print(f"OpenRice Short Url: {restaurant.get(
+        print_resault += "\n" + (f"OpenRice Short Url: {restaurant.get(
             'contectInfo', {}).get('openRiceShortUrl', 'N/A')}")
-        print(f"Cover Image Url: {restaurant.get('faviconUrl', 'N/A')}")
-        print('-' * 100)
+        print_resault += "\n" + \
+            (f"Cover Image Url: {restaurant.get('faviconUrl', 'N/A')}")
+        return print_resault
 
     def __init__(self,
                  base_data_path="./openrice_data",
@@ -263,13 +265,15 @@ class OpenriceApi(object):
 
 if __name__ == "__main__":
     openriceApi = OpenriceApi()
+    district_id = openriceApi.get_district_id_from_text("Central", "en")
     resaults = openriceApi.search_restaurants(
-        # keyword = "麵包",
+        keywords="麵包",
         start=0,
         count=3,
-        # district = "中環",
-        # district_lang = "en", # used to specify the language of the district query
+        district_id=district_id,
         lang="en",  # used to specify the language of the resaults
     )
     for resault in resaults:
-        openriceApi.pretty_print_result(resault)
+        print('-'*100)
+        print(openriceApi.prettify_result(resault))
+        print('-'*100)

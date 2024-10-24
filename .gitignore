@@ -5,3 +5,4 @@ data*
 chroma_db*
 node_modules
 **__pycache__
+.env
