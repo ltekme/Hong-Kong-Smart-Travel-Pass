@@ -1,4 +1,5 @@
-const queryParams = "lang=E&oLabel=Kowloon&oType=HRStation&oValue=45&dLabel=Disneyland%20Resort&dType=HRStation&dValue=55"
+import fs from 'node:fs';
+const queryParams = "lang=E&oType=HRStation&oValue=45&dType=HRStation&dValue=55"
 const resault = await fetch(`https://www.mtr.com.hk/share/customer/jp/api/CompleteRoutes/?${queryParams}`, {
     "headers": {
       "accept": "*/*",
@@ -23,3 +24,7 @@ const resault = await fetch(`https://www.mtr.com.hk/share/customer/jp/api/Comple
 
 const data = await resault.json();
 console.log(data);
+if (!fs.existsSync('./mtr_data')) {
+    fs.mkdirSync('./mtr_data');
+};
+await fs.writeFileSync(`./mtr_data/search.json`, JSON.stringify(data, null, 4));
