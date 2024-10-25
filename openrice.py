@@ -212,15 +212,46 @@ class OpenriceApi(object):
         start=0,
         count=3,
     ) -> list:
+
+        district_ids = [district["districtId"] for district in self.districts]
+        landmark_ids = [landmark["landmarkId"] for landmark in self.landmarks]
+
         search_param = ""
+
+        # Check params
+        if landmark_id and not district_id:
+            if landmark_id in landmark_ids:
+                print("Invalid landmark id, Check if in district")
+                search_param += f"&landmarkId={landmark_id}"
+            elif landmark_id in district_ids:
+                print("Landmark is in district")
+                search_param += f"&districtId={landmark_id}"
+
+        if not landmark_id and district_id:
+            if district_id in district_ids:
+                print("Invalid district id, Check if in landmark")
+                search_param += f"&districtId={district_id}"
+            elif district_id in landmark_ids:
+                print("District is in landmark")
+                search_param += f"&landmarkId={district_id}"
+
+        if landmark_id and district_id:
+            if district_id in district_ids:
+                search_param += f"&districtId={district_id}"
+            if landmark_id in landmark_ids:
+                search_param += f"&landmarkId={landmark_id}"
+
         search_param += f"&startAt={start}" if start else "&startAt=0"
         search_param += f"&rows={count}" if count else "&rows=3"
-        search_param += f"&districtId={district_id}" if district_id else ""
-        search_param += f"&landmarkId={landmark_id}" if landmark_id else ""
+        # search_param += f"&districtId={district_id}" if district_id else ""
+        # search_param += f"&landmarkId={landmark_id}" if landmark_id else ""
         search_param += f"&keyword={keywords}" if keywords else ""
         search_param += f"&uiLang={lang}"
 
         resault = fetch(self.SEARCH_BASE_API_URL + search_param)
+        if resault.get('success') == False:
+            print('Error: from API\n', resault)
+            return []
 
         return [{
             "name": raw_data["name"],
@@ -261,19 +292,30 @@ class OpenriceApi(object):
 
 if __name__ == "__main__":
     openriceApi = OpenriceApi()
-    # district_id = openriceApi.get_district_id_from_text("Central", "en")
-    # landmark_id = openriceApi.get_langmark_id_from_text("IFC", "en")
-    # resaults = openriceApi.search(
-    #     keywords="麵包",
-    #     start=0,
-    #     count=3,
-    #     landmark_id=landmark_id,
-    #     # district_id=district_id,
-    #     lang="en",  # used to specify the language of the resaults
-    # )
-    # for resault in resaults:
-    #     print('-'*100)
-    #     print(openriceApi.prettify(resault))
-    #     print('-'*100)
+    district_id = openriceApi.get_district_id_from_text("Central", "en")
+    landmark_id = openriceApi.get_langmark_id_from_text("IFC", "en")
+    resaults = openriceApi.search(
+        # keywords="麵包",
+        start=0,
+        count=3,
+        # landmark_id=landmark_id,
+        # district_id=district_id,
+        landmark_id=3020,
+        lang="en",  # used to specify the language of the resaults
+    )
+    for resault in resaults:
+        print('-'*100)
+        print(openriceApi.prettify(resault))
+        print('-'*100)
 
-    print(openriceApi.landmarks)
+    # print(openriceApi.landmarks)
+    # Check id uniqueness
+    # landmark_ids = [landmark["landmarkId"]
+    #                 for landmark in openriceApi.landmarks]
+    # district_ids = [district["districtId"]
+    #                 for district in openriceApi.districts]
+    # for i in district_ids:
+    #     if i in landmark_ids:
+    #         print(i)
+    #         print("Landmark and district ids are not unique")
+    #         break
