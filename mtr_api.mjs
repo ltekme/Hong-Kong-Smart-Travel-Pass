@@ -1,8 +1,8 @@
 import fs from 'node:fs';
-const originStationId = 45;
-const destinationStationId = 71;
-const queryParams = `lang=E&oType=HRStation&dType=HRStation&oValue=${originStationId}&dValue=${destinationStationId}`;
-const resault = await fetch(`https://www.mtr.com.hk/share/customer/jp/api/CompleteRoutes?${queryParams}`, {
+const originStationId = 25;
+const destinationStationId = 37;
+const queryParams = `lang=E&o=${originStationId}&d=${destinationStationId}`;
+const resault = await fetch("https://www.mtr.com.hk/share/customer/jp/api/HRRoutes/?"+ queryParams, {
   "headers": {
     "accept": "*/*",
     "accept-language": "en,en-US;q=0.9,en-GB;q=0.8,en-HK;q=0.7,zh-HK;q=0.6,zh;q=0.5",
@@ -16,8 +16,8 @@ const resault = await fetch(`https://www.mtr.com.hk/share/customer/jp/api/Comple
     "sec-fetch-mode": "cors",
     "sec-fetch-site": "same-origin",
     "x-requested-with": "XMLHttpRequest",
-    // "cookie": "ARRAffinity=293dca6e50e0448949dd1b45076f4b3ede6f3ebe0a3cf1228b4fe209661d3bbf; ARRAffinitySameSite=293dca6e50e0448949dd1b45076f4b3ede6f3ebe0a3cf1228b4fe209661d3bbf; gLang=E; gTour=L; PHPSESSID=km5q5f7tmu828vim5l4a5ab745; style_val=styles1; _gid=GA1.3.475086806.1729840804; jphistory=%7B%7D; ARRAffinity=293dca6e50e0448949dd1b45076f4b3ede6f3ebe0a3cf1228b4fe209661d3bbf; ARRAffinitySameSite=293dca6e50e0448949dd1b45076f4b3ede6f3ebe0a3cf1228b4fe209661d3bbf; _gid=GA1.3.475086806.1729840804; _gat_UA-109329221-3=1; _ga=GA1.1.2001646916.1729840804; _ga_Y6KEBZX3W9=GS1.1.1729840804.1.1.1729841677.0.0.0; ai_user=1A0995EF-3EF7-4D42-BB4A-4B23553BED9E; _ga_Y6KEBZX3W9=GS1.1.1729840804.1.1.1729841694.0.0.0; _ga=GA1.1.2001646916.1729840804",
-    // "Referer": "https://www.mtr.com.hk/en/customer/jp/index.php?oLabel=Kowloon&oType=HRStation&oValue=45&dLabel=Disneyland%20Resort&dType=HRStation&dValue=55",
+    // "cookie": "ARRAffinity=293dca6e50e0448949dd1b45076f4b3ede6f3ebe0a3cf1228b4fe209661d3bbf; ARRAffinitySameSite=293dca6e50e0448949dd1b45076f4b3ede6f3ebe0a3cf1228b4fe209661d3bbf; gLang=E; gTour=L; PHPSESSID=km5q5f7tmu828vim5l4a5ab745; style_val=styles1; _gid=GA1.3.475086806.1729840804; jphistory=%7B%7D; ARRAffinity=293dca6e50e0448949dd1b45076f4b3ede6f3ebe0a3cf1228b4fe209661d3bbf; ARRAffinitySameSite=293dca6e50e0448949dd1b45076f4b3ede6f3ebe0a3cf1228b4fe209661d3bbf; _gid=GA1.3.475086806.1729840804; _gat_UA-109329221-3=1; _ga=GA1.1.2001646916.1729840804; _ga_Y6KEBZX3W9=GS1.1.1729840804.1.1.1729841677.0.0.0; ai_user=1A0995EF-3EF7-4D42-BB4A-4B23553BED9E; _ga=GA1.1.2001646916.1729840804; _ga_Y6KEBZX3W9=GS1.1.1729840804.1.1.1729842147.0.0.0",
+    // "Referer": "https://www.mtr.com.hk/en/customer/jp/index.php?oLabel=Kowloon&oType=HRStation&oValue=45&dLabel=University&dType=HRStation&dValue=71",
     "Referrer-Policy": "no-referrer-when-downgrade"
   },
   "body": null,
