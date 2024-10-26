@@ -100,25 +100,25 @@ const responseData = await response.json()
 await fs.writeFileSync(`${tractionDataPath}/trip_com.json`, JSON.stringify(responseData, null, 4));
 console.log(responseData);
 
-fetch("https://hk.trip.com/restapi/soa2/19913/getTripAttractionList", {
-  "headers": {
-    "accept": "*/*",
-    "accept-language": "en,en-US;q=0.9,en-GB;q=0.8,en-HK;q=0.7,zh-HK;q=0.6,zh;q=0.5",
-    "cache-control": "no-cache",
-    "content-type": "application/json",
-    "pragma": "no-cache",
-    "priority": "u=1, i",
-    "sec-ch-ua": "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"",
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": "\"Windows\"",
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin"
-  },
-  "referrer": "https://hk.trip.com/things-to-do/list-38/city?citytype=dt&id=38&name=%E9%A6%99%E6%B8%AF&keyword=kowloon&pshowcode=Ticket2&locale=zh-HK&curr=HKD",
-  "referrerPolicy": "strict-origin-when-cross-origin",
-  "body": "{\"head\":{\"extension\":[{\"name\":\"platform\",\"value\":\"Online\"},{\"name\":\"locale\",\"value\":\"zh-HK\"},{\"name\":\"currency\",\"value\":\"HKD\"}],\"cid\":\"1728913602112.4736Rgli22JR\"},\"scene\":\"ticket\",\"districtId\":38,\"index\":6,\"count\":10,\"sortType\":1,\"returnModuleType\":\"product\",\"filter\":{\"filterItems\":[],\"coordinateFilter\":{\"coordinateType\":\"\",\"latitude\":null,\"longitude\":null},\"itemType\":\"\"},\"token\":\"MTg1MjE3MzYsNTE4MzQ1NTgsNzY3NjgsODMzMjEsMTI0MjUyMTI0LDc2MDM0LDg3ODA1LDc5ODQ4NDQ1LDIyODQ3NzQ2LDkwOTE2NTY2LDk0NTE4LDEzNjAwNzc3MCwxNDAxNTU3MzksMjI4NDc3NDUsODgwOTQsMjQ2NTA5MDIsNTE4MzMxMDgsNTE4MzI2MTQsMjI4NDcxNzgsMzEwNDI4NjcsMjQ2NTA4OTAsMTM2OTg0MDY0LDEwMTY5OTkxNCw1MTgzMjgxNywxMzY4NDkxODQsMTM4MDY4MzI0LDEzNjgyOTA2NiwxNDg4NDMxNjAsMTQ4ODQzMTYzLDkxNDgyLDE0ODg0MzE1OCwxNDg4NDMxNjEsMTQ4ODQzMTU3LDMwNTc5ODI5LDEwNTQyNDYzLDg4NjcwLDEzNDQ1MzI4LDUwNjEyMzM0LDEzMTkxNzY0NCw2OTU0NzY5OCwzMDk0MDE2Niw1MTYwNzE2MiwxNDM2OTI5OTQsOTA5MTY2OTMsMTQ2NDQ5NzY4LDUxODMyNTE3LDE0NDA3OTcyMSwxNDczODIwODcsMTQ0MDgzNzg4LDE0NDA3OTkzNg==\",\"keyword\":\"kowloon\",\"cityId\":0,\"pageId\":\"10650012750\"}",
-  "method": "POST",
-  "mode": "cors",
-  "credentials": "include"
-});
+// fetch("https://hk.trip.com/restapi/soa2/19913/getTripAttractionList", {
+//   "headers": {
+//     "accept": "*/*",
+//     "accept-language": "en,en-US;q=0.9,en-GB;q=0.8,en-HK;q=0.7,zh-HK;q=0.6,zh;q=0.5",
+//     "cache-control": "no-cache",
+//     "content-type": "application/json",
+//     "pragma": "no-cache",
+//     "priority": "u=1, i",
+//     "sec-ch-ua": "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"",
+//     "sec-ch-ua-mobile": "?0",
+//     "sec-ch-ua-platform": "\"Windows\"",
+//     "sec-fetch-dest": "empty",
+//     "sec-fetch-mode": "cors",
+//     "sec-fetch-site": "same-origin"
+//   },
+//   "referrer": "https://hk.trip.com/things-to-do/list-38/city?citytype=dt&id=38&name=%E9%A6%99%E6%B8%AF&keyword=kowloon&pshowcode=Ticket2&locale=zh-HK&curr=HKD",
+//   "referrerPolicy": "strict-origin-when-cross-origin",
+//   "body": "{\"head\":{\"extension\":[{\"name\":\"platform\",\"value\":\"Online\"},{\"name\":\"locale\",\"value\":\"zh-HK\"},{\"name\":\"currency\",\"value\":\"HKD\"}],\"cid\":\"1728913602112.4736Rgli22JR\"},\"scene\":\"ticket\",\"districtId\":38,\"index\":6,\"count\":10,\"sortType\":1,\"returnModuleType\":\"product\",\"filter\":{\"filterItems\":[],\"coordinateFilter\":{\"coordinateType\":\"\",\"latitude\":null,\"longitude\":null},\"itemType\":\"\"},\"token\":\"MTg1MjE3MzYsNTE4MzQ1NTgsNzY3NjgsODMzMjEsMTI0MjUyMTI0LDc2MDM0LDg3ODA1LDc5ODQ4NDQ1LDIyODQ3NzQ2LDkwOTE2NTY2LDk0NTE4LDEzNjAwNzc3MCwxNDAxNTU3MzksMjI4NDc3NDUsODgwOTQsMjQ2NTA5MDIsNTE4MzMxMDgsNTE4MzI2MTQsMjI4NDcxNzgsMzEwNDI4NjcsMjQ2NTA4OTAsMTM2OTg0MDY0LDEwMTY5OTkxNCw1MTgzMjgxNywxMzY4NDkxODQsMTM4MDY4MzI0LDEzNjgyOTA2NiwxNDg4NDMxNjAsMTQ4ODQzMTYzLDkxNDgyLDE0ODg0MzE1OCwxNDg4NDMxNjEsMTQ4ODQzMTU3LDMwNTc5ODI5LDEwNTQyNDYzLDg4NjcwLDEzNDQ1MzI4LDUwNjEyMzM0LDEzMTkxNzY0NCw2OTU0NzY5OCwzMDk0MDE2Niw1MTYwNzE2MiwxNDM2OTI5OTQsOTA5MTY2OTMsMTQ2NDQ5NzY4LDUxODMyNTE3LDE0NDA3OTcyMSwxNDczODIwODcsMTQ0MDgzNzg4LDE0NDA3OTkzNg==\",\"keyword\":\"kowloon\",\"cityId\":0,\"pageId\":\"10650012750\"}",
+//   "method": "POST",
+//   "mode": "cors",
+//   "credentials": "include"
+// });

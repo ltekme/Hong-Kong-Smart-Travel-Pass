@@ -17,9 +17,15 @@ from pydantic import BaseModel
 from google.oauth2.service_account import Credentials
 
 from openrice import OpenriceApi
+from mtr import MTRApi
 
 from dotenv import load_dotenv
 load_dotenv()
+
+
+# GCP_DATA_SA_CREDENTIAL_PATH
+# GCP_AI_SA_CREDENTIAL_PATH
+# need to be set in the .env file
 
 
 class MessageContentImage:
@@ -191,6 +197,9 @@ class Chat:
 class LLMChainToos:
     lang = "en"
 
+    class EmptyArgs(BaseModel):
+        pass
+
     @staticmethod
     def fetch_data(url: str, methoad: t.Literal['POST', 'GET'] = 'GET') -> str:
         return requests.request(method=methoad, url=url).content.decode('utf-8')
@@ -239,9 +248,6 @@ class LLMChainToos:
             lang=kwargs.get('lang', 'en')
         )]
 
-    class OpenriceFilterListArgs(BaseModel):
-        pass
-
     @staticmethod
     def get_openrice_districts_filter_list(**kwargs) -> list[dict[int, str]]:
         openrice = OpenriceApi()
@@ -273,49 +279,101 @@ class LLMChainToos:
             return 'No query provided for Google Search'
         return search.run(query)
 
+    @staticmethod
+    def get_mtr_stations_info(**kwargs) -> str:
+        credentials_path = os.getenv(
+            "GCP_DATA_SA_CREDENTIAL_PATH", './gcp_cred-data.json')
+        credentials = Credentials.from_service_account_file(credentials_path)
+        mtrApi = MTRApi(credentials=credentials)
+        return mtrApi.prettify_station(mtrApi.stations)
+
+    class GetMtrStationFromName(BaseModel):
+        station_name: str
+
+    @staticmethod
+    def get_mtr_station_from_station_name(station_name: str, **kwargs) -> str:
+        credentials_path = os.getenv(
+            "GCP_DATA_SA_CREDENTIAL_PATH", './gcp_cred-data.json')
+        credentials = Credentials.from_service_account_file(credentials_path)
+        mtrApi = MTRApi(credentials=credentials)
+        station = mtrApi.get_station_from_station_name(station_name)
+        if not station:
+            return f"Station with name {station_name} not found"
+        return mtrApi.prettify_station(station)
+
+    class SearchMtrPathArgs(BaseModel):
+        originStationId: int
+        destinationStationId: int
+
+    @staticmethod
+    def search_mtr_path_between_stations(originStationId: int, destinationStationId: int, **kwargs) -> str:
+        credentials_path = os.getenv(
+            "GCP_DATA_SA_CREDENTIAL_PATH", './gcp_cred-data.json')
+        credentials = Credentials.from_service_account_file(credentials_path)
+        mtrApi = MTRApi(credentials=credentials)
+        return mtrApi.get_from_and_to_station_path(originStationId, destinationStationId)
+
     all: list[Tool] = [
         Tool.from_function(
             name="get_current_weather",
             func=get_weather_temperture,
-            description="Used to get the current weather from loacation. Default Hong Kong. Input should be a single string for the location",
+            description="THIS IS REALTIME DATA: Used to get the current weather from loacation. Default Hong Kong. Input should be a single string for the location",
             return_direct=True,
         ),
         Tool.from_function(
             name="get_weather_forcast",
             func=get_weather_forcast,
-            description="Used to get the 9 day weather forcast from loacation. Default Hong Kong. Input should be a single string for the location",
+            description="THIS IS REALTIME DATA: Used to get the 9 day weather forcast from loacation. Default Hong Kong. Input should be a single string for the location",
             return_direct=True,
         ),
         Tool.from_function(
             name="get_content_from_url",
             func=fetch_data,
-            description="Used to get the content from a url. Input should be a single string for the url",
+            description="THIS IS REALTIME DATA: Used to get the content from a url. Input should be a single string for the url",
             return_direct=True,
         ),
         StructuredTool(
             name="get_openrice_restaurant_recommendation",
             func=get_openrice_restaurant_recommendation,
-            description="Used to get the restaurant recommendation from openrice. Default Hong Kong with no District. The district_id filter can be obtained from get_openrice_districts_filter_list tool. When no district id were found using the get_openrice_districts_filter_list tool, use the get_openrice_landmark_filter_list tool and see if the place exists in that list. The landmark_id filter can be obtained from the get_openrice_landmark_filter_list tool. Places like MTR stations will be in the landmark filter list. Input to this tool is optional. When no input is provided, general recommendataions will be provided. Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool. keyword argument can be used to narrow down the search for the restarant keywords, the keyword is not a search engine, it is used to filter restauract info. Provide the openRiceShortUrl when asked for a specific restaurant.",
+            description="THIS IS REALTIME DATA: Used to get the restaurant recommendation from openrice. Default Hong Kong with no District. The district_id filter can be obtained from get_openrice_districts_filter_list tool. When no district id were found using the get_openrice_districts_filter_list tool, use the get_openrice_landmark_filter_list tool and see if the place exists in that list. The landmark_id filter can be obtained from the get_openrice_landmark_filter_list tool. Places like MTR stations will be in the landmark filter list. Input to this tool is optional. When no input is provided, general recommendataions will be provided. Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool. keyword argument can be used to narrow down the search for the restarant keywords, the keyword is not a search engine, it is used to filter restauract info. Provide the openRiceShortUrl when asked for a specific restaurant.",
             args_schema=OpenriceRecommendationArgs
         ),
         StructuredTool(
             name="get_openrice_landmark_filter_list",
             func=get_openrice_landmark_filter_list,
-            description="Used to get list of landmarks from openrice to be used in the as landmark filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search landmark. If a place not exist in this list, try google searching the location of a place. e,g, amoy plaza is in Kowloon Bay",
-            args_schema=OpenriceFilterListArgs
+            description="THIS IS REALTIME DATA: Used to get list of landmarks from openrice to be used in the as landmark filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search landmark. If a place not exist in this list, try google searching the location of a place. e,g, amoy plaza is in Kowloon Bay",
+            args_schema=EmptyArgs
         ),
 
         StructuredTool(
             name="get_openrice_districts_filter_list",
             func=get_openrice_districts_filter_list,
-            description="Used to get the list of districts from openrice to be used as district filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search districts. When no matching district werre found, try using the get_openrice_landmark_filter_list tool, sometimes the place exists in the landmark filter list. If it sill doesn't exists, use the google_search tool to see if you can get a wider location that exists in the list.",
-            args_schema=OpenriceFilterListArgs
+            description="THIS IS REALTIME DATA: Used to get the list of districts from openrice to be used as district filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search districts. When no matching district werre found, try using the get_openrice_landmark_filter_list tool, sometimes the place exists in the landmark filter list. If it sill doesn't exists, use the google_search tool to see if you can get a wider location that exists in the list.",
+            args_schema=EmptyArgs
         ),
         StructuredTool(
             name="google_search",
             func=perform_google_search,
-            description="Search Google for recent results.",
+            description="THIS IS REALTIME DATA: Search Google for recent results.",
             args_schema=PerformGoogleSearchArgs
+        ),
+        StructuredTool(
+            name="get_mtr_stations_info",
+            func=get_mtr_stations_info,
+            description="THIS IS REALTIME DATA: Get the list of MTR stations information. Line Station Sequence is the order of the station in the line. Line Station Direction is the direction of the station in the line. No Input Should be provided.",
+            args_schema=EmptyArgs
+        ),
+        StructuredTool(
+            name="search_mtr_path_between_stations",
+            func=search_mtr_path_between_stations,
+            description="THIS IS REALTIME DATA: Search the path between two MTR stations. Input should be two integers for the originStationId and destinationStationId. The station id can be obtained from the get_mtr_stations_info tool or get_mtr_station_from_station_name tool, when it is not found in the get_mtr_station_from_station_name, try get all the stations using the get_mtr_stations_info tool and find the station id from there, incase typo in the station name.",
+            args_schema=SearchMtrPathArgs
+        ),
+        StructuredTool(
+            name="get_mtr_station_from_station_name",
+            func=get_mtr_station_from_station_name,
+            description="THIS IS REALTIME DATA: Get the MTR station information from the station name. Input should be a single string for the station name. The station name can be in English or Chinese. The station name should be the exact name of the station. The station name can be obtained from the get_mtr_stations_info tool.",
+            args_schema=GetMtrStationFromName
         )
     ]
 
@@ -455,7 +513,9 @@ class ChatLLM:
 
 
 if __name__ == "__main__":
-    credentials = Credentials.from_service_account_file('./gcp_cred-ai.json')
+    credentials_path = os.getenv(
+        "GCP_AI_SA_CREDENTIAL_PATH", './gcp_cred-ai.json')
+    credentials = Credentials.from_service_account_file(credentials_path)
     chatLLM = ChatLLM(credentials)
     # chatLLM.chatId = "7b5bb9e7-ceff-42a1-abc4-af6198f96390"
     while True:

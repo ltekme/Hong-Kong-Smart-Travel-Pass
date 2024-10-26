@@ -1,6 +1,6 @@
 import fs from 'node:fs';
-const originStationId = 25;
-const destinationStationId = 37;
+const originStationId = 75;
+const destinationStationId = 89;
 const queryParams = `lang=E&o=${originStationId}&d=${destinationStationId}`;
 const resault = await fetch("https://www.mtr.com.hk/share/customer/jp/api/HRRoutes/?"+ queryParams, {
   "headers": {
