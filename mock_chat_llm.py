@@ -455,10 +455,7 @@ class ChatLLM:
 
 
 if __name__ == "__main__":
-    credentialsFiles = list(filter(lambda f: f.startswith(
-        'gcp_cred') and f.endswith('.json'), os.listdir('.')))
-    credentials = Credentials.from_service_account_file(
-        credentialsFiles[0])
+    credentials = Credentials.from_service_account_file('./gcp_cred-ai.json')
     chatLLM = ChatLLM(credentials)
     # chatLLM.chatId = "7b5bb9e7-ceff-42a1-abc4-af6198f96390"
     while True:
