@@ -75,8 +75,7 @@ class MTRApi():
 
     def print_log(self, msg: str) -> None:
         if self.verbose:
-            print('\033[94m' +
-                  f"[{inspect.stack()[1][3]}] " + str(msg) + '\x1b[0m')
+            print('\033[94m' +f"[{inspect.stack()[1][3]}] " + str(msg) + '\x1b[0m')
 
     def __init__(self, credentials: Credentials, store=True, verbose=False) -> None:
         self.verbose = verbose

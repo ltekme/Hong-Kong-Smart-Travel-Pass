@@ -1,6 +1,10 @@
 from .Weather import *
+from .Openrice import *
 
 all = [
     GetWeatherForcastTool(),
-    GetCurrentWeatherTempetureTool()
+    GetCurrentWeatherTempetureTool(),
+    GetOpenriceRestaurantRecommendationTool(),
+    GetOpenriceDistrictFilterListTool(),
+    GetOpenriceLandmarkFilterListTool()
 ]

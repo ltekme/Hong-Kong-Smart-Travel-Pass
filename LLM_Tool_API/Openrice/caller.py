@@ -4,52 +4,7 @@ import requests
 import shutil
 from typing import Tuple
 
-REQUEST_HEADERS: dict = {
-    "accept": "*/*",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
-    "accept-language": "en,en-US;q=0.9,en-GB;q=0.8,en-HK;q=0.7,zh-HK;q=0.6,zh;q=0.5",
-    "cache-control": "no-cache",
-    "pragma": "no-cache",
-    "priority": "u=1, i",
-    "sec-ch-ua": "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"",
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": "\"Windows\"",
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "Referrer-Policy": "strict-origin-when-cross-origin"
-}
-
-
-def create_folder_if_not_exists(folder_path):
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-
-
-def write_data(data: dict | list, path: str) -> None:
-    print("Writing data to:", path)
-    create_folder_if_not_exists(os.path.dirname(path))
-    with open(path, "w") as f:
-        json.dump(data, f, indent=4)
-
-
-def read_json_file(file_path: str) -> dict | list:
-    print("Reading data from:", file_path)
-    try:
-        with open(file_path, "r") as f:
-            return json.load(f)
-    except:
-        return []
-
-
-def fetch(url: str, params: dict = {}) -> dict | list:
-    print("Fetching data from:", url)
-    return json.loads(requests.request(
-        method=params.get("method", "GET"),
-        url=url,
-        headers=params.get("headers", REQUEST_HEADERS),
-        data=params.get("body", None),
-    ).content)
+from ..ExternalIo import fetch, write_json_file, read_json_file
 
 
 class OpenriceApi(object):
@@ -58,7 +13,7 @@ class OpenriceApi(object):
     DISTRICT_LANDMARKS_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/region/all?uiLang=zh&uiCity=hongkong"
     PRICE_RANGE_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/country/all"
 
-    lang_dict_options: dict = ["en", "en", "sc"]
+    lang_dict_options: dict = ["en", "tc", "sc"]
 
     base_data_path = "./openrice_data/"
     raw_price_range_data_path: str = base_data_path + "openrice_priceRange_raw.json"
@@ -112,10 +67,10 @@ class OpenriceApi(object):
 
         # Store data
         if self.store_data:
-            write_data(raw_district_landmarks_data,
-                       self.raw_district_data_path)
-            write_data(self._district_data, self.district_data_path)
-            write_data(self._langmarks_data, self.landmarks_data_path)
+            write_json_file(raw_district_landmarks_data,
+                            self.raw_district_data_path)
+            write_json_file(self._district_data, self.district_data_path)
+            write_json_file(self._langmarks_data, self.landmarks_data_path)
 
         return self.districts
 
@@ -145,8 +100,9 @@ class OpenriceApi(object):
 
         # Store data
         if self.store_data:
-            write_data(raw_price_range_data, self.raw_price_range_data_path)
-            write_data(self._price_range_data, self.price_range_data_path)
+            write_json_file(raw_price_range_data,
+                            self.raw_price_range_data_path)
+            write_json_file(self._price_range_data, self.price_range_data_path)
 
         return self._price_range_data
 

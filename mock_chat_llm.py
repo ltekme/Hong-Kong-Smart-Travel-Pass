@@ -16,7 +16,6 @@ from langchain_google_community import GoogleSearchAPIWrapper
 from pydantic import BaseModel
 from google.oauth2.service_account import Credentials
 
-from openrice import OpenriceApi
 from mtr import MTRApi
 from LLM_Tool_API import all as all_llm_tools
 
@@ -205,39 +204,6 @@ class LLMChainToos:
     def fetch_data(url: str, methoad: t.Literal['POST', 'GET'] = 'GET') -> str:
         return requests.request(method=methoad, url=url).content.decode('utf-8')
 
-    class OpenriceRecommendationArgs(BaseModel):
-        district_id: t.Optional[int] = None
-        landmark_id: t.Optional[int] = None
-        keyword: t.Optional[str] = None
-        number_of_results: t.Optional[int] = 5
-        starting_resault_index: t.Optional[int] = 0
-        lang: t.Optional[str] = "en"
-
-    @staticmethod
-    def get_openrice_restaurant_recommendation(**kwargs) -> str:
-        openrice = OpenriceApi()
-        return [openrice.prettify(restaurant) + '\n\n' for restaurant in openrice.
-                search(
-            district_id=kwargs.get('district_id'),
-            landmark_id=kwargs.get('landmark_id'),
-            keywords=kwargs.get('keyword'),
-            count=kwargs.get('number_of_results', 5),
-            start=kwargs.get('starting_resault_index', 0),
-            lang=kwargs.get('lang', 'en')
-        )]
-
-    @staticmethod
-    def get_openrice_districts_filter_list(**kwargs) -> list[dict[int, str]]:
-        openrice = OpenriceApi()
-        district_filters = openrice.districts
-        return [{district['districtId']: district['nameLangDict']['en']} for district in district_filters]
-
-    @staticmethod
-    def get_openrice_landmark_filter_list(**kwargs) -> list[dict[int, str]]:
-        openrice = OpenriceApi()
-        landmark_filters = openrice.landmarks
-        return [{landmark['landmarkId']: landmark['nameLangDict']['en']} for landmark in landmark_filters]
-
     class PerformGoogleSearchArgs(BaseModel):
         query: str
 
@@ -296,26 +262,7 @@ class LLMChainToos:
             name="get_content_from_url",
             func=fetch_data,
             description="Used to get the content from a url. Input should be a single string for the url",
-            return_direct=True,
-        ),
-        StructuredTool(
-            name="get_openrice_restaurant_recommendation",
-            func=get_openrice_restaurant_recommendation,
-            description="Used to get the restaurant recommendation from openrice. Default Hong Kong with no District. The district_id filter can be obtained from get_openrice_districts_filter_list tool. When no district id were found using the get_openrice_districts_filter_list tool, use the get_openrice_landmark_filter_list tool and see if the place exists in that list. The landmark_id filter can be obtained from the get_openrice_landmark_filter_list tool. Places like MTR stations will be in the landmark filter list. Input to this tool is optional. When no input is provided, general recommendataions will be provided. Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool. keyword argument can be used to narrow down the search for the restarant keywords, the keyword is not a search engine, it is used to filter restauract info. Provide the openRiceShortUrl when asked for a specific restaurant.",
-            args_schema=OpenriceRecommendationArgs
-        ),
-        StructuredTool(
-            name="get_openrice_landmark_filter_list",
-            func=get_openrice_landmark_filter_list,
-            description="Used to get list of landmarks from openrice to be used in the as landmark filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search landmark. If a place not exist in this list, try google searching the location of a place. e,g, amoy plaza is in Kowloon Bay",
-            args_schema=EmptyArgs
-        ),
-
-        StructuredTool(
-            name="get_openrice_districts_filter_list",
-            func=get_openrice_districts_filter_list,
-            description="Used to get the list of districts from openrice to be used as district filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search districts. When no matching district werre found, try using the get_openrice_landmark_filter_list tool, sometimes the place exists in the landmark filter list. If it sill doesn't exists, use the google_search tool to see if you can get a wider location that exists in the list.",
-            args_schema=EmptyArgs
+            return_direct=False,
         ),
         StructuredTool(
             name="google_search",
@@ -389,9 +336,6 @@ class LLMChainModel:
             }] + [img.as_lcMessageDict for img in last_user_message.content.images])
         ])
 
-        # Debugging
-        # print(messages)
-
         agent = create_structured_chat_agent(self.llm, self.tools, prompt)
         executor = AgentExecutor(
             agent=agent,
@@ -404,8 +348,11 @@ class LLMChainModel:
             "chat_history": messages_copy.as_list_of_lcMessages,
             "question": last_user_message.content.text
         })
+
         # Debugging
-        # print(messages)
+        # print(agent.get_prompts()[0])
+        # return Message('ai', "debugging output")
+
         return Message('ai', resault['output'])
 
 

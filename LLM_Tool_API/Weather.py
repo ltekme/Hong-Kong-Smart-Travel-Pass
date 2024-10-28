@@ -2,23 +2,30 @@ import typing as t
 from pydantic import BaseModel
 from langchain_core.tools import BaseTool
 
-from .Args import EmptyArgs
-from .Fetch import fetch
+from .ExternalIo import fetch
 
 
 class GetWeatherForcastTool(BaseTool):
+
+    class ToolArgs(BaseModel):
+        pass
+
     name: str = "Weather Forcast Tool"
     description: str = "Used to get the current weather in Hong Kong."
-    args_schema: t.Type[BaseModel] = EmptyArgs
+    args_schema: t.Type[BaseModel] = ToolArgs
 
     def _run(self, **kwargs) -> str:
         return "JSON data fetched from hong kong observatory API" + str(fetch(f"https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=en"))
 
 
 class GetCurrentWeatherTempetureTool(BaseTool):
+
+    class ToolArgs(BaseModel):
+        pass
+
     name: str = "Current Weather Tempeture Tool"
     description: str = "Used to get the current weather from loacation."
-    args_schema: t.Type[BaseModel] = EmptyArgs
+    args_schema: t.Type[BaseModel] = ToolArgs
 
     def _run(self, **kwargs) -> str:
         tempectureUrlMapping = {
