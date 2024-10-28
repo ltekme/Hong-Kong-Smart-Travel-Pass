@@ -173,8 +173,12 @@ class MTRApi():
 
     def get_station_from_station_name(self, station_name: str) -> list[dict[str, str]] | None:
         self.print_log("Seasrching Station Name " + str(station_name))
+        if self.vector_store.get(limit=1, include=["documents"])["documents"] == []:
+            self.print_log(
+                "No data in Chroma DB yet. Calling .stations to inti chroma db")
+            self.stations
         resault = self.vector_store.similarity_search(station_name, k=4)
-        self.print_log("Found Station" + str(resault))
+        self.print_log("Found Station " + str(resault))
         return list(map(MTRApi.format_chroma_doc_to_dict, list(map(lambda d: d.page_content, resault))))
 
     def get_from_and_to_station_path(self, originStationId: int, destinationStationId: int) -> str:
