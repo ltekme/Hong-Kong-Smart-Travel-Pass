@@ -3,6 +3,7 @@ gcp_cred*.json
 data*
 !data*.mjs
 chroma_db*
+*_chroma_db/*
 node_modules
 **__pycache__
 .env

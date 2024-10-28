@@ -66,7 +66,7 @@ vector_store = Chroma(
 
 results = vector_store.similarity_search(
     # wrong station name, but simular
-    "Kowlon bay",
+    "Kowlon tong",
     k=2,
 )
 

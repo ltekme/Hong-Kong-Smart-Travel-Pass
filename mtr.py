@@ -5,6 +5,9 @@ import requests
 from google.oauth2.service_account import Credentials
 from google.cloud import bigquery
 from google.cloud.bigquery.table import RowIterator
+from langchain_google_vertexai import VertexAIEmbeddings
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
 
 REQUEST_HEADERS = {
     "accept": "*/*",
@@ -58,6 +61,9 @@ def read_json_file(file_path: str) -> dict | list:
 class MTRApi():
 
     station_data_path = "mtr_data/mtr_stations.json"
+    chroma_db_path = "./mtr_chroma_db"
+    chroma_db_collection = "mtr"
+    mtr_data_csv = "./data/mtr_lines_and_stations.csv"
     queryColumns = "`Chinese Name`,`English Name`,`Station Code`,`Line Code`,`Station ID`"
     _stations = []
 
@@ -65,6 +71,40 @@ class MTRApi():
         self.credentials = credentials
         self.table_name = f"{credentials.project_id}.Transport.MTR"
         self.store = store
+        self.embeddings = VertexAIEmbeddings(
+            credentials=credentials,
+            project=credentials.project_id,
+            model_name="text-multilingual-embedding-002",
+        )
+        chroma_param = {
+            "collection_name": self.chroma_db_collection,
+            "embedding_function": self.embeddings,
+        }
+        if self.store:
+            chroma_param["persist_directory"] = self.chroma_db_path
+        self.vector_store = Chroma(**chroma_param)
+
+    def load_data(self,):
+        data_file = open(self.mtr_data_csv, 'r', encoding="utf-8")
+        raw_data = data_file.read()
+        # Replace " with none
+        raw_data = raw_data.replace("\"", "")
+        data_lines = str(raw_data).split("\n")
+        # Read csv headers
+        headers = str(data_lines[0]).split(",")
+        stations = [line.split(",") for line in data_lines[1:]]
+        # Format CSV to Text Document
+        documents = []
+        for station in stations:
+            if len(station) < 2 or station[0] == "":
+                continue
+            station_text = []
+            for i in range(len(headers)):
+                station_text.append(f"{headers[i]}: {station[i]}")
+            station_text = ", ".join(station_text)
+            print("Adding: " + station_text + " to Chroma DB")
+            documents.append(Document(page_content=station_text))
+        self.vector_store.add_documents(documents=documents)
 
     @staticmethod
     def listdictify_query(results: RowIterator):
@@ -73,23 +113,16 @@ class MTRApi():
 
     @property
     def stations(self) -> list[dict[str, str]]:
-        if self.store and not self._stations:
-            print("Fetching stations from stored data")
-            self._stations = read_json_file(self.station_data_path)
-        if not self.store or not self._stations:
-            print("Fetching stations from BigQuery")
-            client = bigquery.Client(credentials=self.credentials)
-            query = client.query(f"""
-SELECT DISTINCT
-  {self.queryColumns}
-FROM
-  `{self.table_name}`
-;""")
-            results = query.result()
-            self._stations = self.listdictify_query(results)
-            if self.store:
-                write_data(self._stations, self.station_data_path)
-        return self._stations
+        docs_in_db = self.vector_store.get(include=["documents"])["documents"]
+        if not docs_in_db:
+            self.load_data()
+            docs_in_db = self.vector_store.get(
+                include=["documents"])["documents"]
+        # print(docs_in_db)
+        stations = [{
+            doc_c.split(':')[0]: doc_c.split(':')[1] for doc_c in str(doc).split(',')
+        } for (doc) in docs_in_db]
+        return stations
 
     @staticmethod
     def prettify_station(stations: list[dict[str, str]] | dict[str, str]) -> str:
@@ -112,7 +145,7 @@ FROM
 
     def get_station_from_station_name(self, station_name: str) -> dict[str, str] | None:
         filtered_stations = list(
-            filter(lambda station: station['English Name'] == station_name, self.stations))
+            filter(lambda station: station['English Name'].lower() == station_name.lower() or station["Chinese Name"].lower() == station_name.lower(), self.stations))
         return filtered_stations[0] if filtered_stations else None
 
     def get_from_and_to_station_path(self, originStationId: int, destinationStationId: int) -> str:
@@ -133,12 +166,11 @@ FROM
             for fare in route['fares']:
                 text.append(f"  {fare['fareTitle']}:")
                 for category, prices in dict(fare['fareInfo']).items():
-                    text.append(f"    {str(category).capitalize(
-                    )}: Octopus - {dict(prices).get('octopus')}, Single Journey - {dict(prices).get('sj')}")
+                    text.append(
+                        f"    {str(category).capitalize()}: Octopus - {dict(prices).get('octopus')}, Single Journey - {dict(prices).get('sj')}")
             text.append("Path:(Sequence of Stations)")
             for path in route['path']:
-                path_text = f"{path['linkType']}: Station: {self.get_station_from_station_id(int(path['ID']))[
-                    'English Name']}, Time: {path['time']} minutes, {path['linkText'] if path['linkText'] else ''}"
+                path_text = f"{path['linkType']}: Station: {self.get_station_from_station_id(int(path['ID']))['English Name']}, Time: {path['time']} minutes, {path['linkText'] if path['linkText'] else ''}"
                 text.append(f"  {path_text}")
 
         return "\n".join(text)
@@ -147,10 +179,10 @@ FROM
 if __name__ == "__main__":
     credentials = Credentials.from_service_account_file('gcp_cred-data.json')
     mtr = MTRApi(credentials=credentials)
-    # print(mtr.stations)
+    print(mtr.stations)
     # station = mtr.get_station_from_station_code("AWE")
     # print(mtr.prettify_station(mtr.stations))
-    start = mtr.get_station_from_station_name("Sheung Shui")
-    end = mtr.get_station_from_station_name("South Horizons")
-    print(mtr.get_from_and_to_station_path(
-        start.get('Station ID', 1), end.get('Station ID', 1)))
+    # start = mtr.get_station_from_station_name("Sheung Shui")
+    # end = mtr.get_station_from_station_name("South Horizons")
+    # print(mtr.get_from_and_to_station_path(
+    #     start.get('Station ID', 1), end.get('Station ID', 1)))
