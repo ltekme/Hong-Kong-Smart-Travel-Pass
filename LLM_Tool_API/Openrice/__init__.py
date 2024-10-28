@@ -7,10 +7,13 @@ from .caller import OpenriceApi
 
 class OpenricaApiToolBase(BaseTool):
 
-    openrice: t.ClassVar[OpenriceApi] = OpenriceApi()
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._openrice = OpenriceApi(**kwargs)
+    
+    @property
+    def openrice(self) -> OpenriceApi:
+        return self._openrice
 
 
 class GetOpenriceRestaurantRecommendationTool(OpenricaApiToolBase):
@@ -29,19 +32,19 @@ class GetOpenriceRestaurantRecommendationTool(OpenricaApiToolBase):
         )
         keyword: t.Optional[str] = Field(
             default=None,
-            description="Restaurant search keyward, default None, can be used to narrow down restaurand by keyword, like `dim sum` for dim sum, `bread` of bakery."
+            description="Restaurant search keyword, default None, can be used to narrow down restaurant by keyword, like `dim sum` for dim sum, `bread` for bakery."
         )
         number_of_results: t.Optional[int] = Field(
             default=3,
-            description="Number of search resault, default 3, can be 1 to 10"
+            description="Number of search results, default 3, can be 1 to 10"
         )
-        starting_resault_index: t.Optional[int] = Field(
+        starting_result_index: t.Optional[int] = Field(
             default=0,
-            description="Search resault starting index. Can be used for get next resaults. e.g. number_of_resault=10, starting_resault_index=0, will return first 10 resault - number_of_resault=10, starting_resault_index=1, will return the next 10 resault after the first 10, so on and so fourth."
+            description="Search result starting index. Can be used to get next results. e.g. number_of_results=10, starting_result_index=0, will return first 10 results - number_of_results=10, starting_result_index=1, will return the next 10 results after the first 10, so on and so forth."
         )
         lang: t.Optional[t.Literal["en", "sc", "tc"]] = Field(
             default="en",
-            description="Language of search resault, default, en, can be either, en, sc, tc."
+            description="Language of search result, default, en, can be either, en, sc, tc."
         )
 
     name: str = "Get Openrice Restaurant Recommendation"
@@ -49,7 +52,7 @@ class GetOpenriceRestaurantRecommendationTool(OpenricaApiToolBase):
 District filter and Landmark filter are both used to narrow down restaurant search.
 Places like MTR stations will be in the landmark filter list when not found in District filter. 
 Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool.
-When no input is provided, general recommendataions will be provided."""
+When no input is provided, general recommendations will be provided."""
     args_schema: t.Type[BaseModel] = ToolArgs
 
     def _run(self, **kwargs) -> str:
@@ -59,7 +62,7 @@ When no input is provided, general recommendataions will be provided."""
             landmark_id=kwargs.get('landmark_id'),
             keywords=kwargs.get('keyword'),
             count=kwargs.get('number_of_results', 5),
-            start=kwargs.get('starting_resault_index', 0),
+            start=kwargs.get('starting_result_index', 0),
             lang=kwargs.get('lang', 'en')
         )]
 
@@ -94,13 +97,14 @@ class GetOpenriceLandmarkFilterListTool(OpenricaApiToolBase):
         pass
 
     name: str = "Get Openrice Landmark Filter List"
-    description: str = """Used to get the list of lamdmark filters from Openrice. No input is needed"""
+    description: str = """Used to get the list of landmark filters from Openrice. No input is needed"""
     args_schema:  t.Type[BaseModel] = ToolArgs
 
     def _run(self, **kwargs) -> str:
         headers = ["landmarkId", "associatedDistrictId", "nameEN"]
         values = list(map(
-            lambda l: f"""{l["landmarkId"]},{l["districtId"]},{l["nameLangDict"]["en"]}""",
+            lambda l: f"""{l["landmarkId"]},{
+                l["districtId"]},{l["nameLangDict"]["en"]}""",
             self.openrice.landmarks
         ))
         return ','.join(headers) + "\n" + "\n".join(values)

@@ -1,87 +1,39 @@
 import os
-import json
-import requests
 import inspect
 
-
 from google.oauth2.service_account import Credentials
-from google.cloud import bigquery
-from google.cloud.bigquery.table import RowIterator
 from langchain_google_vertexai import VertexAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-REQUEST_HEADERS = {
-    "accept": "*/*",
-    "accept-language": "en,en-US;q=0.9,en-GB;q=0.8,en-HK;q=0.7,zh-HK;q=0.6,zh;q=0.5",
-    "cache-control": "no-cache",
-    "pragma": "no-cache",
-    "priority": "u=1, i",
-    "sec-ch-ua": "\"Chromium\";v=\"130\", \"Google Chrome\";v=\"130\", \"Not?A_Brand\";v=\"99\"",
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": "\"Windows\"",
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "x-requested-with": "XMLHttpRequest",
-    "Referrer-Policy": "no-referrer-when-downgrade",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
-}
-
-
-def fetch(url: str, params: dict = {}, log_print=False) -> dict | list:
-    if log_print:
-        print('\033[93m' + str("Fetching data from:", url) + '\x1b[0m')
-    return json.loads(requests.request(
-        method=params.get("method", "GET"),
-        url=url,
-        headers=params.get("headers", REQUEST_HEADERS),
-        data=params.get("body", None),
-    ).content)
-
-
-def create_folder_if_not_exists(folder_path):
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-
-
-def write_data(data: dict | list, path: str, log_print=False) -> None:
-    if log_print:
-        print('\033[93m' + "Writing data to:", path + '\x1b[0m')
-    create_folder_if_not_exists(os.path.dirname(path))
-    with open(path, "w") as f:
-        json.dump(data, f, indent=4)
-
-
-def read_json_file(file_path: str, log_print=False) -> dict | list:
-    if log_print:
-        print('\033[93m' + "Reading data from:", file_path + '\x1b[0m')
-    try:
-        with open(file_path, "r") as f:
-            return json.load(f)
-    except:
-        return []
+from ..ExternalIo import fetch, write_file
 
 
 class MTRApi():
 
-    station_data_path = "mtr_data/mtr_stations.json"
-    chroma_db_path = "./mtr_chroma_db"
-    chroma_db_collection = "mtr"
-    mtr_data_csv = "./data/mtr_lines_and_stations.csv"
-    queryColumns = "`Chinese Name`,`English Name`,`Station Code`,`Line Code`,`Station ID`"
     _stations = []
-    verbose = False
 
     def print_log(self, msg: str) -> None:
-        if self.verbose:
-            print('\033[94m' +f"[{inspect.stack()[1][3]}] " + str(msg) + '\x1b[0m')
+        if not self.verbose:
+            return
+        print(f'\033[41;37m[{inspect.stack()[1][3]}] ' + msg + '\x1b[0m')
 
-    def __init__(self, credentials: Credentials, store=True, verbose=False) -> None:
+    def __init__(self,
+                 credentials: Credentials,
+                 store=True,
+                 verbose=False,
+                 chroma_db_path="./chroma_db",
+                 chroma_db_colection="mtr",
+                 data_csv_file_path="./data/mtr_lines_and_stations.csv",
+                 mtr_data_url="https://opendata.mtr.com.hk/data/mtr_lines_and_stations.csv",
+                 **kwargs
+                 ) -> None:
         self.verbose = verbose
-        self.credentials = credentials
-        self.table_name = f"{credentials.project_id}.Transport.MTR"
         self.store = store
+        self.chroma_db_path = chroma_db_path
+        self.chroma_db_collection = chroma_db_colection
+        self.data_csv_file_path = data_csv_file_path
+        self.data_url = mtr_data_url
 
         self.print_log("Initializing Chroma")
         self.embeddings = VertexAIEmbeddings(
@@ -98,11 +50,26 @@ class MTRApi():
             chroma_param["persist_directory"] = self.chroma_db_path
         self.vector_store = Chroma(**chroma_param)
         self.print_log("Finished Initializing Chroma")
+        # Verify Data
+        self.print_log("Verifying Chroma db data exists")
+        docs_in_db = self.vector_store.get(
+            include=["documents"], limit=1)["documents"]
+        if not docs_in_db:
+            self.print_log("Empty Chroma db, loading data")
+            self.load_data()
+        self.print_log("Data Exists in Chroma DB, clear to proceed")
 
-    def load_data(self,):
-        self.print_log("Opening CSV")
-        data_file = open(self.mtr_data_csv, 'r', encoding="utf-8")
-        raw_data = data_file.read()
+    def load_data(self):
+        if not os.path.exists(self.data_csv_file_path) or not self.store:
+            self.print_log("File path {} does not exists, fetching from url".format(
+                self.data_csv_file_path))
+            raw_data = fetch(self.data_url)
+
+            if self.store:
+                write_file(raw_data, self.data_csv_file_path)
+        else:
+            data_file = open(self.data_csv_file_path, 'r', encoding="utf-8")
+            raw_data = data_file.read()
 
         # Replace " with none
         raw_data = raw_data.replace("\"", "")
@@ -180,7 +147,7 @@ class MTRApi():
         self.print_log("Found Station " + str(resault))
         return list(map(MTRApi.format_chroma_doc_to_dict, list(map(lambda d: d.page_content, resault))))
 
-    def get_from_and_to_station_path(self, originStationId: int, destinationStationId: int) -> str:
+    def get_route_suggestion(self, originStationId: int, destinationStationId: int) -> str:
         queryParams = f'lang=E&o={originStationId}&d={destinationStationId}'
         json_data = fetch(
             url="https://www.mtr.com.hk/share/customer/jp/api/HRRoutes/?" + queryParams,
@@ -204,14 +171,20 @@ class MTRApi():
                         f"    {str(category).capitalize()}: Octopus - {dict(prices).get('octopus')}, Single Journey - {dict(prices).get('sj')}")
             text.append("Path:(Sequence of Stations)")
             for path in route['path']:
-                path_text = f"{path['linkType']}: Station: {self.get_station_from_station_id(int(path['ID']))['English Name']}, Time: {path['time']} minutes, {path['linkText'] if path['linkText'] else ''}"
+                path_text = "{}: Station: {}, Time: {} minutes, {}".format(
+                    path['linkType'],
+                    self.get_station_from_station_id(
+                        path['ID'])['English Name'],
+                    path['time'],
+                    path['linkText'] if path['linkText'] else '',
+                )
                 text.append(f"  {path_text}")
 
         return "\n".join(text)
 
 
 if __name__ == "__main__":
-    credentials = Credentials.from_service_account_file('gcp_cred-data.json')
+    credentials = Credentials.from_service_account_file('gcp_cred-ai.json')
     mtr = MTRApi(credentials=credentials, verbose=True)
     # print(mtr.stations)
     # print(mtr.prettify_station(mtr.stations))

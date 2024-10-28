@@ -16,8 +16,8 @@ from langchain_google_community import GoogleSearchAPIWrapper
 from pydantic import BaseModel
 from google.oauth2.service_account import Credentials
 
-from mtr import MTRApi
-from LLM_Tool_API import all as all_llm_tools
+# from mtr import MTRApi
+from LLM_Tool_API import LLMTools
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -223,39 +223,10 @@ class LLMChainToos:
             return 'No query provided for Google Search'
         return search.run(query)
 
-    @staticmethod
-    def get_mtr_stations_info(**kwargs) -> str:
-        credentials_path = os.getenv(
-            "GCP_DATA_SA_CREDENTIAL_PATH", './gcp_cred-data.json')
-        credentials = Credentials.from_service_account_file(credentials_path)
-        mtrApi = MTRApi(credentials=credentials)
-        return mtrApi.prettify_station(mtrApi.stations)
-
-    class GetMtrStationFromName(BaseModel):
-        station_name: str
-
-    @staticmethod
-    def get_mtr_station_from_station_name(station_name: str, **kwargs) -> str:
-        credentials_path = os.getenv(
-            "GCP_DATA_SA_CREDENTIAL_PATH", './gcp_cred-data.json')
-        credentials = Credentials.from_service_account_file(credentials_path)
-        mtrApi = MTRApi(credentials=credentials)
-        station = mtrApi.get_station_from_station_name(station_name)
-        if not station:
-            return f"Station with name {station_name} not found"
-        return mtrApi.prettify_station(station)
-
-    class SearchMtrPathArgs(BaseModel):
-        originStationId: int
-        destinationStationId: int
-
-    @staticmethod
-    def search_mtr_path_between_stations(originStationId: int, destinationStationId: int, **kwargs) -> str:
-        credentials_path = os.getenv(
-            "GCP_DATA_SA_CREDENTIAL_PATH", './gcp_cred-data.json')
-        credentials = Credentials.from_service_account_file(credentials_path)
-        mtrApi = MTRApi(credentials=credentials)
-        return mtrApi.get_from_and_to_station_path(originStationId, destinationStationId)
+    credentials_path = os.getenv(
+        "GCP_AI_SA_CREDENTIAL_PATH", './gcp_cred-ai.json')
+    credentials = Credentials.from_service_account_file(credentials_path)
+    llm_tools = LLMTools(credentials=credentials, verbose=True)
 
     all: list[Tool] = [
         Tool.from_function(
@@ -269,26 +240,8 @@ class LLMChainToos:
             func=perform_google_search,
             description="Search Google for recent results.",
             args_schema=PerformGoogleSearchArgs
-        ),
-        StructuredTool(
-            name="get_mtr_stations_info",
-            func=get_mtr_stations_info,
-            description="Get the list of MTR stations information. Line Station Sequence is the order of the station in the line. Line Station Direction is the direction of the station in the line. No Input Should be provided.",
-            args_schema=EmptyArgs
-        ),
-        StructuredTool(
-            name="search_mtr_path_between_stations",
-            func=search_mtr_path_between_stations,
-            description="Search the path between two MTR stations. Input should be two integers for the originStationId and destinationStationId. The station id can be obtained from the get_mtr_stations_info tool or get_mtr_station_from_station_name tool, when it is not found in the get_mtr_station_from_station_name, try get all the stations using the get_mtr_stations_info tool and find the station id from there, incase typo in the station name.",
-            args_schema=SearchMtrPathArgs
-        ),
-        StructuredTool(
-            name="get_mtr_station_from_station_name",
-            func=get_mtr_station_from_station_name,
-            description="Get the MTR station information from the station name. Input should be a single string for the station name. The station name can be in English or Chinese. The station name should be the exact name of the station. The station name can be obtained from the get_mtr_stations_info tool.",
-            args_schema=GetMtrStationFromName
         )
-    ] + all_llm_tools
+    ] + llm_tools.all
 
 
 class LLMChainModel:
@@ -374,7 +327,7 @@ class ChatLLM:
     def __init__(self,
                  credentials: Credentials,
                  model: str = "gemini-1.5-pro",
-                 temperature: float = 0.5,
+                 temperature: float = 0.1,
                  max_tokens: int = 4096,
                  chatRecordFolderPath: str = './chat_data',
                  chatId: str = None,
