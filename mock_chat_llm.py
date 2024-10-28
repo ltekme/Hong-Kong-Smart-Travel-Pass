@@ -317,62 +317,62 @@ class LLMChainToos:
         Tool.from_function(
             name="get_current_weather",
             func=get_weather_temperture,
-            description="THIS IS REALTIME DATA: Used to get the current weather from loacation. Default Hong Kong. Input should be a single string for the location",
+            description="Used to get the current weather from loacation. Default Hong Kong. Input should be a single string for the location",
             return_direct=True,
         ),
         Tool.from_function(
             name="get_weather_forcast",
             func=get_weather_forcast,
-            description="THIS IS REALTIME DATA: Used to get the 9 day weather forcast from loacation. Default Hong Kong. Input should be a single string for the location",
+            description="Used to get the 9 day weather forcast from loacation. Default Hong Kong. Input should be a single string for the location",
             return_direct=True,
         ),
         Tool.from_function(
             name="get_content_from_url",
             func=fetch_data,
-            description="THIS IS REALTIME DATA: Used to get the content from a url. Input should be a single string for the url",
+            description="Used to get the content from a url. Input should be a single string for the url",
             return_direct=True,
         ),
         StructuredTool(
             name="get_openrice_restaurant_recommendation",
             func=get_openrice_restaurant_recommendation,
-            description="THIS IS REALTIME DATA: Used to get the restaurant recommendation from openrice. Default Hong Kong with no District. The district_id filter can be obtained from get_openrice_districts_filter_list tool. When no district id were found using the get_openrice_districts_filter_list tool, use the get_openrice_landmark_filter_list tool and see if the place exists in that list. The landmark_id filter can be obtained from the get_openrice_landmark_filter_list tool. Places like MTR stations will be in the landmark filter list. Input to this tool is optional. When no input is provided, general recommendataions will be provided. Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool. keyword argument can be used to narrow down the search for the restarant keywords, the keyword is not a search engine, it is used to filter restauract info. Provide the openRiceShortUrl when asked for a specific restaurant.",
+            description="Used to get the restaurant recommendation from openrice. Default Hong Kong with no District. The district_id filter can be obtained from get_openrice_districts_filter_list tool. When no district id were found using the get_openrice_districts_filter_list tool, use the get_openrice_landmark_filter_list tool and see if the place exists in that list. The landmark_id filter can be obtained from the get_openrice_landmark_filter_list tool. Places like MTR stations will be in the landmark filter list. Input to this tool is optional. When no input is provided, general recommendataions will be provided. Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool. keyword argument can be used to narrow down the search for the restarant keywords, the keyword is not a search engine, it is used to filter restauract info. Provide the openRiceShortUrl when asked for a specific restaurant.",
             args_schema=OpenriceRecommendationArgs
         ),
         StructuredTool(
             name="get_openrice_landmark_filter_list",
             func=get_openrice_landmark_filter_list,
-            description="THIS IS REALTIME DATA: Used to get list of landmarks from openrice to be used in the as landmark filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search landmark. If a place not exist in this list, try google searching the location of a place. e,g, amoy plaza is in Kowloon Bay",
+            description="Used to get list of landmarks from openrice to be used in the as landmark filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search landmark. If a place not exist in this list, try google searching the location of a place. e,g, amoy plaza is in Kowloon Bay",
             args_schema=EmptyArgs
         ),
 
         StructuredTool(
             name="get_openrice_districts_filter_list",
             func=get_openrice_districts_filter_list,
-            description="THIS IS REALTIME DATA: Used to get the list of districts from openrice to be used as district filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search districts. When no matching district werre found, try using the get_openrice_landmark_filter_list tool, sometimes the place exists in the landmark filter list. If it sill doesn't exists, use the google_search tool to see if you can get a wider location that exists in the list.",
+            description="Used to get the list of districts from openrice to be used as district filter on get_openrice_restaurant_recommendation. No Input Should be provided. This list is limited to Openrice search districts. When no matching district werre found, try using the get_openrice_landmark_filter_list tool, sometimes the place exists in the landmark filter list. If it sill doesn't exists, use the google_search tool to see if you can get a wider location that exists in the list.",
             args_schema=EmptyArgs
         ),
         StructuredTool(
             name="google_search",
             func=perform_google_search,
-            description="THIS IS REALTIME DATA: Search Google for recent results.",
+            description="Search Google for recent results.",
             args_schema=PerformGoogleSearchArgs
         ),
         StructuredTool(
             name="get_mtr_stations_info",
             func=get_mtr_stations_info,
-            description="THIS IS REALTIME DATA: Get the list of MTR stations information. Line Station Sequence is the order of the station in the line. Line Station Direction is the direction of the station in the line. No Input Should be provided.",
+            description="Get the list of MTR stations information. Line Station Sequence is the order of the station in the line. Line Station Direction is the direction of the station in the line. No Input Should be provided.",
             args_schema=EmptyArgs
         ),
         StructuredTool(
             name="search_mtr_path_between_stations",
             func=search_mtr_path_between_stations,
-            description="THIS IS REALTIME DATA: Search the path between two MTR stations. Input should be two integers for the originStationId and destinationStationId. The station id can be obtained from the get_mtr_stations_info tool or get_mtr_station_from_station_name tool, when it is not found in the get_mtr_station_from_station_name, try get all the stations using the get_mtr_stations_info tool and find the station id from there, incase typo in the station name.",
+            description="Search the path between two MTR stations. Input should be two integers for the originStationId and destinationStationId. The station id can be obtained from the get_mtr_stations_info tool or get_mtr_station_from_station_name tool, when it is not found in the get_mtr_station_from_station_name, try get all the stations using the get_mtr_stations_info tool and find the station id from there, incase typo in the station name.",
             args_schema=SearchMtrPathArgs
         ),
         StructuredTool(
             name="get_mtr_station_from_station_name",
             func=get_mtr_station_from_station_name,
-            description="THIS IS REALTIME DATA: Get the MTR station information from the station name. Input should be a single string for the station name. The station name can be in English or Chinese. The station name should be the exact name of the station. The station name can be obtained from the get_mtr_stations_info tool.",
+            description="Get the MTR station information from the station name. Input should be a single string for the station name. The station name can be in English or Chinese. The station name should be the exact name of the station. The station name can be obtained from the get_mtr_stations_info tool.",
             args_schema=GetMtrStationFromName
         )
     ]
@@ -382,7 +382,7 @@ class LLMChainModel:
 
     # prompt = hub.pull("hwchase17/structured-chat-agent")
     # Clone from hum as I can't be bothered to create another API key
-    system_prompt_template = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n{existing_system_prompt}"""
+    system_prompt_template = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nAll content from tools are real-time data.\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n{existing_system_prompt}"""
 
     tools = LLMChainToos.all
 
