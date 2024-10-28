@@ -18,6 +18,7 @@ from google.oauth2.service_account import Credentials
 
 from openrice import OpenriceApi
 from mtr import MTRApi
+from LLM_Tool_API import all as all_llm_tools
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -204,29 +205,6 @@ class LLMChainToos:
     def fetch_data(url: str, methoad: t.Literal['POST', 'GET'] = 'GET') -> str:
         return requests.request(method=methoad, url=url).content.decode('utf-8')
 
-    @staticmethod
-    def get_weather_forcast(location: str = None) -> str:
-        lang = "en"
-        nineDatForcastUrl = f"https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang={
-            lang}"
-        nineDatForcast = LLMChainToos.fetch_data(nineDatForcastUrl)
-        return nineDatForcast
-
-    @staticmethod
-    def get_weather_temperture(location: str = None) -> str:
-        tempectureUrlMapping = {
-            "en": "https://rss.weather.gov.hk/rss/CurrentWeather.xml",
-            "tc": "https://rss.weather.gov.hk/rss/CurrentWeather_uc.xml"
-        }
-        tempecture = LLMChainToos.fetch_data(
-            tempectureUrlMapping[LLMChainToos.lang])
-        data = str(tempecture)
-        desc_start_string = '<description>\n        <![CDATA['
-        desc_start_index = data.index(
-            desc_start_string) + len(desc_start_string)
-        desc_end_index = data[desc_start_index:].index('</description>')
-        return data[desc_start_index:][:desc_end_index]
-
     class OpenriceRecommendationArgs(BaseModel):
         district_id: t.Optional[int] = None
         landmark_id: t.Optional[int] = None
@@ -315,18 +293,6 @@ class LLMChainToos:
 
     all: list[Tool] = [
         Tool.from_function(
-            name="get_current_weather",
-            func=get_weather_temperture,
-            description="Used to get the current weather from loacation. Default Hong Kong. Input should be a single string for the location",
-            return_direct=True,
-        ),
-        Tool.from_function(
-            name="get_weather_forcast",
-            func=get_weather_forcast,
-            description="Used to get the 9 day weather forcast from loacation. Default Hong Kong. Input should be a single string for the location",
-            return_direct=True,
-        ),
-        Tool.from_function(
             name="get_content_from_url",
             func=fetch_data,
             description="Used to get the content from a url. Input should be a single string for the url",
@@ -375,7 +341,7 @@ class LLMChainToos:
             description="Get the MTR station information from the station name. Input should be a single string for the station name. The station name can be in English or Chinese. The station name should be the exact name of the station. The station name can be obtained from the get_mtr_stations_info tool.",
             args_schema=GetMtrStationFromName
         )
-    ]
+    ] + all_llm_tools
 
 
 class LLMChainModel:

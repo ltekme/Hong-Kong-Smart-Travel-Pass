@@ -31,7 +31,7 @@ REQUEST_HEADERS = {
 
 def fetch(url: str, params: dict = {}, log_print=False) -> dict | list:
     if log_print:
-        print('\033[93m' + "Fetching data from:", url)
+        print('\033[93m' + str("Fetching data from:", url) + '\x1b[0m')
     return json.loads(requests.request(
         method=params.get("method", "GET"),
         url=url,
