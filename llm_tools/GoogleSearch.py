@@ -14,7 +14,7 @@ class PerformGoogleSearchTool(BaseTool):
         )
 
     name: str = "Google Search"
-    description: str = "Used to perform google search to get recent and relevent information. Can be used to lookup anything"
+    description: str = "Used to perform google search to get recent and relevent information. Can be used to lookup anything. If there is somethgin you are not 100% sure, use this to look it up."
     args_schema: t.Type[BaseModel] = ToolArgs
 
     def _run(self, query: str, **kwargs) -> str:

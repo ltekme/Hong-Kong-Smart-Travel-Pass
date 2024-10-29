@@ -113,6 +113,10 @@ class Chat:
             self._chat_messages.append(system_message)
 
     @property
+    def as_list(self) -> list[Message]:
+        return self._chat_messages
+
+    @property
     def as_list_of_lcMessages(self) -> list[HumanMessage | AIMessage | SystemMessage]:
         return [msg.lcMessage for msg in self._chat_messages]
 
@@ -209,6 +213,7 @@ class LLMChainModel:
     system_prompt_template = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nAll content from tools are real-time data.\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n{existing_system_prompt}"""
 
     tools = LLMChainTools.all
+
     def __init__(self,
                  credentials: Credentials,
                  model: str,
@@ -341,7 +346,7 @@ if __name__ == "__main__":
         "GCP_AI_SA_CREDENTIAL_PATH", './gcp_cred-ai.json')
     credentials = Credentials.from_service_account_file(credentials_path)
     chatLLM = ChatLLM(credentials)
-    # chatLLM.chatId = "7b5bb9e7-ceff-42a1-abc4-af6198f96390"
+    chatLLM.chatId = "a5d44788-0954-4a26-bc47-7fb7e2466537"
     while True:
         msg = input("Human: ")
         if msg == "EXIT":
