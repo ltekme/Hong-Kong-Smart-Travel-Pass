@@ -7,6 +7,7 @@ export const App = () => {
     const [imageDataUrls, setImageDataUrls] = useState([]);
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [sendLocation, setSendLocation] = useState(false);
     const fileInputRef = useRef(null);
 
     const handleImageUpload = (event) => {
@@ -25,9 +26,28 @@ export const App = () => {
             .catch(error => console.error("Error reading files: ", error));
     };
 
-    const sendToAPI = () => {
+    const getLocation = () => {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+                (position) => resolve(position.coords),
+                (error) => reject(error),
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 1000,
+                    timeout: 1000,
+                }
+            );
+        });
+    };
+
+    const sendToAPI = async () => {
         setIsLoading(true);
         const humanMessage = { role: "user", content: message, images: imageDataUrls };
+        let context = {}
+        if (sendLocation) {
+            let location = await getLocation();
+            context.location = `${location.latitude},${location.longitude}`
+        }
         fetch(apiUrl, {
             method: "POST",
             headers: {
@@ -35,8 +55,11 @@ export const App = () => {
             },
             body: JSON.stringify({
                 chatId: chatId,
-                message: humanMessage.content,
-                images: humanMessage.images
+                content: {
+                    message: humanMessage.content,
+                    images: humanMessage.images,
+                },
+                context: context,
             }),
         })
             .then(response => response.json())
@@ -59,7 +82,8 @@ export const App = () => {
         API Url: <input onChange={e => setApiUrl(e.target.value)} value={apiUrl} />
         <br />
         Chat ID: <input onChange={e => setChatId(e.target.value)} value={chatId} />
-
+        <br />
+        Send Location: <input type="checkbox" value={sendLocation} onChange={e => setSendLocation(e.target.value)} />
         <hr />
 
         Images: <input
