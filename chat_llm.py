@@ -3,16 +3,14 @@ import json
 import uuid
 import copy
 import base64
-import requests
 import typing as t
+import datetime
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.tools import StructuredTool, Tool
 from langchain_google_vertexai import ChatVertexAI
 from langchain.agents import create_structured_chat_agent, AgentExecutor
 
-from pydantic import BaseModel
 from google.oauth2.service_account import Credentials
 
 # from mtr import MTRApi
@@ -42,7 +40,7 @@ class MessageContentImage:
         return f"data:image/{self.format};base64,{self.data}"
 
     @staticmethod
-    def from_uri(uri: str) -> None:
+    def from_uri(uri: str) -> "MessageContentImage":
         format = uri.split(';')[0].split('/')[1]
         data = uri.split(',')[1]
         return MessageContentImage(format=format, data=data)
@@ -210,7 +208,7 @@ class LLMChainModel:
 
     # prompt = hub.pull("hwchase17/structured-chat-agent")
     # Clone from hum as I can't be bothered to create another API key
-    system_prompt_template = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nAll content from tools are real-time data.\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n{existing_system_prompt}"""
+    system_prompt_template = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nAll content from tools are real-time data.\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n{existing_system_prompt}\n\nAdditional Contexts:{additional_context}"""
 
     tools = LLMChainTools.all
 
@@ -231,7 +229,7 @@ class LLMChainModel:
             region="us-central1",
         )
 
-    def invoke(self, messages: Chat) -> Message:
+    def invoke(self, messages: Chat, context: str) -> Message:
         messages_copy: Chat = copy.deepcopy(messages)
 
         system_message_content = None
@@ -242,6 +240,11 @@ class LLMChainModel:
         last_user_message = messages_copy.last_message
         messages_copy.remove_last_message()
 
+        # additional context for llm
+        full_context = "Current local datetime: {}\n".format(
+            datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"))
+        full_context += context
+
         prompt = ChatPromptTemplate([
             ("system", self.system_prompt_template),
             MessagesPlaceholder('chat_history'),
@@ -250,6 +253,9 @@ class LLMChainModel:
                 "text": "Input: {question}\n\n{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what)"
             }] + [img.as_lcMessageDict for img in last_user_message.content.images])
         ])
+        
+        # for img in last_user_message.content.images:
+        #     print(img.as_lcMessageDict)
 
         agent = create_structured_chat_agent(
             self.llm, self.tools, prompt)
@@ -262,7 +268,8 @@ class LLMChainModel:
         resault = executor.invoke({
             "existing_system_prompt": system_message_content.text,
             "chat_history": messages_copy.as_list_of_lcMessages,
-            "question": last_user_message.content.text
+            "question": last_user_message.content.text,
+            "additional_context": full_context
         })
 
         # Debugging
@@ -289,12 +296,13 @@ class ChatLLM:
 
     def __init__(self,
                  credentials: Credentials,
-                 model: str = "gemini-1.5-pro",
+                 model: str = "gemini-1.5-pro-002",
                  temperature: float = 0.1,
                  max_tokens: int = 4096,
                  chatRecordFolderPath: str = './chat_data',
                  chatId: str = None,
-                 store_chat_records: bool = True):
+                 store_chat_records: bool = True
+                 ) -> None:
         self.llm = LLMChainModel(
             credentials=credentials,
             model=model,
@@ -323,7 +331,7 @@ class ChatLLM:
     def chatRecordFilePath(self) -> str:
         return self.chatRecordFolderPath + "/" + self._chatId + ".json"
 
-    def new_message(self, message: str, images: list[MessageContentImage] = []) -> Message:
+    def new_message(self, message: str, images: list[MessageContentImage] = [], context: str = "") -> Message:
         if not message:
             return Message('', "Please provide a message.")
         if images != []:
@@ -332,7 +340,7 @@ class ChatLLM:
         else:
             self.chatRecords.append(Message('human', message))
 
-        resault = self.llm.invoke(self.chatRecords)
+        resault = self.llm.invoke(self.chatRecords, context)
 
         self.chatRecords.append(resault)
 
