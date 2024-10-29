@@ -62,19 +62,17 @@ class MessageContent:
 class Message:
     def __init__(self, role: t.Literal["ai", "human", "system"], content: MessageContent | str) -> None:
         self.role: t.Literal["ai", "human", "system"] = role
-        if type(content) == str:
-            self.content: MessageContent = MessageContent(content)
         if type(content) == MessageContent:
             self.content: MessageContent = content
-        if not self.content.text:
-            self.content = MessageContent("No input")
+            return
+        self.content: MessageContent = MessageContent(str(content))
 
     @property
     def message_list(self) -> list[dict[str, str]]:
         """Return the human message list in the format of langchain template message"""
         return [{
             "type": "text",
-            "text": self.content.text
+            "text": str(self.content.text)
         }] + [image.as_lcMessageDict for image in self.content.images]
 
     @property
@@ -160,11 +158,13 @@ class Chat:
             return self._chat_messages
 
         except FileNotFoundError:
-            self._chat_messages = [system_message_copy]
+            if system_message_copy is not None:
+                self._chat_messages = [system_message_copy]
             return self._chat_messages
 
         except json.JSONDecodeError:
-            self._chat_messages = [system_message_copy]
+            if system_message_copy is not None:
+                self._chat_messages = [system_message_copy]
             return self._chat_messages
 
     @ property
@@ -208,7 +208,7 @@ class LLMChainModel:
 
     # prompt = hub.pull("hwchase17/structured-chat-agent")
     # Clone from hum as I can't be bothered to create another API key
-    system_prompt_template = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nAll content from tools are real-time data.\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n{existing_system_prompt}\n\nAdditional Contexts:{additional_context}"""
+    system_prompt_template = """{existing_system_prompt}\n\nAdditional Contexts:{additional_context}\n\nYou have access to the following tools:\n\n{tools}\n\nAll content from tools are real-time data.\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation"""
 
     tools = LLMChainTools.all
 
@@ -216,6 +216,7 @@ class LLMChainModel:
                  credentials: Credentials,
                  model: str,
                  temperature: float,
+                 top_p: float,
                  max_tokens: int,
                  ):
         self.llm = ChatVertexAI(
@@ -223,6 +224,7 @@ class LLMChainModel:
             temperature=temperature,
             max_tokens=max_tokens,
             timeout=None,
+            top_p=top_p,
             max_retries=2,
             credentials=credentials,
             project=credentials.project_id,
@@ -253,7 +255,7 @@ class LLMChainModel:
                 "text": "Input: {question}\n\n{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what)"
             }] + [img.as_lcMessageDict for img in last_user_message.content.images])
         ])
-        
+
         # for img in last_user_message.content.images:
         #     print(img.as_lcMessageDict)
 
@@ -266,7 +268,7 @@ class LLMChainModel:
             handle_parsing_errors=True,  # Handle any parsing errors gracefully
         )
         resault = executor.invoke({
-            "existing_system_prompt": system_message_content.text,
+            "existing_system_prompt": system_message_content.text if system_message_content is not None else "",
             "chat_history": messages_copy.as_list_of_lcMessages,
             "question": last_user_message.content.text,
             "additional_context": full_context
@@ -275,8 +277,7 @@ class LLMChainModel:
         # Debugging
         # print(agent.get_prompts()[0])
         # return Message('ai', "debugging output")
-
-        return Message('ai', resault['output'])
+        return Message('ai', MessageContent(resault['output']))
 
 
 class ChatLLM:
@@ -285,9 +286,12 @@ class ChatLLM:
         system_message_string=(
             "You are a very powerful AI. "
             "Context maybe given to assist the assistant in providing better responses. "
-            "Answer the questions to the best of your ability. "
-            "If you don't know the answer, just say you don't know. "
             "For now you and the user is in Hong Kong. "
+            "When asked for direction, provide as much details as possible. "
+            "Use the google search tool to make sure your response are factical and can be sourced. "
+            "You don't know much about the outside word, but with tools you can look up information. "
+            "To provide the most accurate resault use the google search too make sure everyting you say are correct. "
+            "When responding to the user provide as much contenxt as you can since you may need to answer more queries based on your responds. "
         )
     )
     chatRecordFolderPath = './chat_data'
@@ -297,8 +301,9 @@ class ChatLLM:
     def __init__(self,
                  credentials: Credentials,
                  model: str = "gemini-1.5-pro-002",
-                 temperature: float = 0.1,
-                 max_tokens: int = 4096,
+                 temperature: float = 1,
+                 top_p: float = 0.95,
+                 max_tokens: int = 8192,
                  chatRecordFolderPath: str = './chat_data',
                  chatId: str = None,
                  store_chat_records: bool = True
@@ -306,6 +311,7 @@ class ChatLLM:
         self.llm = LLMChainModel(
             credentials=credentials,
             model=model,
+            top_p=top_p,
             temperature=temperature,
             max_tokens=max_tokens
         )

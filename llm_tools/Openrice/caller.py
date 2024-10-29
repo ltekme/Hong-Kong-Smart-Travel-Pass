@@ -97,7 +97,7 @@ class OpenriceApi(object):
         self.verbose_print("Parsing Lamdmark data")
         self._langmarks_data = [{
             "landmarkId": data["landmarkId"],
-            "districtId": data["districtId"],
+            # "districtId": data["districtId"],
             "nameLangDict": {key: data['nameLangDict'][key] for key in self.lang_dict_options},
         } for data in raw_district_landmarks_data["landmarks"]]
 

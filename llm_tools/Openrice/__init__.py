@@ -10,7 +10,7 @@ class OpenricaApiToolBase(BaseTool):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._openrice = OpenriceApi(**kwargs)
-    
+
     @property
     def openrice(self) -> OpenriceApi:
         return self._openrice
@@ -76,13 +76,13 @@ class GetOpenriceDistrictFilterListTool(OpenricaApiToolBase):
         pass
 
     name: str = "Get Openrice Districts Filter List"
-    description: str = """Used to get the list of district filters from Openrice. No input is needed"""
+    description: str = "Used to get the list of district filters from Openrice. No input is needed. When a place is not found in this list, it may be in the landmark list from `Get Openrice Landmark Filter List`"
     args_schema:  t.Type[BaseModel] = ToolArgs
 
     def _run(self, **kwargs) -> str:
         headers = ["districtId", "nameEN"]
         values = list(map(
-            lambda d: f"""{d["districtId"]},{d["nameLangDict"]["en"]}""",
+            lambda d: f"{d['districtId']},{d['nameLangDict']['en']}",
             self.openrice.districts
         ))
         return ','.join(headers) + "\n" + "\n".join(values)
@@ -97,14 +97,13 @@ class GetOpenriceLandmarkFilterListTool(OpenricaApiToolBase):
         pass
 
     name: str = "Get Openrice Landmark Filter List"
-    description: str = """Used to get the list of landmark filters from Openrice. No input is needed"""
+    description: str = "Used to get the list of landmark filters from Openrice. No input is needed. When a place is not found in this list, it may be in the district list from `Get Openrice Districts Filter List`"
     args_schema:  t.Type[BaseModel] = ToolArgs
 
     def _run(self, **kwargs) -> str:
-        headers = ["landmarkId", "associatedDistrictId", "nameEN"]
+        headers = ["landmarkId", "nameEN"]
         values = list(map(
-            lambda l: f"""{l["landmarkId"]},{
-                l["districtId"]},{l["nameLangDict"]["en"]}""",
+            lambda l: f"{l['landmarkId']},{l['nameLangDict']['en']}",
             self.openrice.landmarks
         ))
         return ','.join(headers) + "\n" + "\n".join(values)
