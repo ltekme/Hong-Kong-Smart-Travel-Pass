@@ -86,8 +86,7 @@ class MTRApi():
                 continue
             station_text = ", ".join(
                 map(lambda i: f"{headers[i]}: {station[i]}", range(len(headers))))
-            self.print_log("Adding: " +
-                           station_text + " to Chroma DB")
+            self.print_log(f"Adding: to Chroma DB {station_text.split(',')[2]}")
             documents.append(Document(page_content=station_text))
 
         self.vector_store.add_documents(documents=documents)

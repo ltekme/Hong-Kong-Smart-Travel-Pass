@@ -75,6 +75,6 @@ def write_file(data: str, path: str, log_print=True):
     create_folder_if_not_exists(os.path.dirname(path))
     if log_print:
         print(
-            f'\033[31m[{inspect.stack()[1][3]}] Trying to read data from {path}\x1b[0m')
-    with open(path, 'w') as f:
+            f'\033[31m[{inspect.stack()[1][3]}] Writing data to {path}\x1b[0m')
+    with open(path, 'w', encoding="utf-8") as f: 
         f.write(data)

@@ -26,7 +26,7 @@ class OpenriceApi(object):
     def __init__(self,
                  store_data: bool = True,
                  force_fetch: bool = False,
-                 base_data_path="./openrice_data/",
+                 base_data_path="./data/",
                  verbose: bool = False,
                  **kwargs
                  ) -> None:
