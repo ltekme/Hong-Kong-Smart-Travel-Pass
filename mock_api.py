@@ -101,7 +101,7 @@ def chat_messages() -> JsonResponse:
     ))
 
     # Send to llm
-    chatLLM.chatId = request_json.get('chat_id', str(uuid.uuid4()))
+    chatLLM.chatId = request_json.get('chatId', str(uuid.uuid4()))
     ai_response = chatLLM.new_message(
         message=message, images=images, context=client_context)
 

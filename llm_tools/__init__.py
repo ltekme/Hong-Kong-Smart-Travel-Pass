@@ -3,7 +3,7 @@ from google.oauth2.service_account import Credentials
 from .Weather import *
 from .Openrice import *
 from .MTR import *
-from .GoogleSearch import *
+from .Google import *
 
 
 class LLMTools:
@@ -32,6 +32,8 @@ class LLMTools:
             GetMTRStationByNameTool(
                 credentials=self.credentials, verbose=self.verbose),
 
-            # Google Search
+            # Google
             PerformGoogleSearchTool(),
+            ReverseGeocodeConvertionTool(),
+            GetGeocodeFromPlaces(),
         ]

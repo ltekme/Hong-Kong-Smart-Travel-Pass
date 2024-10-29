@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export const App = () => {
     const [apiUrl, setApiUrl] = useState("http://127.0.0.1:5000");
-    const [chatId, setChatId] = useState(crypto.randomUUID());
+    const [chatId, setChatId] = useState('');
     const [message, setMessage] = useState("");
     const [imageDataUrls, setImageDataUrls] = useState([]);
     const [messages, setMessages] = useState([]);
@@ -26,6 +26,10 @@ export const App = () => {
             .catch(error => console.error("Error reading files: ", error));
     };
 
+    useEffect(() => {
+        setChatId(crypto.randomUUID());
+    }, []);
+
     const getLocation = () => {
         return new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(
@@ -34,7 +38,7 @@ export const App = () => {
                 {
                     enableHighAccuracy: true,
                     maximumAge: 1000,
-                    timeout: 1000,
+                    timeout: 5000,
                 }
             );
         });
@@ -45,8 +49,12 @@ export const App = () => {
         const humanMessage = { role: "user", content: message, images: imageDataUrls };
         let context = {}
         if (sendLocation) {
-            let location = await getLocation();
-            context.location = `${location.latitude},${location.longitude}`
+            try {
+                let location = await getLocation();
+                context.location = `${location.latitude},${location.longitude}`
+            } catch {
+                context.location = "Not Avalable"
+            }
         }
         fetch(apiUrl, {
             method: "POST",
