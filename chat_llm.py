@@ -11,7 +11,6 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.tools import StructuredTool, Tool
 from langchain_google_vertexai import ChatVertexAI
 from langchain.agents import create_structured_chat_agent, AgentExecutor
-from langchain_google_community import GoogleSearchAPIWrapper
 
 from pydantic import BaseModel
 from google.oauth2.service_account import Credentials
@@ -194,54 +193,13 @@ class Chat:
         return None
 
 
-class LLMChainToos:
-    lang = "en"
-
-    class EmptyArgs(BaseModel):
-        pass
-
-    @staticmethod
-    def fetch_data(url: str, methoad: t.Literal['POST', 'GET'] = 'GET') -> str:
-        return requests.request(method=methoad, url=url).content.decode('utf-8')
-
-    class PerformGoogleSearchArgs(BaseModel):
-        query: str
-
-    @staticmethod
-    def perform_google_search(*args, **kwargs) -> str:
-        google_api_key = os.getenv("GOOGLE_SEARCH_API_KEY")
-        google_cse_id = os.getenv("GOOGLE_CSE_ID")
-        if not google_api_key or not google_cse_id:
-            return 'Google API Key or Google CSE ID is not provided. Cannot Perform Google Search'
-        search = GoogleSearchAPIWrapper(
-            google_api_key=google_api_key,
-            google_cse_id=google_cse_id
-        )
-        # Assuming the first positional argument is the query
-        query = args[0] if args else kwargs.get('query')
-        if not query:
-            return 'No query provided for Google Search'
-        return search.run(query)
-
+class LLMChainTools:
+    # Preinitialise Tools
     credentials_path = os.getenv(
         "GCP_AI_SA_CREDENTIAL_PATH", './gcp_cred-ai.json')
     credentials = Credentials.from_service_account_file(credentials_path)
     llm_tools = LLMTools(credentials=credentials, verbose=True)
-
-    all: list[Tool] = [
-        Tool.from_function(
-            name="get_content_from_url",
-            func=fetch_data,
-            description="Used to get the content from a url. Input should be a single string for the url",
-            return_direct=False,
-        ),
-        StructuredTool(
-            name="google_search",
-            func=perform_google_search,
-            description="Search Google for recent results.",
-            args_schema=PerformGoogleSearchArgs
-        )
-    ] + llm_tools.all
+    all = llm_tools.all
 
 
 class LLMChainModel:
@@ -250,8 +208,7 @@ class LLMChainModel:
     # Clone from hum as I can't be bothered to create another API key
     system_prompt_template = """Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tools}\n\nAll content from tools are real-time data.\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation\n\n{existing_system_prompt}"""
 
-    tools = LLMChainToos.all
-
+    tools = LLMChainTools.all
     def __init__(self,
                  credentials: Credentials,
                  model: str,
@@ -289,7 +246,8 @@ class LLMChainModel:
             }] + [img.as_lcMessageDict for img in last_user_message.content.images])
         ])
 
-        agent = create_structured_chat_agent(self.llm, self.tools, prompt)
+        agent = create_structured_chat_agent(
+            self.llm, self.tools, prompt)
         executor = AgentExecutor(
             agent=agent,
             tools=self.tools,
