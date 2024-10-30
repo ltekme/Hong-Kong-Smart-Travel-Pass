@@ -8,9 +8,15 @@ from .Google import *
 
 class LLMTools:
 
-    def __init__(self, credentials: Credentials, verbose=False) -> None:
+    def __init__(self,
+                 credentials: Credentials,
+                 google_api_key: str = None,
+                 google_cse_id: str = None,
+                 verbose=False) -> None:
         self.credentials = credentials
         self.verbose = verbose
+        self.google_api_key = google_api_key or os.getenv("GOOGLE_API_KEY")
+        self.google_cse_id = google_cse_id or os.getenv("GOOGLE_CSE_ID")
 
     @property
     def all(self):
@@ -34,7 +40,14 @@ class LLMTools:
                 credentials=self.credentials, verbose=self.verbose),
 
             # Google
-            PerformGoogleSearchTool(),
-            ReverseGeocodeConvertionTool(),
-            GetGeocodeFromPlaces(),
+            PerformGoogleSearchTool(
+                google_cse_id=self.google_cse_id,
+                google_api_key=self.google_api_key,
+            ),
+            ReverseGeocodeConvertionTool(
+                google_api_key=self.google_api_key,
+            ),
+            GetGeocodeFromPlaces(
+                google_api_key=self.google_api_key,
+            ),
         ]
