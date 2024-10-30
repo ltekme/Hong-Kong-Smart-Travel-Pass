@@ -15,8 +15,10 @@ class GoogleToolBase(BaseTool):
                  google_cse_id: str = None,
                  **kwargs):
         super().__init__(**kwargs)
-        self.google_api_key = google_api_key or os.getenv("GOOGLE_API_KEY")
-        self.google_cse_id = google_cse_id or os.getenv("GOOGLE_CSE_ID")
+        self._google_api_key: str = google_api_key or os.getenv(
+            "GOOGLE_API_KEY")
+        self._google_cse_id: str = google_cse_id or os.getenv(
+            "GOOGLE_CSE_ID")
 
 
 class PerformGoogleSearchTool(GoogleToolBase):
@@ -34,11 +36,11 @@ class PerformGoogleSearchTool(GoogleToolBase):
     args_schema: t.Type[BaseModel] = ToolArgs
 
     def _run(self, query: str, **kwargs) -> str:
-        if not self.google_api_key or not self.google_cse_id:
+        if not self._google_api_key or not self._google_cse_id:
             return 'Cannot Perform Google Search'
         search = GoogleSearchAPIWrapper(
-            google_api_key=self.google_api_key,
-            google_cse_id=self.google_cse_id
+            google_api_key=self._google_api_key,
+            google_cse_id=self._google_cse_id
         )
         return search.run(query)
 
@@ -61,9 +63,9 @@ class ReverseGeocodeConvertionTool(GoogleToolBase):
     args_schema: t.Type[BaseModel] = ToolArgs
 
     def _run(self, latitude: float, longitude: float, **kwargs) -> str:
-        if not self.google_api_key:
+        if not self._google_api_key:
             return "Cannot Perform Reverse Geocode Search"
-        maps = googlemaps.Client(key=self.google_api_key)
+        maps = googlemaps.Client(key=self._google_api_key)
         resault = maps.reverse_geocode((latitude, longitude))
         return "\n".join(list(map(lambda a: a['formatted_address'], resault)))
 
@@ -83,9 +85,9 @@ class GetGeocodeFromPlaces(GoogleToolBase):
     args_schema: t.Type[BaseModel] = ToolArgs
 
     def _run(self, place: str, **kwargs) -> t.Tuple[int, int]:
-        if not self.google_api_key:
+        if not self._google_api_key:
             return "Cannot Perform Reverse Geocode Search"
-        maps = googlemaps.Client(key=self.google_api_key)
+        maps = googlemaps.Client(key=self._google_api_key)
         geocode_result = maps.geocode(place)
         location = None
         if geocode_result:
