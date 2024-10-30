@@ -81,12 +81,13 @@ class MTRApi():
 
         # Format CSV to Text Document
         documents = []
+
+        self.print_log(f"Adding data to chroma db")
         for station in stations:
             if len(station) < 2 or station[0] == "":
                 continue
             station_text = ", ".join(
                 map(lambda i: f"{headers[i]}: {station[i]}", range(len(headers))))
-            self.print_log(f"Adding: to Chroma DB {station_text.split(',')[2]}")
             documents.append(Document(page_content=station_text))
 
         self.vector_store.add_documents(documents=documents)

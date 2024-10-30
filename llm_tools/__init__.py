@@ -20,9 +20,10 @@ class LLMTools:
             GetCurrentWeatherTempetureTool(),
 
             # OpenRice
-            GetOpenriceRestaurantRecommendationTool(verbose=self.verbose),
-            GetOpenriceDistrictFilterListTool(verbose=self.verbose),
-            GetOpenriceLandmarkFilterListTool(verbose=self.verbose),
+            GetOpenriceRestaurantRecommendationTool(
+                credentials=self.credentials, verbose=self.verbose),
+            GetOpenriceFilterTool(
+                credentials=self.credentials, verbose=self.verbose),
 
             # MTR
             GetAllMTRStationInfoTool(

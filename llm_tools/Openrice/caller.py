@@ -1,6 +1,11 @@
 import os
 import inspect
 
+from google.oauth2.service_account import Credentials
+from langchain_google_vertexai import VertexAIEmbeddings
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
+
 from ..ExternalIo import fetch, write_json_file, read_json_file
 
 
@@ -12,8 +17,6 @@ class OpenriceApi(object):
 
     lang_dict_options: dict = ["en", "tc", "sc"]
 
-    base_data_path = "./openrice_data/"
-
     _district_data: list = []
     _langmarks_data: list = []
     _price_range_data: list = []
@@ -24,29 +27,60 @@ class OpenriceApi(object):
         print(f'\033[43;30m[{inspect.stack()[1][3]}] ' + msg + '\x1b[0m')
 
     def __init__(self,
+                 credentials: Credentials,
                  store_data: bool = True,
                  force_fetch: bool = False,
                  base_data_path="./data/",
                  verbose: bool = False,
+                 chroma_db_path="./chroma_db",
+                 chroma_db_collection_prefix="fuckingrice",
                  **kwargs
                  ) -> None:
         self.store_data = store_data
         self.force_fetch = force_fetch
         self.base_data_path = base_data_path
+        self.chroma_db_path = chroma_db_path
+        self.chroma_db_collection_prefix = chroma_db_collection_prefix
         self.raw_price_range_data_path = base_data_path + "openrice_priceRange_raw.json"
         self.price_range_data_path = base_data_path + "openrice_priceRange.json"
         self.raw_district_data_path = base_data_path + "openrice_district_raw.json"
         self.district_data_path = base_data_path + "openrice_district.json"
         self.landmarks_data_path = base_data_path + "openrice_landmarks.json"
         self.verbose = verbose
+        self.verbose_print("Initializing openrice data api")
 
-        self.verbose_print("Initializing Openrice Data Api")
-        self.verbose_print("Store data: {}".format(self.store_data))
-        self.verbose_print("Force fetch: {}".format(self.force_fetch))
+        # Init Chroma
+        self.verbose_print("Initializing openrice data chroma db")
+        self.embeddings = VertexAIEmbeddings(
+            credentials=credentials,
+            project=credentials.project_id,
+            model_name="text-multilingual-embedding-002",
+        )
+        chroma_param = {
+            "collection_name": self.chroma_db_collection_prefix,
+            "embedding_function": self.embeddings,
+        }
+        if self.store_data:
+            self.verbose_print("openrice chroma presist directory enabled")
+            chroma_param["persist_directory"] = self.chroma_db_path
+        self.vector_store = Chroma(**chroma_param)
         self.fetch_price_range_data()
         self.fetch_district_and_landmark_data()
 
     def fetch_district_and_landmark_data(self):
+        self.verbose_print("Attempt get landmark data from chroma")
+        landmark_chroma = self.vector_store.get(
+            where_document={"$contains": "landmarkId"},
+            include=['documents'],
+            limit=1
+        )['documents']
+        self.verbose_print("Attempt get district data from chroma")
+        district_chroma = self.vector_store.get(
+            where_document={"$contains": "districtId"},
+            include=['documents'],
+            limit=1
+        )['documents']
+
         # Use cached data
         if self.store_data and not self.force_fetch:
             self.verbose_print(
@@ -58,61 +92,93 @@ class OpenriceApi(object):
                 self.verbose_print(
                     f"Content Loaded from {self.base_data_path}"
                 )
-                return
 
-        # Get raw data
-        raw_district_landmarks_data = None
-        if self.force_fetch or not os.path.exists(self.raw_district_data_path):
-            self.verbose_print(
-                "Existing raw data not found in {} or Force Fetch Enabled. Fetching data from API."
-                .format(self.raw_district_data_path)
-            )
-            raw_district_landmarks_data = fetch(
-                self.DISTRICT_LANDMARKS_DATA_URL
-            )
-        else:
-            self.verbose_print(
-                "Raw data path {} exists, try loading data."
-                .format(self.raw_district_data_path)
-            )
-            raw_district_landmarks_data = read_json_file(
-                self.raw_district_data_path
-            )
-            if not raw_district_landmarks_data:
+        if not self._district_data or self._langmarks_data:
+            # Get raw data
+            raw_district_landmarks_data = None
+            if self.force_fetch or not os.path.exists(self.raw_district_data_path):
                 self.verbose_print(
-                    "Empty raw data in {}, fetching from api."
+                    "Existing raw data not found in {} or Force Fetch Enabled. Fetching data from API."
                     .format(self.raw_district_data_path)
                 )
                 raw_district_landmarks_data = fetch(
                     self.DISTRICT_LANDMARKS_DATA_URL
                 )
+            else:
+                self.verbose_print(
+                    "Raw data path {} exists, try loading data."
+                    .format(self.raw_district_data_path)
+                )
+                raw_district_landmarks_data = read_json_file(
+                    self.raw_district_data_path
+                )
+                if not raw_district_landmarks_data:
+                    self.verbose_print(
+                        "Empty raw data in {}, fetching from api."
+                        .format(self.raw_district_data_path)
+                    )
+                    raw_district_landmarks_data = fetch(
+                        self.DISTRICT_LANDMARKS_DATA_URL
+                    )
 
-        # Parse data
-        self.verbose_print("Parsing District data")
-        self._district_data = [{
-            "districtId": data["districtId"],
-            "nameLangDict": {key: data['nameLangDict'][key] for key in self.lang_dict_options},
-        } for data in raw_district_landmarks_data["districts"]]
+            # Parse data
+            self.verbose_print("Parsing District data")
+            self._district_data = [{
+                "districtId": data["districtId"],
+                "nameLangDict": {key: data['nameLangDict'][key] for key in self.lang_dict_options},
+            } for data in raw_district_landmarks_data["districts"]]
 
-        self.verbose_print("Parsing Lamdmark data")
-        self._langmarks_data = [{
-            "landmarkId": data["landmarkId"],
-            # "districtId": data["districtId"],
-            "nameLangDict": {key: data['nameLangDict'][key] for key in self.lang_dict_options},
-        } for data in raw_district_landmarks_data["landmarks"]]
+            self.verbose_print("Parsing Lamdmark data")
+            self._langmarks_data = [{
+                "landmarkId": data["landmarkId"],
+                # "districtId": data["districtId"],
+                "nameLangDict": {key: data['nameLangDict'][key] for key in self.lang_dict_options},
+            } for data in raw_district_landmarks_data["landmarks"]]
 
-        # Store data
-        if self.store_data:
-            self.verbose_print("Storage enabled, writing data to file.")
-            write_json_file(raw_district_landmarks_data,
-                            self.raw_district_data_path)
-            write_json_file(self._district_data, self.district_data_path)
-            write_json_file(self._langmarks_data, self.landmarks_data_path)
+            # Store data
+            if self.store_data:
+                self.verbose_print("Storage enabled, writing data to file.")
+                write_json_file(raw_district_landmarks_data,
+                                self.raw_district_data_path)
+                write_json_file(self._district_data, self.district_data_path)
+                write_json_file(self._langmarks_data, self.landmarks_data_path)
 
-        return self.districts
+        # Verify Chroma Data
+        self.verbose_print("checking chroma db for district data.")
+        if not district_chroma or self.force_fetch:
+            self.verbose_print(
+                "chroma has no district data, or force fetch is enabled. adding data to chroma db.")
+            self.vector_store.add_documents(list(map(lambda doc: Document(
+                'districtId:{}, nameEN: {}, nameTC: {}, nameSC: {}'.format(
+                    doc["districtId"],
+                    doc["nameLangDict"]["en"],
+                    doc["nameLangDict"]["tc"],
+                    doc["nameLangDict"]["sc"],
+                )
+            ), self._district_data)))
+            self.verbose_print("added district data")
+
+        self.verbose_print("checking chroma db for landmark data.")
+        if not landmark_chroma or self.force_fetch:
+            self.verbose_print(
+                "chroma db has no landmark data, or force fetch is enabled. adding data to chroma db.")
+            self.vector_store.add_documents(list(map(lambda doc: Document(
+                'landmarkId:{}, nameEN: {}, nameTC: {}, nameSC: {}'.format(
+                    doc["landmarkId"],
+                    doc["nameLangDict"]["en"],
+                    doc["nameLangDict"]["tc"],
+                    doc["nameLangDict"]["sc"],
+                )
+            ), self._langmarks_data)))
+            self.verbose_print("added landmark data")
 
     def fetch_price_range_data(self):
         # Use cached data
+        price_range_chroma = self.vector_store.get(
+            where_document={"$contains": "priceRangeId"},
+            include=['documents'],
+            limit=1
+        )['documents']
         if self.store_data and not self.force_fetch:
             self.verbose_print(
                 f"Try Fetching data from {self.price_range_data_path}"
@@ -122,47 +188,60 @@ class OpenriceApi(object):
                 self.verbose_print(
                     f"Content Loaded from {self.price_range_data_path}"
                 )
-                return self._price_range_data
 
-        # Get raw data
-        raw_price_range_data = None
-        if self.force_fetch or not os.path.exists(self.raw_price_range_data_path):
-            self.verbose_print(
-                "Existing raw data not found in {} or Force Fetch Enabled. Fetching data from API."
-                .format(self.raw_price_range_data_path)
-            )
-            raw_price_range_data = fetch(self.PRICE_RANGE_DATA_URL)
-        else:
-            self.verbose_print(
-                "Raw data path {} exists, try loading data."
-                .format(self.raw_price_range_data_path)
-            )
-            raw_price_range_data = read_json_file(
-                self.raw_price_range_data_path
-            )
-            if not raw_price_range_data:
+        if not self._price_range_data:
+            # Get raw data
+            raw_price_range_data = None
+            if self.force_fetch or not os.path.exists(self.raw_price_range_data_path):
                 self.verbose_print(
-                    "Empty raw data in {}, fetching from api."
+                    "Existing raw data not found in {} or Force Fetch Enabled. Fetching data from API."
                     .format(self.raw_price_range_data_path)
                 )
                 raw_price_range_data = fetch(self.PRICE_RANGE_DATA_URL)
+            else:
+                self.verbose_print(
+                    "Raw data path {} exists, try loading data."
+                    .format(self.raw_price_range_data_path)
+                )
+                raw_price_range_data = read_json_file(
+                    self.raw_price_range_data_path
+                )
+                if not raw_price_range_data:
+                    self.verbose_print(
+                        "Empty raw data in {}, fetching from api."
+                        .format(self.raw_price_range_data_path)
+                    )
+                raw_price_range_data = fetch(self.PRICE_RANGE_DATA_URL)
 
-        # Parse data
-        self.verbose_print("Parsing PriceRange data")
-        self._price_range_data = [{
-            "rangeId": data["priceRangeId"],
-            "nameId": f"from-{data['rangeStart']}-to-{data['rangeEnd']}",
-            "nameLangDict": {key: data['nameLangDict'][key] for key in self.lang_dict_options},
-        } for data in raw_price_range_data["regions"]['0']['priceRanges']]
+            # Parse data
+            self.verbose_print("Parsing PriceRange data")
+            self._price_range_data = [{
+                "priceRangeId": data["priceRangeId"],
+                "nameLangDict": {key: data['nameLangDict'][key] for key in self.lang_dict_options},
+            } for data in raw_price_range_data["regions"]['0']['priceRanges']]
 
-        # Store data
-        if self.store_data:
-            self.verbose_print("Storage enabled, writing data to file.")
-            write_json_file(raw_price_range_data,
-                            self.raw_price_range_data_path)
-            write_json_file(self._price_range_data, self.price_range_data_path)
+            # Store data
+            if self.store_data:
+                self.verbose_print("Storage enabled, writing data to file.")
+                write_json_file(raw_price_range_data,
+                                self.raw_price_range_data_path)
+                write_json_file(self._price_range_data,
+                                self.price_range_data_path)
 
-        return self._price_range_data
+        # Verify Chroma Data
+        self.verbose_print("checking chroma db for landmark data.")
+        if not price_range_chroma or self.force_fetch:
+            self.verbose_print(
+                "chroma has no price range data, or force fetch is enabled")
+            self.vector_store.add_documents(list(map(lambda doc: Document(
+                'priceRangeId:{}, nameEN: {}, nameTC: {}, nameSC: {}'.format(
+                    doc["priceRangeId"],
+                    doc["nameLangDict"]["en"],
+                    doc["nameLangDict"]["tc"],
+                    doc["nameLangDict"]["sc"],
+                )
+            ), self._price_range_data)))
+            self.verbose_print("added price range data")
 
     @property
     def districts(self) -> list:
@@ -190,7 +269,7 @@ class OpenriceApi(object):
     def get_price_range_text_from_id(self, price_range_id: int, lang: str = "en") -> str | None:
         self.verbose_print(f"Getting price range id: {price_range_id}")
         for price_range in self.price_ranges:
-            if price_range["rangeId"] == price_range_id:
+            if price_range["priceRangeId"] == price_range_id:
                 return price_range["nameLangDict"][lang]
         return None
 
@@ -199,15 +278,6 @@ class OpenriceApi(object):
         for district in self.districts:
             if district["districtId"] == district_id:
                 return district["nameLangDict"][lang]
-        return None
-
-    def get_district_id_from_text(self, district_text: int, lang: str = "en") -> str | None:
-        self.verbose_print(
-            f"Getting district from district text: {district_text}"
-        )
-        for district in self.districts:
-            if district_text in district["nameLangDict"][lang]:
-                return district["districtId"]
         return None
 
     def get_landmark_text_from_id(self, landmark_id: int, lang: str = "en") -> str | None:
@@ -219,14 +289,16 @@ class OpenriceApi(object):
                 return landmark["nameLangDict"][lang]
         return None
 
-    def get_langmark_id_from_text(self, landmark_text: int, lang: str = "en") -> str | None:
+    def search_filter(self, place: str, count: int = 4) -> str | None:
         self.verbose_print(
-            f"Getting landmark from text: {landmark_id}"
+            f"Getting filter: {place}"
         )
-        for landmark in self.landmarks:
-            if landmark_text in landmark["nameLangDict"][lang]:
-                return landmark["landmarkId"]
-        return None
+        resault = self.vector_store.similarity_search(k=count, query=place)
+        if resault:
+            self.verbose_print(
+                f"Got resault {resault}"
+            )
+            return "\n".join(list(map(lambda r: r.page_content, resault)))
 
     def search(
         self,
@@ -238,8 +310,8 @@ class OpenriceApi(object):
         count=3,
     ) -> list:
 
-        district_ids = [district["districtId"] for district in self.districts]
-        landmark_ids = [landmark["landmarkId"] for landmark in self.landmarks]
+        district_ids = list(map(lambda l: l["districtId"], self.districts))
+        landmark_ids = list(map(lambda l: l["landmarkId"], self.landmarks))
 
         search_param = ""
 
@@ -321,21 +393,23 @@ class OpenriceApi(object):
 
 if __name__ == "__main__":
     openriceApi = OpenriceApi()
-    district_id = openriceApi.get_district_id_from_text("Central", "en")
-    landmark_id = openriceApi.get_langmark_id_from_text("IFC", "en")
-    resaults = openriceApi.search(
-        # keywords="麵包",
-        start=0,
-        count=3,
-        # landmark_id=landmark_id,
-        # district_id=district_id,
-        landmark_id=3020,
-        lang="en",  # used to specify the language of the resaults
-    )
-    for resault in resaults:
-        print('-'*100)
-        print(openriceApi.prettify(resault))
-        print('-'*100)
+    # district_id = openriceApi.get_district_id_from_text("Central", "en")
+    # landmark_id = openriceApi.get_langmark_id_from_text("IFC", "en")
+    # resaults = openriceApi.search(
+    #     # keywords="麵包",
+    #     start=0,
+    #     count=3,
+    #     # landmark_id=landmark_id,
+    #     # district_id=district_id,
+    #     landmark_id=3020,
+    #     lang="en",  # used to specify the language of the resaults
+    # )
+    # for resault in resaults:
+    #     print('-'*100)
+    #     print(openriceApi.prettify(resault))
+    #     print('-'*100)
+
+    openriceApi.search_filter("Central")
 
     # print(openriceApi.landmarks)
     # Check id uniqueness

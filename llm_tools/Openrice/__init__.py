@@ -24,11 +24,11 @@ class GetOpenriceRestaurantRecommendationTool(OpenricaApiToolBase):
     class ToolArgs(BaseModel):
         district_id: t.Optional[int] = Field(
             default=None,
-            description="District filter id, default None, can be get from `Get Openrice Districts Filter List` tool. Can be used to narrow down restaurant search district. If a place is not found in the district filter list, try the landmark list. Only input id from district filter list into this field."
+            description="District filter id, default None, can be get from `Get Openrice Filters` tool. Can be used to narrow down restaurant search district. Only input id from district filter into this field."
         )
         landmark_id: t.Optional[int] = Field(
             default=None,
-            description="Landmark filter id, default None, can be get from `Get Openrice Landmark Filter List` tool. Can be used to narrow down restaurant search district. If a place is not found in the landmark filter list, try the district list for a wider area search. Only input id from landmark filter list into this field."
+            description="Landmark filter id, default None, can be get from `Get Openrice Filters` tool. Can be used to narrow down restaurant search district. Only input id from landmark filter into this field."
         )
         keyword: t.Optional[str] = Field(
             default=None,
@@ -49,8 +49,7 @@ class GetOpenriceRestaurantRecommendationTool(OpenricaApiToolBase):
 
     name: str = "Get Openrice Restaurant Recommendation"
     description: str = """Used to get restaurant recommendation from Openrice. Defaults, location Hong Kong, no specific district, no specific landmark.
-District filter and Landmark filter are both used to narrow down restaurant search.
-Places like MTR stations will be in the landmark filter list when not found in District filter. 
+District filter id and Landmark filter id can both be used to narrow down restaurant search area.
 Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool.
 When no input is provided, general recommendations will be provided."""
     args_schema: t.Type[BaseModel] = ToolArgs
@@ -67,43 +66,19 @@ When no input is provided, general recommendations will be provided."""
         )]
 
 
-class GetOpenriceDistrictFilterListTool(OpenricaApiToolBase):
+class GetOpenriceFilterTool(OpenricaApiToolBase):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     class ToolArgs(BaseModel):
-        pass
+        place: str = Field(
+            description="The place to get openrice filter."
+        )
 
-    name: str = "Get Openrice Districts Filter List"
-    description: str = "Used to get the list of district filters from Openrice. No input is needed. When a place is not found in this list, it may be in the landmark list from `Get Openrice Landmark Filter List`"
+    name: str = "Get Openrice Filters"
+    description: str = "Used to get the district or landmark filters if from Openrice. This tool returns a list of landmark id or district id to sbe used in the `Get Openrice Restaurant Recommendation` tool."
     args_schema:  t.Type[BaseModel] = ToolArgs
 
-    def _run(self, **kwargs) -> str:
-        headers = ["districtId", "nameEN"]
-        values = list(map(
-            lambda d: f"{d['districtId']},{d['nameLangDict']['en']}",
-            self.openrice.districts
-        ))
-        return ','.join(headers) + "\n" + "\n".join(values)
-
-
-class GetOpenriceLandmarkFilterListTool(OpenricaApiToolBase):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    class ToolArgs(BaseModel):
-        pass
-
-    name: str = "Get Openrice Landmark Filter List"
-    description: str = "Used to get the list of landmark filters from Openrice. No input is needed. When a place is not found in this list, it may be in the district list from `Get Openrice Districts Filter List`"
-    args_schema:  t.Type[BaseModel] = ToolArgs
-
-    def _run(self, **kwargs) -> str:
-        headers = ["landmarkId", "nameEN"]
-        values = list(map(
-            lambda l: f"{l['landmarkId']},{l['nameLangDict']['en']}",
-            self.openrice.landmarks
-        ))
-        return ','.join(headers) + "\n" + "\n".join(values)
+    def _run(self, place: str, **kwargs) -> str:
+        return self.openrice.search_filter(place)
