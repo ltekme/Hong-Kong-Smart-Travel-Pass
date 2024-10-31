@@ -1,5 +1,27 @@
 import { useState, useRef, useEffect } from "react";
 
+
+export const CascatingTextOutput = ({ text }) => {
+    const [textDisplayed, setTextDisplayed] = useState('');
+
+    const getRandomDelay = () => 20;// Math.floor(Math.random() * (50 - 10 + 1)) + 10;
+
+    useEffect(() => {
+        const setText = async () => {
+            let displayTexts = "";
+            for (const char of text.split("")) {
+                displayTexts += char
+                setTextDisplayed(displayTexts);
+                await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
+            }
+        }
+        setText();
+    }, [text]);
+
+    return (<span>{textDisplayed}</span>);
+}
+
+
 export const App = () => {
     const [apiUrl, setApiUrl] = useState("http://127.0.0.1:5000");
     const [chatId, setChatId] = useState('');
@@ -128,7 +150,7 @@ export const App = () => {
                 {messages.map((msg, index) => (
                     <tr key={index}>
                         <td>{msg.role}</td>
-                        <td>{msg.content}</td>
+                        <td>{<CascatingTextOutput text={msg.content} />}</td>
                         <td>
                             {msg.images.map((url, imgIndex) => (
                                 <img key={imgIndex} src={url} alt={`Preview ${imgIndex}`} style={{ maxWidth: "100px", margin: "10px" }} />

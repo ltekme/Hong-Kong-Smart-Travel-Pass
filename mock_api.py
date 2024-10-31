@@ -90,13 +90,14 @@ def chat_messages() -> JsonResponse:
         return response
 
     # process context
-    client_context = ""
-    for co in context.keys():
-        client_context += f"{co}: {context[co]}"
+    client_context = "\n".join(list(map(
+        lambda co: f"{co}: {context[co]}",
+        context.keys()
+    )))
 
     # Expected images is a list of string containing src data url for image
     images = list(map(
-        lambda img: chat_llm.MessageContentImage.from_uri(img),
+        lambda img: chat_llm.MessageContentMedia.from_uri(img),
         images
     ))
 

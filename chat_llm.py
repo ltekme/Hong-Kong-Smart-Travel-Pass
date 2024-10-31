@@ -25,25 +25,20 @@ load_dotenv()
 # need to be set in the .env file
 
 
-class MessageContentImage:
-    def __init__(self, format: str, data: str) -> None:
+class MessageContentMedia:
+    def __init__(self, format: str, data: str, media_type="image") -> None:
         """ Message content image class
         format: string representation of image format => ['jpg', 'png', ...]
         data: string representation of image data in base64 fomat => ['8nascCaAX==']
         """
         self.format = format
         self.data = data
+        self.media_type = media_type
 
     @property
     def uri(self) -> str:
         """Return the image uri in the format of JS data as URL"""
-        return f"data:image/{self.format};base64,{self.data}"
-
-    @staticmethod
-    def from_uri(uri: str) -> "MessageContentImage":
-        format = uri.split(';')[0].split('/')[1]
-        data = uri.split(',')[1]
-        return MessageContentImage(format=format, data=data)
+        return f"data:{self.media_type}/{self.format};base64,{self.data}"
 
     @property
     def as_lcMessageDict(self) -> dict:
@@ -52,9 +47,20 @@ class MessageContentImage:
             "image_url": {"url": self.uri}
         }
 
+    @staticmethod
+    def from_uri(uri: str) -> "MessageContentMedia":
+        if not uri.startswith('data:'):
+            ##TODO: fetch data from url or something else
+            pass
+        header = uri.split(';')[0].split('/')
+        format = header[1]
+        media_type = header[0].split(':')[1]
+        data = uri.split(',')[1]
+        return MessageContentMedia(format=format, data=data, media_type=media_type)
+
 
 class MessageContent:
-    def __init__(self, text: str, images: list[MessageContentImage] = []) -> None:
+    def __init__(self, text: str, images: list[MessageContentMedia] = []) -> None:
         self.text = text
         self.images = images
 
@@ -144,7 +150,7 @@ class Chat:
                         message_content_text = content['text']
                     if content['type'] == 'image_url':
                         message_content_images.append(
-                            MessageContentImage.from_uri(content['image_url']['url']))
+                            MessageContentMedia.from_uri(content['image_url']['url']))
 
                 messages.append(Message(
                     role=msg['role'],
@@ -337,7 +343,7 @@ class ChatLLM:
     def chatRecordFilePath(self) -> str:
         return self.chatRecordFolderPath + "/" + self._chatId + ".json"
 
-    def new_message(self, message: str, images: list[MessageContentImage] = [], context: str = "") -> Message:
+    def new_message(self, message: str, images: list[MessageContentMedia] = [], context: str = "") -> Message:
         if not message:
             return Message('', "Please provide a message.")
         if images != []:
@@ -378,7 +384,7 @@ if __name__ == "__main__":
                     break
                 with open(image_path, 'rb') as f:
                     images_content.append(
-                        MessageContentImage(
+                        MessageContentMedia(
                             format=image_path.split('.')[-1],
                             data=base64.b64encode(f.read()).decode('ASCII')))
             msg.replace(':image', '')
