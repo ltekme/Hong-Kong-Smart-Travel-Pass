@@ -16,7 +16,7 @@ class MTRApi():
     def print_log(self, msg: str) -> None:
         if not self.verbose:
             return
-        print(f'\033[41;37m[{inspect.stack()[1][3]}] ' + msg + '\x1b[0m')
+        print(f'\033[41;37m[mtr][{inspect.stack()[1][3]}] ' + msg + '\x1b[0m')
 
     def __init__(self,
                  credentials: Credentials,

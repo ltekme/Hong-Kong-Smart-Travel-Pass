@@ -13,12 +13,20 @@ class GoogleToolBase(BaseTool):
     def __init__(self,
                  google_api_key: str = None,
                  google_cse_id: str = None,
+                 verbose: bool = False,
                  **kwargs):
         super().__init__(**kwargs)
         self._google_api_key: str = google_api_key or os.getenv(
             "GOOGLE_API_KEY")
         self._google_cse_id: str = google_cse_id or os.getenv(
             "GOOGLE_CSE_ID")
+        self.verbose = verbose
+
+    def print_log(self, msg: str):
+        if self.verbose:
+            print(
+                "\033[44;97m[Google]" + str(msg) + "\033[0m"
+            )
 
 
 class PerformGoogleSearchTool(GoogleToolBase):
@@ -37,12 +45,16 @@ class PerformGoogleSearchTool(GoogleToolBase):
 
     def _run(self, query: str, **kwargs) -> str:
         if not self._google_api_key or not self._google_cse_id:
+            self.print_log("No google api key defined, returning not avalable")
             return 'Cannot Perform Google Search'
         search = GoogleSearchAPIWrapper(
             google_api_key=self._google_api_key,
             google_cse_id=self._google_cse_id
         )
-        return search.run(query)
+        self.print_log(f"Searching {query}")
+        resault = search.run(query)
+        self.print_log(f"Got {resault}")
+        return resault
 
 
 class ReverseGeocodeConvertionTool(GoogleToolBase):
@@ -64,10 +76,14 @@ class ReverseGeocodeConvertionTool(GoogleToolBase):
 
     def _run(self, latitude: float, longitude: float, **kwargs) -> str:
         if not self._google_api_key:
+            self.print_log("No google api key defined, returning not avalable")
             return "Cannot Perform Reverse Geocode Search"
+        self.print_log(f"Finding {longitude}, {latitude}")
         maps = googlemaps.Client(key=self._google_api_key)
         resault = maps.reverse_geocode((latitude, longitude))
-        return "\n".join(list(map(lambda a: a['formatted_address'], resault)))
+        addresses = list(map(lambda a: a['formatted_address'], resault))
+        self.print_log("Got addresses" + addresses)
+        return "\n".join(addresses)
 
 
 class GetGeocodeFromPlaces(GoogleToolBase):
@@ -86,6 +102,7 @@ class GetGeocodeFromPlaces(GoogleToolBase):
 
     def _run(self, place: str, **kwargs) -> t.Tuple[int, int]:
         if not self._google_api_key:
+            self.print_log("No google api key defined, returning not avalable")
             return "Cannot Perform Reverse Geocode Search"
         maps = googlemaps.Client(key=self._google_api_key)
         geocode_result = maps.geocode(place)
@@ -93,5 +110,7 @@ class GetGeocodeFromPlaces(GoogleToolBase):
         if geocode_result:
             location = geocode_result[0]['geometry']['location']
         if location:
-            return location["lat"], location["lng"]
+            geolocation = location["lat"], location["lng"]
+            self.print_log("got location " + geolocation)
+            return geolocation
         return None

@@ -5,7 +5,25 @@ from langchain_core.tools import BaseTool
 from .ExternalIo import fetch
 
 
-class GetWeatherForcastTool(BaseTool):
+class WeatherToolBase(BaseTool):
+
+    def print_log(self, msg: str) -> None:
+        if self.verbose:
+            print("\033[47m\033[34m[Hong Kong Observatory] " +
+                  str(msg) +
+                  "\033[0m")
+
+    def __init__(self,
+                 verbose: bool = False,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.verbose = verbose
+
+
+class GetWeatherForcastTool(WeatherToolBase):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     class ToolArgs(BaseModel):
         pass
@@ -15,10 +33,14 @@ class GetWeatherForcastTool(BaseTool):
     args_schema: t.Type[BaseModel] = ToolArgs
 
     def _run(self, **kwargs) -> str:
+        self.print_log("Getting current weather tempecture")
         return "JSON data fetched from hong kong observatory API" + str(fetch(f"https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=en"))
 
 
-class GetCurrentWeatherTempetureTool(BaseTool):
+class GetCurrentWeatherTempetureTool(WeatherToolBase):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     class ToolArgs(BaseModel):
         pass
@@ -32,6 +54,7 @@ class GetCurrentWeatherTempetureTool(BaseTool):
             "en": "https://rss.weather.gov.hk/rss/CurrentWeather.xml",
             "tc": "https://rss.weather.gov.hk/rss/CurrentWeather_uc.xml"
         }
+        self.print_log("Getting weather forcast")
         data = str(fetch(tempectureUrlMapping["en"]))
         desc_start_string = '<description>\n        <![CDATA['
         desc_start_index = data.index(

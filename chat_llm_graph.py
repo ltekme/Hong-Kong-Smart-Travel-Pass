@@ -6,6 +6,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_google_vertexai import ChatVertexAI
+from langgraph.prebuilt import ToolNode
 
 from google.oauth2.service_account import Credentials
 
@@ -14,7 +15,10 @@ import chat_llm as cllm
 
 class LLMGraphModel:
 
-    # tools = LLMChainTools.all
+    tools = cllm.LLMChainTools.all
+
+    def _lcNode_chatbot_invoke(self, state: list):
+        return {"messages": [self.llm.invoke(state["messages"])]}
 
     def __init__(self,
                  credentials: Credentials,
@@ -31,16 +35,15 @@ class LLMGraphModel:
             credentials=credentials,
             project=credentials.project_id,
             region="us-central1",
-        )
+        ).bind_tools(self.tools)
 
         graph_builder = StateGraph(list)
-        graph_builder.add_node("bot_invoke", self._chatbot_invoke)
+        graph_builder.add_node("bot_invoke", self._lcNode_chatbot_invoke)
+        graph_builder.add_node("all_tools", ToolNode(self.tools))
+        graph_builder.add_edge("bot_invoke", "all_tools")
         graph_builder.add_edge(START, "bot_invoke")
         graph_builder.add_edge("bot_invoke", END)
         self.graph = graph_builder.compile()
-
-    def _chatbot_invoke(self, state: list):
-        return {"messages": [self.llm.invoke(state["messages"])]}
 
     def show(self, img_path: str) -> None:
         with open(img_path, "wb") as f:
@@ -67,7 +70,6 @@ if __name__ == "__main__":
             user_input = input(': ')
             # clear input line
             print('\033[1A\033[K', end="")
-            
             if user_input.lower() in ["quit", "exit", "q"]:
                 print("Goodbye!")
                 break

@@ -24,7 +24,7 @@ class OpenriceApi(object):
     def verbose_print(self, msg: str) -> None:
         if not self.verbose:
             return
-        print(f'\033[43;30m[{inspect.stack()[1][3]}] ' + msg + '\x1b[0m')
+        print(f'\033[43;30m[openrice][{inspect.stack()[1][3]}] ' + msg + '\x1b[0m')
 
     def __init__(self,
                  credentials: Credentials,
