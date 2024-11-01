@@ -67,10 +67,10 @@ def chat_messages() -> JsonResponse:
             "location": "lat, lon",
             "language": "en"
         },
-        # message and images will be transformed
+        # message and media will be transformed
         "content": {
             "message": "user message",
-            "images": ["data url", "data url", "data url"]
+            "media": ["data url", "data url", "data url"]
         }
     }
 
@@ -81,7 +81,7 @@ def chat_messages() -> JsonResponse:
     context: dict = request_json.get('context', no_data)
 
     message = content.get("message", "")
-    images = content.get('images', [])
+    media = content.get('media', [])
 
     # Handle empty message
     if not message:
@@ -95,16 +95,26 @@ def chat_messages() -> JsonResponse:
         context.keys()
     )))
 
-    # Expected images is a list of string containing src data url for image
-    images = list(map(
-        lambda img: chat_llm.MessageContentMedia.from_uri(img),
-        images
-    ))
+    # Expected media is a list of string containing src data url for image
+    # media = list(filter(
+    #     lambda x: bool(x), list(map(
+    #         lambda content:
+    #             chat_llm.MessageContentMedia.from_uri(
+    #                 content) if content else None,
+    #         media
+    #     ))))
+
+    messageMedia = []
+    for mediaContent in media:
+        mediaObj = chat_llm.MessageContentMedia.from_uri(
+            mediaContent)
+        if mediaObj is not None:
+            messageMedia.append(mediaObj)
 
     # Send to llm
     chatLLM.chatId = request_json.get('chatId', str(uuid.uuid4()))
     ai_response = chatLLM.new_message(
-        message=message, images=images, context=client_context)
+        message=message, media=messageMedia, context=client_context)
 
     # return response from llm
     response.status = HTTPStatus.OK

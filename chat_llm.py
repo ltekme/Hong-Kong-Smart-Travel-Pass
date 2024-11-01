@@ -48,21 +48,24 @@ class MessageContentMedia:
         }
 
     @staticmethod
-    def from_uri(uri: str) -> "MessageContentMedia":
-        if not uri.startswith('data:'):
-            ##TODO: fetch data from url or something else
-            pass
-        header = uri.split(';')[0].split('/')
-        format = header[1]
-        media_type = header[0].split(':')[1]
-        data = uri.split(',')[1]
-        return MessageContentMedia(format=format, data=data, media_type=media_type)
+    def from_uri(uri: str) -> t.Union["MessageContentMedia", None]:
+        try:
+            if not uri.startswith('data:'):
+                # TODO: fetch data from url or something else
+                pass
+            header = uri.split(';')[0].split('/')
+            format = header[1]
+            media_type = header[0].split(':')[1]
+            data = uri.split(',')[1]
+            return MessageContentMedia(format=format, data=data, media_type=media_type)
+        except:
+            return None
 
 
 class MessageContent:
-    def __init__(self, text: str, images: list[MessageContentMedia] = []) -> None:
+    def __init__(self, text: str, media: list[MessageContentMedia] = []) -> None:
         self.text = text
-        self.images = images
+        self.media = media
 
 
 class Message:
@@ -79,7 +82,7 @@ class Message:
         return [{
             "type": "text",
             "text": str(self.content.text)
-        }] + [image.as_lcMessageDict for image in self.content.images]
+        }] + [image.as_lcMessageDict for image in self.content.media]
 
     @property
     @staticmethod
@@ -143,20 +146,20 @@ class Chat:
             messages = []
             for msg in data_in_file:
                 message_content_text = None
-                message_content_images = []
+                message_content_media = []
 
                 for content in msg['content']:
                     if content['type'] == 'text':
                         message_content_text = content['text']
                     if content['type'] == 'image_url':
-                        message_content_images.append(
+                        message_content_media.append(
                             MessageContentMedia.from_uri(content['image_url']['url']))
 
                 messages.append(Message(
                     role=msg['role'],
                     content=MessageContent(
                         text=message_content_text if message_content_text else '',
-                        images=message_content_images
+                        media=message_content_media
                     ))
                 )
 
@@ -259,10 +262,10 @@ class LLMChainModel:
             ("user", [{
                 "type": "text",
                 "text": "Input: {question}\n\n{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what)"
-            }] + [img.as_lcMessageDict for img in last_user_message.content.images])
+            }] + [img.as_lcMessageDict for img in last_user_message.content.media])
         ])
 
-        # for img in last_user_message.content.images:
+        # for img in last_user_message.content.media:
         #     print(img.as_lcMessageDict)
 
         agent = create_structured_chat_agent(
@@ -298,6 +301,7 @@ class ChatLLM:
             "You don't know much about the outside word, but with tools you can look up information. "
             "To provide the most accurate resault use the google search too make sure everyting you say are correct. "
             "When responding to the user provide as much contenxt as you can since you may need to answer more queries based on your responds. "
+            "output markdown whenever posible, in the Final Answer response"
         )
     )
     chatRecordFolderPath = './chat_data'
@@ -306,6 +310,7 @@ class ChatLLM:
 
     def __init__(self,
                  credentials: Credentials,
+                 LLM_Class=LLMChainModel,
                  model: str = "gemini-1.5-pro-002",
                  temperature: float = 1,
                  top_p: float = 0.95,
@@ -314,7 +319,7 @@ class ChatLLM:
                  chatId: str = None,
                  store_chat_records: bool = True
                  ) -> None:
-        self.llm = LLMChainModel(
+        self.llm = LLM_Class(
             credentials=credentials,
             model=model,
             top_p=top_p,
@@ -343,12 +348,12 @@ class ChatLLM:
     def chatRecordFilePath(self) -> str:
         return self.chatRecordFolderPath + "/" + self._chatId + ".json"
 
-    def new_message(self, message: str, images: list[MessageContentMedia] = [], context: str = "") -> Message:
+    def new_message(self, message: str, media: list[MessageContentMedia] = [], context: str = "") -> Message:
         if not message:
             return Message('', "Please provide a message.")
-        if images != []:
+        if media != []:
             self.chatRecords.append(
-                Message('human', MessageContent(message, images)))
+                Message('human', MessageContent(message, media)))
         else:
             self.chatRecords.append(Message('human', message))
 
@@ -376,20 +381,20 @@ if __name__ == "__main__":
 
         # process image
         response = None
-        images_content = []
+        media_content = []
         if ':image' in msg:
             while True:
                 image_path = input("Image Path: ")
                 if image_path == "DONE":
                     break
                 with open(image_path, 'rb') as f:
-                    images_content.append(
+                    media_content.append(
                         MessageContentMedia(
                             format=image_path.split('.')[-1],
                             data=base64.b64encode(f.read()).decode('ASCII')))
             msg.replace(':image', '')
 
-        response = chatLLM.new_message(msg, images_content)
+        response = chatLLM.new_message(msg, media_content)
         # print("ChatID: " + chatLLM.chatId)
         # print(response.lcMessage.pretty_print())
         print(f"AI({chatLLM.chatId}): " + response.content.text)
