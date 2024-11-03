@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
+const iconUrl = "https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=523024447160668&height=50&width=50&ext=1733220092&hash=Aba9dbz6Cbx1o7uR39R-CLIn"
 
 export const CascatingTextOutput = ({ text }) => {
     const [textDisplayed, setTextDisplayed] = useState('');
@@ -48,8 +49,21 @@ export const App = () => {
             .catch(error => console.error("Error reading files: ", error));
     };
 
+    const [userIconBlob, setIconBlob] = useState('');
+    const fetchUserIcon = async ({ iconUrl, callBack }) => {
+        const data = await fetch(iconUrl);
+        const dataBlob = await data.blob();
+        const reader = new FileReader();
+        reader.onloadend = (e) => {
+            callBack(e.target.result);
+        };
+        reader.readAsDataURL(dataBlob);
+    };
+
+    // Init
     useEffect(() => {
         setChatId(crypto.randomUUID());
+        fetchUserIcon({ iconUrl: iconUrl, callBack: setIconBlob });
     }, []);
 
     const getLocation = () => {
@@ -109,6 +123,8 @@ export const App = () => {
     return (<>
         <h1>Mock AI API Tester</h1>
 
+        <img src={userIconBlob} alt="shit" />
+        <br />
         API Url: <input onChange={e => setApiUrl(e.target.value)} value={apiUrl} />
         <br />
         Chat ID: <input onChange={e => setChatId(e.target.value)} value={chatId} />

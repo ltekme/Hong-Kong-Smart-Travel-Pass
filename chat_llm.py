@@ -210,7 +210,7 @@ class LLMChainTools:
         "GCP_AI_SA_CREDENTIAL_PATH", './gcp_cred-ai.json')
     credentials = Credentials.from_service_account_file(credentials_path)
     llm_tools = LLMTools(credentials=credentials, verbose=True)
-    all = llm_tools.all
+    all = llm_tools.getall()
 
 
 class LLMChainModel:
