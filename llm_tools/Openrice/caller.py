@@ -37,21 +37,47 @@ class FilterBase(OpenriceBase):
 
     def __init__(self,
                  searchKey: str,
-                 searchKeyParentKey: list[str],
                  credentials: Credentials,
                  store_data: bool = True,
                  verbose: bool = False,
+                 searchKeyParentKey: list[str] = [],
                  data_base_path: str = "./data",
                  chroma_db_path: str = "./chroma_db",
                  chroma_db_collection_prefix: str = "shitrice",
-                 metadata_url=False,
-                 data_url=None,
+                 metadata_url=False,  # weather to use metadata url or filter url
+                 data_url=None,  # custom data url, data schema must match api
                  **kwargs,
                  ):
         super().__init__(verbose)
         self.searchKey = searchKey
         self.store_data = store_data
 
+        # chroma setup
+        self.logger(f"initializing chroma db filter for {searchKey}")
+        # when only doing where doc search, no embedding func is needed
+        embeddings = VertexAIEmbeddings(
+            credentials=credentials,
+            project=credentials.project_id,
+            model_name="text-multilingual-embedding-002",
+        )
+        chroma_param = {
+            "collection_name": chroma_db_collection_prefix,
+            "embedding_function": embeddings,
+        }
+        if self.store_data:
+            self.logger("chroma presist directory enabled")
+            chroma_param["persist_directory"] = chroma_db_path
+        self.logger("setting up chromadb")
+        self.vector_store = Chroma(**chroma_param)
+
+        # case for non specific filter, dont inti data
+        if self.searchKey is None:
+            self.logger(
+                "Non specific filter is search key is specificed, exiting data init, chroma db may containes incomplete or incorrect data"
+            )
+            return
+
+        # split between data in metadata api url or filter data url
         self.data_url = data_url or self._FILTER_RAW_DATA_URL if not metadata_url else self._METADATA_RAW_DATA_URL
         if not metadata_url:
             self.raw_data_path = os.path.join(
@@ -63,48 +89,35 @@ class FilterBase(OpenriceBase):
         self.data_path = os.path.join(
             data_base_path, f"openrice_{searchKey}.json")
 
-        self.logger(f"initializing {searchKey} filter")
-        embeddings = VertexAIEmbeddings(
-            credentials=credentials,
-            project=credentials.project_id,
-            model_name="text-multilingual-embedding-002",
-        )
-        chroma_param = {
-            "collection_name": chroma_db_collection_prefix,
-            "embedding_function": embeddings,
-        }
-
-        if self.store_data:
-            self.logger("chroma presist directory enabled")
-            chroma_param["persist_directory"] = chroma_db_path
-
-        self.logger("setting up chromadb")
-        self.vector_store = Chroma(**chroma_param)
-
+        # check data file exists and appempt load
         self.logger(f"setting up {searchKey} filter data")
         if self.store_data and os.path.exists(self.data_path):
             self.logger(f"getting {searchKey} filter from file")
             self._data = read_json_file(self.data_path)
 
-        self.logger(
-            f"{searchKey} filter data not in file or file store not enabled, parsing from raw data")
-
-        # get the items from list of dict keys
-        searchKeyMap = self.raw_data
-        for layer in searchKeyParentKey:
-            searchKeyMap = searchKeyMap[layer]
-
+        # check for no data in file
         if not self._data:
+            self.logger(
+                f"{searchKey} filter data not in file or file store not enabled, parsing from raw data")
+
+            # get the items from list of dict keys
+            searchKeyMap = self.raw_data
+            for layer in searchKeyParentKey:
+                searchKeyMap = searchKeyMap[layer]
+
+            # parse to dict
             self._data = list(map(lambda d: {
                 self.searchKey: d["searchKey"].split("=")[1],
                 **{f"name{l.upper()}": d["nameLangDict"][l] for l in self.lang_dict_options},
             }, searchKeyMap))
+
+            # store data to file if enabled
             if self.store_data:
                 write_json_file(self._data, self.data_path)
 
-        self.init_chroma(self._data)
+        self.init_chroma_data(self._data)
 
-        self.logger(f"filter {searchKey} loaded")
+        self.logger(f"filter {searchKey} data loaded")
 
     @property
     def raw_data(self):
@@ -130,7 +143,7 @@ class FilterBase(OpenriceBase):
         self.logger("got raw data from API, returning")
         return raw_data
 
-    def init_chroma(self, data_expected: list[dict]):
+    def init_chroma_data(self, data_expected: list[dict]):
         self.logger(f"attempt to get {self.searchKey} data from chroma")
         coll = self.vector_store.get(
             where={"openrice_searchKey": self.searchKey},
@@ -150,16 +163,46 @@ class FilterBase(OpenriceBase):
             self.logger("adding documents to chroma db")
             self.vector_store.add_documents(list(map(lambda item: Document(
                 ', '.join(list(map(
-                    lambda l: f"{str(l)}: {item[l]}",
+                    lambda l: f"\"{str(l)}\": \"{item[l]}\"",
                     dict(item).keys(),
                 ))),
                 metadata={
                     "openrice_searchKey": self.searchKey,
                     "source": self.data_url,
+                    "type": "openrice_searchKey_filters",
                 },
             ), data_expected)))
 
         self.logger(f"finishing initializing chroma db for {self.searchKey}")
+
+    @property
+    def all(self) -> list:
+        return self._data
+
+    def search(self, keyword: str) -> list[Document]:
+        search_param = {
+            "query": keyword,
+            "k": 5,
+            "filter": {
+                "type": "openrice_searchKey_filters"
+            }
+        }
+        if self.searchKey is not None:
+            search_param["filter"]["openrice_searchKey"] = self.searchKey
+
+        return list(map(
+            lambda doc: doc.page_content,
+            self.vector_store.similarity_search(**search_param)
+        ))
+
+    def by_id(self, id: int) -> dict | None:
+        if not self.searchKey:
+            raise NotImplementedError(
+                "This methoad cannot be called on instence without searchKey")
+        resault = list(map(lambda flt: flt[self.searchKey] == id, self._data))
+        if resault != []:
+            return resault
+        return None
 
 
 class LandmarkFilter(FilterBase):
@@ -172,10 +215,6 @@ class LandmarkFilter(FilterBase):
         kwargs["searchKeyParentKey"] = ["landmarks"]
         super().__init__(**kwargs)
 
-    @property
-    def all(self) -> list:
-        return self._data
-
 
 class DistrictFilter(FilterBase):
 
@@ -186,10 +225,6 @@ class DistrictFilter(FilterBase):
         kwargs["searchKey"] = "districtId"
         kwargs["searchKeyParentKey"] = ["districts"]
         super().__init__(**kwargs)
-
-    @property
-    def all(self) -> list:
-        return self._data
 
 
 class CuisineFilter(FilterBase):
@@ -202,10 +237,6 @@ class CuisineFilter(FilterBase):
         kwargs["searchKeyParentKey"] = ["categories", "cuisine"]
         super().__init__(**kwargs)
 
-    @property
-    def all(self) -> list:
-        return self._data
-
 
 class DishFilter(FilterBase):
 
@@ -216,10 +247,6 @@ class DishFilter(FilterBase):
         kwargs["searchKey"] = "dishId"
         kwargs["searchKeyParentKey"] = ["categories", "dish"]
         super().__init__(**kwargs)
-
-    @property
-    def all(self) -> list:
-        return self._data
 
 
 class ThemeFilter(FilterBase):
@@ -232,10 +259,6 @@ class ThemeFilter(FilterBase):
         kwargs["searchKeyParentKey"] = ["categories", "theme"]
         super().__init__(**kwargs)
 
-    @property
-    def all(self) -> list:
-        return self._data
-
 
 class AmenityFilter(FilterBase):
 
@@ -246,10 +269,6 @@ class AmenityFilter(FilterBase):
         kwargs["searchKey"] = "amenityId"
         kwargs["searchKeyParentKey"] = ["categories", "amenity"]
         super().__init__(**kwargs)
-
-    @property
-    def all(self) -> list:
-        return self._data
 
 
 class PriceRangeFilter(FilterBase):
@@ -263,13 +282,23 @@ class PriceRangeFilter(FilterBase):
         kwargs["metadata_url"] = True
         super().__init__(**kwargs)
 
-    @property
-    def all(self) -> list:
-        return self._data
+
+class Filters(FilterBase):
+    def __init__(self, **kwargs):
+        kwargs["searchKey"] = None
+        super().__init__(**kwargs)
+        self.landmark = LandmarkFilter(**kwargs)
+        self.district = DistrictFilter(**kwargs)
+        self.cuisine = CuisineFilter(**kwargs)
+        self.dish = DishFilter(**kwargs)
+        self.theme = ThemeFilter(**kwargs)
+        self.amenity = AmenityFilter(**kwargs)
+        self.priceRange = PriceRangeFilter(**kwargs)
 
 
 if __name__ == "__main__":
-    # cannot directory run, but can be imported to test
+    # cannot directory run, due to relative import
+    # but can be imported to test
     credentials_path = os.getenv(
         "GCP_AI_SA_CREDENTIAL_PATH", './gcp_cred-ai.json')
     credentials = Credentials.from_service_account_file(credentials_path)
