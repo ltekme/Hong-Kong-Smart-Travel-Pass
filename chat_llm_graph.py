@@ -65,17 +65,17 @@ if __name__ == "__main__":
     llmgraph = LLMGraphModel(credentials=credentials)
     llmgraph.show("./data/graph.png")
 
-    while True:
-        try:
-            user_input = input(': ')
-            # clear input line
-            print('\033[1A\033[K', end="")
-            if user_input.lower() in ["quit", "exit", "q"]:
-                print("Goodbye!")
-                break
-            HumanMessage(user_input).pretty_print()
-            resault = llmgraph.invoke(user_input)
-            resault.pretty_print()
-        except KeyboardInterrupt:
-            print("bye !")
-            break
+    # while True:
+    #     try:
+    #         user_input = input(': ')
+    #         # clear input line
+    #         print('\033[1A\033[K', end="")
+    #         if user_input.lower() in ["quit", "exit", "q"]:
+    #             print("Goodbye!")
+    #             break
+    #         HumanMessage(user_input).pretty_print()
+    #         resault = llmgraph.invoke(user_input)
+    #         resault.pretty_print()
+    #     except KeyboardInterrupt:
+    #         print("bye !")
+    #         break
