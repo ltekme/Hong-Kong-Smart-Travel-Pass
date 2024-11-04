@@ -1,6 +1,6 @@
 import os
 import inspect
-
+import typing as t
 from google.oauth2.service_account import Credentials
 from langchain_google_vertexai import VertexAIEmbeddings
 from langchain_chroma import Chroma
@@ -36,17 +36,16 @@ class FilterBase(OpenriceBase):
     _METADATA_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/country/all"
 
     def __init__(self,
-                 searchKey: str,
                  credentials: Credentials,
                  store_data: bool = True,
                  verbose: bool = False,
+                 searchKey: str = None,
                  searchKeyParentKey: list[str] = [],
                  data_base_path: str = "./data",
                  chroma_db_path: str = "./chroma_db",
                  chroma_db_collection_prefix: str = "shitrice",
                  metadata_url=False,  # weather to use metadata url or filter url
                  data_url=None,  # custom data url, data schema must match api
-                 **kwargs,
                  ):
         super().__init__(verbose)
         self.searchKey = searchKey
@@ -146,7 +145,10 @@ class FilterBase(OpenriceBase):
     def init_chroma_data(self, data_expected: list[dict]):
         self.logger(f"attempt to get {self.searchKey} data from chroma")
         coll = self.vector_store.get(
-            where={"openrice_searchKey": self.searchKey},
+            where={"$and": [
+                {"openrice_searchKey": self.searchKey},
+                {"type": "openrice_searchKey_filters"},
+            ]},
             include=["metadatas"],
         )
         collection_len = len(coll["ids"])
@@ -199,10 +201,22 @@ class FilterBase(OpenriceBase):
         if not self.searchKey:
             raise NotImplementedError(
                 "This methoad cannot be called on instence without searchKey")
-        resault = list(map(lambda flt: flt[self.searchKey] == id, self._data))
+        resault = list(filter(
+            # is is compairing string because my dumb fuck decided to get the id from search key string so everything is compatable.
+            lambda flt: flt[self.searchKey] == f"{id}",
+            self._data
+        ))
         if resault != []:
-            return resault
+            return resault[0]
         return None
+
+    def get_api_filter_search_key(self, id: int) -> str:
+        self.logger(f"getting {id=} on {self.searchKey}")
+        if self.by_id(id) != None:
+            self.logger(f"found {id=} on {self.searchKey}")
+            return f"{self.searchKey}={id}"
+        self.logger(f"{id=} not found on {self.searchKey}")
+        return ""
 
 
 class LandmarkFilter(FilterBase):
@@ -296,17 +310,209 @@ class Filters(FilterBase):
         self.priceRange = PriceRangeFilter(**kwargs)
 
 
+class RestaurantSearchApi(OpenriceBase):
+    _SEARCH_BASE_API_URL: str = "https://www.openrice.com/api/v2/search?uiCity=hongkong&regionId=0&pageToken=CONST_DUMMY_TOKEN"
+
+    def __init__(self,
+                 credentials: Credentials,
+                 verbose: bool = False,
+                 **kwargs):
+        kwargs["credentials"] = credentials
+        kwargs["verbose"] = verbose
+        super().__init__(verbose)
+        self.filters = Filters(**kwargs)
+
+    def format_opening_hours(self, data):
+        self.logger(f"processing opening hours on {data[0]['poiId']=}")
+        # Dictionary to hold the strings for each day of the week and special days
+        days = {
+            "Monday": [],
+            "Tuesday": [],
+            "Wednesday": [],
+            "Thursday": [],
+            "Friday": [],
+            "Saturday": [],
+            "Sunday": [],
+            "Holiday": [],
+            "HolidayEve": []
+        }
+        # Mapping of dayOfWeek to day names
+        day_map = {
+            1: "Sunday",
+            2: "Monday",
+            3: "Tuesday",
+            4: "Wednesday",
+            5: "Thursday",
+            6: "Friday",
+            7: "Saturday",
+        }
+
+        # Iterate through the list of POI hours
+        for entry in data:
+            day_of_week = entry["dayOfWeek"]
+            if entry["isHoliday"]:
+                days["Holiday"].append(
+                    f"Holiday: {entry['period1Start']} - {entry['period1End']}")
+                if "period2Start" in entry:
+                    days["Holiday"].append(
+                        f"Holiday: {entry['period2Start']} - {entry['period2End']}")
+
+            elif entry["isHolidayEve"]:
+                days["HolidayEve"].append(
+                    f"Holiday Eve: {entry['period1Start']} - {entry['period1End']}")
+                if "period2Start" in entry:
+                    days["HolidayEve"].append(
+                        f"Holiday Eve: {entry['period2Start']} - {entry['period2End']}")
+            else:
+                day_name = day_map.get(day_of_week, "Unknown")
+                period1 = f"{entry['period1Start']} - {entry['period1End']}"
+                period2 = f"{entry['period2Start']} - {entry['period2End']}" if "period2Start" in entry else ""
+                periods = f"{period1} {period2}".strip()
+                days[day_name].append(f"{day_name}: {periods}")
+
+        # Convert the dictionary to a list of strings
+        result = []
+        for day, entries in days.items():
+            result.append(f"{day}:")
+            result.extend(entries)
+        return result
+
+    def format_raw_restaurant_data(self, raw_data: dict) -> dict:
+        self.logger(f"parsing poiId:{raw_data['poiId']}")
+        return {
+            "name": raw_data.get('name'),
+            "openSince": raw_data.get("openSince"),
+            "address": raw_data.get('address'),
+            "geolocation": (raw_data.get("mapLatitude"), raw_data.get("mapLongitude")),
+            "phones": {
+                "remarks": raw_data.get("phoneRemarks"),
+                "numbers": raw_data.get("phones"),
+            },
+            "priceRangeId": self.filters.priceRange.by_id(raw_data.get("priceRangeId")),
+            "shortUrl": raw_data.get("shortenUrl"),
+            "district": raw_data.get("district", {}).get("name"),
+            "categories": list(map(lambda n: n.get("name"), raw_data.get("categories", []))),
+            "bookingOffers": list(map(lambda o: o.get("title"), raw_data.get("bookingOffers", []))),
+            "altCallName": raw_data.get("latestCallName"),
+            "thumbnail": raw_data.get("doorPhoto", {}).get("url"),
+            "openingHours": self.format_opening_hours(raw_data.get("poiHours"))
+        }
+
+    def to_beautify_string(self, data: dict) -> str:
+        text_item = ""
+        for key, value in data.items():
+            if isinstance(value, dict):
+                text_item += f"{key.capitalize()}:\n"
+                for sub_key, sub_value in value.items():
+                    text_item += f"    {sub_key.capitalize()}: {sub_value}\n"
+            elif isinstance(value, list):
+                text_item += f"{key.capitalize()}: {', '.join(value)}\n"
+            else:
+                text_item += f"{key.capitalize()}: {value}\n"
+        return text_item
+
+    def search(self,
+               landmarkIds: list[int] = [],
+               districtIds: list[int] = [],
+               cuisineIds: list[int] = [],
+               dishIds: list[int] = [],
+               themeIds: list[int] = [],
+               amenityIds: list[int] = [],
+               priceRangeIds: list[int] = [],
+               keywords: str = None,
+               count: int = 3
+               ) -> list[dict]:
+
+        filterSearchKeys = []
+        # landmark
+        if type(landmarkIds) == int:
+            landmarkIds = [landmarkIds]
+        for id in landmarkIds:
+            self.logger(f"finding {landmarkIds=} to search")
+            searchKey = self.filters.landmark.get_api_filter_search_key(id)
+            if searchKey:
+                self.logger(f"adding {searchKey=} to search key")
+                filterSearchKeys.append(searchKey)
+        # district]
+        if type(districtIds) == int:
+            districtIds = [districtIds]
+        for id in districtIds:
+            self.logger(f"finding {districtIds=} to search")
+            searchKey = self.filters.district.get_api_filter_search_key(id)
+            if searchKey:
+                filterSearchKeys.append(searchKey)
+        # cuisine
+        if type(cuisineIds) == int:
+            cuisineIds = [cuisineIds]
+        for id in cuisineIds:
+            self.logger(f"finding {cuisineIds=} to search")
+            searchKey = self.filters.cuisine.get_api_filter_search_key(id)
+            if searchKey:
+                self.logger(f"adding {searchKey=} to search key")
+                filterSearchKeys.append(searchKey)
+        # dish
+        if type(dishIds) == int:
+            dishIds = [dishIds]
+        for id in dishIds:
+            self.logger(f"finding {dishIds=} to search")
+            searchKey = self.filters.dish.get_api_filter_search_key(id)
+            if searchKey:
+                self.logger(f"adding {searchKey=} to search key")
+                filterSearchKeys.append(searchKey)
+        # theme
+        if type(themeIds) == int:
+            themeIds = [themeIds]
+        for id in themeIds:
+            self.logger(f"finding {themeIds=} to search")
+            searchKey = self.filters.theme.get_api_filter_search_key(id)
+            if searchKey:
+                self.logger(f"adding {searchKey=} to search key")
+                filterSearchKeys.append(searchKey)
+        # amenity
+        if type(amenityIds) == int:
+            amenityIds = [amenityIds]
+        for id in amenityIds:
+            self.logger(f"finding {amenityIds=} to search")
+            searchKey = self.filters.amenity.get_api_filter_search_key(id)
+            if searchKey:
+                self.logger(f"adding {searchKey=} to search key")
+                filterSearchKeys.append(searchKey)
+        # price range
+        if type(priceRangeIds) == int:
+            priceRangeIds = [priceRangeIds]
+        for id in priceRangeIds:
+            self.logger(f"finding {priceRangeIds=} to search")
+            searchKey = self.filters.priceRange.get_api_filter_search_key(id)
+            if searchKey:
+                self.logger(f"adding {searchKey=} to search key")
+                filterSearchKeys.append(searchKey)
+
+        searchParams = "&".join(filterSearchKeys)
+        searchUrl = self._SEARCH_BASE_API_URL + "&" + searchParams + \
+            f"&startAt=0&&rows={count}&keyword={keywords}&uiLang=en"
+
+        resault = fetch(searchUrl)
+        if resault.get('success') == False:
+            self.logger('Error: from API\n', resault)
+            return []
+
+        return list(map(
+            self.format_raw_restaurant_data,
+            resault["paginationResult"]["results"]
+        ))
+
+
 if __name__ == "__main__":
     # cannot directory run, due to relative import
     # but can be imported to test
     credentials_path = os.getenv(
         "GCP_AI_SA_CREDENTIAL_PATH", './gcp_cred-ai.json')
     credentials = Credentials.from_service_account_file(credentials_path)
-    kwargs = {"verbose": True, "credentials": credentials}
-    print(LandmarkFilter(**kwargs).all[0])
-    print(DistrictFilter(**kwargs).all[0])
-    print(CuisineFilter(**kwargs).all[0])
-    print(DishFilter(**kwargs).all[0])
-    print(ThemeFilter(**kwargs).all[0])
-    print(AmenityFilter(**kwargs).all[0])
-    print(PriceRangeFilter(**kwargs).all[0])
+
+    kwargs = {
+        "verbose": True,
+        "credentials": credentials
+    }
+    filters = Filters(**kwargs)
+    resault = filters.search("kowloon bay")
+    print("\n".join(resault))
