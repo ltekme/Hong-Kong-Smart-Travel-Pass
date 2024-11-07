@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-
+import ReactMarkdown from 'react-markdown'
 const iconUrl = "https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=523024447160668&height=50&width=50&ext=1733220092&hash=Aba9dbz6Cbx1o7uR39R-CLIn"
 
 export const CascatingTextOutput = ({ text }) => {
@@ -19,7 +19,7 @@ export const CascatingTextOutput = ({ text }) => {
         setText();
     }, [text]);
 
-    return (<span>{textDisplayed}</span>);
+    return <ReactMarkdown>{textDisplayed}</ReactMarkdown>;
 }
 
 
@@ -31,6 +31,8 @@ export const App = () => {
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [sendLocation, setSendLocation] = useState(false);
+    const [overideContent, setOverideContent] = useState(false);
+    const [tempChatId, setTempChatId] = useState('');
     const fileInputRef = useRef(null);
 
     const handleImageUpload = (event) => {
@@ -92,6 +94,10 @@ export const App = () => {
                 context.location = "Not Avalable"
             }
         }
+        console.log(overideContent);
+        if (overideContent) {
+            console.log("Overide Enabled" + `overideContent is set to ${overideContent}`);
+        }
         fetch(apiUrl, {
             method: "POST",
             headers: {
@@ -104,6 +110,7 @@ export const App = () => {
                     images: humanMessage.images,
                 },
                 context: context,
+                overideContent: overideContent,
             }),
         })
             .then(response => response.json())
@@ -119,6 +126,18 @@ export const App = () => {
             .catch(error => console.error("Error sending message: ", error))
             .finally(() => setIsLoading(false));
     };
+    const handleSetOverideContent = () => {
+        setOverideContent(!overideContent);
+        console.log(`overideContent is set to ${!overideContent}`);
+        if (!overideContent) {
+            console.log("Overide Enabled");
+            setTempChatId(chatId);
+            setChatId("mock");
+        } else {
+            setChatId(tempChatId);
+        }
+
+    }
 
     return (<>
         <h1>Mock AI API Tester</h1>
@@ -129,7 +148,9 @@ export const App = () => {
         <br />
         Chat ID: <input onChange={e => setChatId(e.target.value)} value={chatId} />
         <br />
-        Send Location: <input type="checkbox" value={sendLocation} onChange={e => setSendLocation(e.target.value)} />
+        Send Location: <input type="checkbox" name="send location" value={sendLocation} onChange={e => setSendLocation(e.target.value)} />
+        <br />
+        Use Overide: <input type="checkbox" name="overide" value={overideContent} onChange={handleSetOverideContent} />
         <hr />
 
         Images: <input
@@ -176,6 +197,7 @@ export const App = () => {
                 ))}
             </tbody>
         </table>
+
     </>);
 }
 

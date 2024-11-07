@@ -17,7 +17,7 @@ class LLMGraphModel:
 
     tools = cllm.LLMChainTools.all
 
-    def _lcNode_chatbot_invoke(self, state: list):
+    def _lcNode_chatbot_invoke(self, state: dict):
         return {"messages": [self.llm.invoke(state["messages"])]}
 
     def __init__(self,
@@ -37,7 +37,7 @@ class LLMGraphModel:
             region="us-central1",
         ).bind_tools(self.tools)
 
-        graph_builder = StateGraph(list)
+        graph_builder = StateGraph(dict)
         graph_builder.add_node("bot_invoke", self._lcNode_chatbot_invoke)
         graph_builder.add_node("all_tools", ToolNode(self.tools))
         graph_builder.add_edge("bot_invoke", "all_tools")
@@ -50,12 +50,13 @@ class LLMGraphModel:
             f.write(self.graph.get_graph().draw_mermaid_png())
 
     def invoke(self, message: cllm.Message) -> AIMessage:
-        if type(message) != cllm.Message:
+        if not isinstance(message, cllm.Message):
             message = cllm.Message('human', message)
 
         for event in self.graph.stream({"messages": [("user", message.content.text)]}):
             for value in event.values():
                 return value["messages"][0]
+        return AIMessage(content="No response generated.")
 
 
 if __name__ == "__main__":
@@ -74,7 +75,8 @@ if __name__ == "__main__":
                 print("Goodbye!")
                 break
             HumanMessage(user_input).pretty_print()
-            resault = llmgraph.invoke(user_input)
+            message = cllm.Message('human', user_input)
+            resault = llmgraph.invoke(message)
             resault.pretty_print()
         except KeyboardInterrupt:
             print("bye !")

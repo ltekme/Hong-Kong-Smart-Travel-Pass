@@ -111,6 +111,6 @@ class GetGeocodeFromPlaces(GoogleToolBase):
             location = geocode_result[0]['geometry']['location']
         if location:
             geolocation = location["lat"], location["lng"]
-            self.print_log("got location " + geolocation)
+            self.print_log("got location " + str(geolocation))
             return geolocation
         return None

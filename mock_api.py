@@ -2,11 +2,14 @@ import os
 import json
 import typing as t
 import uuid
+
 from http import HTTPStatus, HTTPMethod
 
 from flask import Flask, Response, request
 
 from google.oauth2.service_account import Credentials
+
+from langchain_google_vertexai import ChatVertexAI
 
 import chat_llm
 
@@ -42,7 +45,21 @@ app = Flask(__name__)
 credentials_path = os.getenv(
     "GCP_AI_SA_CREDENTIAL_PATH", './gcp_cred-ai.json')
 credentials = Credentials.from_service_account_file(credentials_path)
-chatLLM = chat_llm.ChatLLM(credentials=credentials)
+llm_model = chat_llm.LLMChainModel(
+    llm=ChatVertexAI(
+        model="gemini-1.5-pro-002",
+        temperature=1,
+        max_tokens=8192,
+        timeout=None,
+        top_p=0.95,
+        max_retries=2,
+        credentials=credentials,
+        project=credentials.project_id,
+        region="us-central1",
+    ),
+    tools=chat_llm.LLMChainTools(credentials).all,
+)
+chatLLM = chat_llm.ChatLLM(llm_model)
 
 
 @app.route("/", methods=[HTTPMethod.POST, HTTPMethod.GET, HTTPMethod.OPTIONS])
@@ -79,9 +96,22 @@ def chat_messages() -> JsonResponse:
 
     content: dict = request_json.get('content', no_data)
     context: dict = request_json.get('context', no_data)
+    overide: bool = request_json.get('overideContent', False)
+    chatId: str = request_json.get('chatId', str(uuid.uuid4()))
+    print(f"{request_json=}")
+    print(f"{overide=}")
 
     message = content.get("message", "")
     media = content.get('media', [])
+
+    # Handle overide
+    if overide:
+
+        chatLLM.chatId = chatId
+        chatLLM.llm_model.overide_file_path = "./chat_data/{}_overide.json".format(
+            chatLLM.chatId)
+        # chatLLM.store_chat_records = False
+        print(f"Overide: {chatLLM.llm_model.overide_file_path}")
 
     # Handle empty message
     if not message:
@@ -112,7 +142,6 @@ def chat_messages() -> JsonResponse:
             messageMedia.append(mediaObj)
 
     # Send to llm
-    chatLLM.chatId = request_json.get('chatId', str(uuid.uuid4()))
     ai_response = chatLLM.new_message(
         message=message, media=messageMedia, context=client_context)
 
@@ -126,4 +155,5 @@ def chat_messages() -> JsonResponse:
 
 
 if __name__ == "__main__":
+
     app.run(debug=True)

@@ -1,4 +1,5 @@
 from google.oauth2.service_account import Credentials
+from typing import Optional
 
 from .Weather import *
 from .Openrice import *
@@ -10,8 +11,8 @@ class LLMTools:
 
     def __init__(self,
                  credentials: Credentials,
-                 google_api_key: str = None,
-                 google_cse_id: str = None,
+                 google_api_key: Optional[str] = "",
+                 google_cse_id: Optional[str] = "",
                  verbose=False) -> None:
         self.credentials = credentials
         self.verbose = verbose

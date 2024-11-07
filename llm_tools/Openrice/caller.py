@@ -221,9 +221,6 @@ class FilterBase(OpenriceBase):
 
 class LandmarkFilter(FilterBase):
 
-    description = "Search for restaurants near a specific landmark. Find places to eat near popular attractions like Ocean Park or Hong Kong Disneyland, shopping malls like IFC or Times Square, or transport hubs like Central Station."
-    tool_description = "Provide a JSON array of landmark IDs (e.g., [9319, 7, 18]). Leave blank or provide an empty array [] for all landmarks." + description
-
     def __init__(self, **kwargs):
         kwargs["searchKey"] = "landmarkId"
         kwargs["searchKeyParentKey"] = ["landmarks"]
@@ -231,9 +228,6 @@ class LandmarkFilter(FilterBase):
 
 
 class DistrictFilter(FilterBase):
-
-    description = "Narrow your search by geographical area. Find restaurants on Hong Kong Island (Central, Causeway Bay), in Kowloon (Tsim Sha Tsui, Mong Kok), the New Territories (Tsuen Wan, Sha Tin), or the Outlying Islands (Lantau, Cheung Chau)."
-    tool_description = "Provide a JSON array of district IDs (e.g., [1999, 2999, 3999]). Leave blank or provide an empty array [] for all districts. " + description
 
     def __init__(self, **kwargs):
         kwargs["searchKey"] = "districtId"
@@ -243,9 +237,6 @@ class DistrictFilter(FilterBase):
 
 class CuisineFilter(FilterBase):
 
-    description = "This filter helps you narrow down restaurants based on their culinary style. Options include broad categories like Western, Japanese, and International, as well as more specific regional cuisines like Hong Kong Style, Sichuan, and Vietnamese."
-    tool_description = "Provide a JSON array of cuisine IDs (e.g., [4000, 1004, 2009]). Leave blank or provide an empty array [] for all cuisines. " + description
-
     def __init__(self, **kwargs):
         kwargs["searchKey"] = "cuisineId"
         kwargs["searchKeyParentKey"] = ["categories", "cuisine"]
@@ -253,9 +244,6 @@ class CuisineFilter(FilterBase):
 
 
 class DishFilter(FilterBase):
-
-    description = """This filter lets you find restaurants serving particular dishes or types of food. Examples include Fine Dining experiences, All-you-can-eat buffets, Omakase menus, Hot Pot, Sushi/Sashimi, Desserts, and more specific items like Ramen, Korean Fried Chicken, or Snake Soup. This filter focuses on the format or kind of food offered."""
-    tool_description = "Provide a JSON array of dish IDs (e.g., [1200, 1076, 1001]). Leave blank or provide an empty array [] for all dishes." + description
 
     def __init__(self, **kwargs):
         kwargs["searchKey"] = "dishId"
@@ -265,9 +253,6 @@ class DishFilter(FilterBase):
 
 class ThemeFilter(FilterBase):
 
-    description = """This filter categorizes restaurants by the dining experience they offer. For example, "Romantic Dining", "Business Dining", "Family Style Dining", "Private Party", and "Group Dining" help users find places suitable for specific occasions or social settings. This filter describes the overall atmosphere or purpose of a dining experience."""
-    tool_description = "Provide a JSON array of theme IDs (e.g., [8, 2, 1]). Leave blank or provide an empty array [] for all themes." + description
-
     def __init__(self, **kwargs):
         kwargs["searchKey"] = "themeId"
         kwargs["searchKeyParentKey"] = ["categories", "theme"]
@@ -276,9 +261,6 @@ class ThemeFilter(FilterBase):
 
 class AmenityFilter(FilterBase):
 
-    description = """This filter helps you find restaurants with specific features or services. Options like "Steak House", "Dim Sum Restaurant", "Salt & Sugar Reduction Restaurant", "Pet Friendly", and "Food Wise Eateries" allow users to select based on the restaurant's environment, target audience, or health-conscious options. It focuses on the restaurant's attributes or services."""
-    tool_description = "Provide a JSON array of amenity IDs (e.g., [1093, 1003, 1001]). Leave blank or provide an empty array [] for all amenities." + description
-
     def __init__(self, **kwargs):
         kwargs["searchKey"] = "amenityId"
         kwargs["searchKeyParentKey"] = ["categories", "amenity"]
@@ -286,9 +268,6 @@ class AmenityFilter(FilterBase):
 
 
 class PriceRangeFilter(FilterBase):
-
-    description = "The IDs correspond to the following ranges: 1 (Below $50), 2 ($51-100), 3 ($101-200), 4 ($201-400), 5 ($401-800), and 6 (Above $801)."
-    tool_description = "Provide a JSON array of price range IDs (e.g., [1, 2, 3]) to filter restaurants by price. Leave blank or provide an empty array [] for all price ranges." + description
 
     def __init__(self, **kwargs):
         kwargs["searchKey"] = "priceRangeId"
@@ -419,7 +398,7 @@ class RestaurantSearchApi(OpenriceBase):
                themeIds: list[int] = [],
                amenityIds: list[int] = [],
                priceRangeIds: list[int] = [],
-               keywords: str = None,
+               keywords: str = "",
                count: int = 3
                ) -> list[dict]:
 
