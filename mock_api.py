@@ -88,7 +88,11 @@ def chat_messages() -> JsonResponse:
         "content": {
             "message": "user message",
             "media": ["data url", "data url", "data url"]
-        }
+        },
+        # chat id to use
+        "chatId": "chat id",
+        # weather to follow overide file, will also use file with {chatId}_overide.json
+        "overideContent": False | True,
     }
 
     no_data = {"no": "data"}
@@ -103,15 +107,19 @@ def chat_messages() -> JsonResponse:
 
     message = content.get("message", "")
     media = content.get('media', [])
+    chatLLM.chatId = chatId
 
     # Handle overide
     if overide:
-
-        chatLLM.chatId = chatId
-        chatLLM.llm_model.overide_file_path = "./chat_data/{}_overide.json".format(
-            chatLLM.chatId)
-        # chatLLM.store_chat_records = False
-        print(f"Overide: {chatLLM.llm_model.overide_file_path}")
+        try:
+            print(f"Loading file: {chatId}_overide.json")
+            with open(f"./chat_data/{chatId}_overide.json", "r", encoding="utf-8") as f:
+                overide_data = json.load(f)
+                chatLLM.llm_model.overide_chat_content = overide_data
+            # chatLLM.store_chat_records = False
+            print(f"Overide: {chatLLM.llm_model.overide_chat_content=}")
+        except Exception as e:
+            print(f"Failed Overide {e=}")
 
     # Handle empty message
     if not message:

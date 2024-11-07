@@ -119,16 +119,16 @@ class Chat:
     def save_to_file(self, file_path: str) -> None:
         if not os.path.exists(os.path.dirname(file_path)):
             os.makedirs(os.path.dirname(file_path))
-        with open(file_path, 'w') as f:
+        with open(file_path, 'w', encoding="utf-8-sig") as f:
             messages = [
                 {"role": msg.role, "content": msg.message_list}
                 for msg in self._chat_messages]
-            json.dump(messages, f, indent=4)
+            json.dump(messages, f, indent=4, ensure_ascii=False)
 
     def get_from_file(self, file_path: str) -> list:
         system_message_copy = self.system_message
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, 'r', encoding="utf-8-sig") as f:
                 data_in_file = json.load(f)
 
             messages = []
@@ -219,22 +219,10 @@ class LLMChainModel:
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool],
-                 overide_file_path: str = "") -> None:
+                 overide_chat_content: list = []) -> None:
         self.llm = llm
         self.tools = tools
-        self.overide_file_path = overide_file_path
-
-    @property
-    def overide_file_path(self) -> str:
-        return self._overide_file_path
-
-    @overide_file_path.setter
-    def overide_file_path(self, value: str) -> None:
-        self._overide_file_path = value
-        overide_chat = Chat()
-        overide_chat.get_from_file(value)
-        overide_chat.remove_system_message()
-        self._overide_chat = overide_chat
+        self.overide_chat_content = overide_chat_content
 
     def get_response_from_llm(self,
                               last_user_message: Message,
@@ -289,15 +277,13 @@ class LLMChainModel:
         # handle overide standard answer
         standard_response = ["Standard Response",
                              "You should follow the standard response below"]
-        if self.overide_file_path and last_user_message:
-            for idx, message in enumerate(self._overide_chat.as_list):
-                if last_user_message.content is not None and message.content is not None:
-                    if message.content.text == last_user_message.content.text:
-                        # Add random delay to simulate real-time response
-                        # sleep(math.ceil(10 * (idx + 1) /
-                        #       len(self._overide_chat.as_list)))
-                        standard_response.append(
-                            self._overide_chat.as_list[idx + 1].content.text)
+
+        if self.overide_chat_content:
+            for m in self.overide_chat_content:
+                print(f"Checking {m=} against {last_user_message.content.text}")
+                if m.get("question") in last_user_message.content.text:
+                    standard_response.append(m.get("response"))
+
 
         # only include the standard response if there are more than the headers
         if len(standard_response) > 2:
