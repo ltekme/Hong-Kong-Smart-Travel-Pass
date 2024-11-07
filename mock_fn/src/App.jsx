@@ -1,27 +1,26 @@
 import { useState, useRef, useEffect } from "react";
-import ReactMarkdown from 'react-markdown'
-const iconUrl = "https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=523024447160668&height=50&width=50&ext=1733220092&hash=Aba9dbz6Cbx1o7uR39R-CLIn"
+import ReactMarkdown from 'react-markdown';
+import { imageMapping } from "./images";
 
 export const CascatingTextOutput = ({ text }) => {
     const [textDisplayed, setTextDisplayed] = useState('');
 
-    const getRandomDelay = () => 20;// Math.floor(Math.random() * (50 - 10 + 1)) + 10;
+    const getRandomDelay = () => 20;
 
     useEffect(() => {
         const setText = async () => {
             let displayTexts = "";
             for (const char of text.split("")) {
-                displayTexts += char
+                displayTexts += char;
                 setTextDisplayed(displayTexts);
                 await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
             }
-        }
+        };
         setText();
     }, [text]);
 
     return <ReactMarkdown>{textDisplayed}</ReactMarkdown>;
-}
-
+};
 
 export const App = () => {
     const [apiUrl, setApiUrl] = useState("http://127.0.0.1:5000");
@@ -34,6 +33,9 @@ export const App = () => {
     const [overideContent, setOverideContent] = useState(false);
     const [tempChatId, setTempChatId] = useState('');
     const fileInputRef = useRef(null);
+    const [userIconBlob, setIconBlob] = useState('');
+    const [iconChangeInterval, setIconChangeInterval] = useState(600);
+    const intervalIdRef = useRef(null);
 
     const handleImageUpload = (event) => {
         const files = Array.from(event.target.files);
@@ -51,22 +53,29 @@ export const App = () => {
             .catch(error => console.error("Error reading files: ", error));
     };
 
-    const [userIconBlob, setIconBlob] = useState('');
-    const fetchUserIcon = async ({ iconUrl, callBack }) => {
-        const data = await fetch(iconUrl);
-        const dataBlob = await data.blob();
-        const reader = new FileReader();
-        reader.onloadend = (e) => {
-            callBack(e.target.result);
-        };
-        reader.readAsDataURL(dataBlob);
-    };
-
-    // Init
     useEffect(() => {
         setChatId(crypto.randomUUID());
-        fetchUserIcon({ iconUrl: iconUrl, callBack: setIconBlob });
+        const cleanup = startRandomImage();
+        return cleanup;
     }, []);
+
+    useEffect(() => {
+        if (intervalIdRef.current) {
+            clearInterval(intervalIdRef.current);
+        }
+        const cleanup = startRandomImage();
+        return cleanup;
+    }, [iconChangeInterval]);
+
+    const startRandomImage = () => {
+        const updateIcon = () => {
+            const randomIndex = Math.floor(Math.random() * imageMapping.length);
+            setIconBlob(imageMapping[randomIndex]);
+        };
+        updateIcon();
+        intervalIdRef.current = setInterval(updateIcon, iconChangeInterval);
+        return () => clearInterval(intervalIdRef.current);
+    };
 
     const getLocation = () => {
         return new Promise((resolve, reject) => {
@@ -85,18 +94,14 @@ export const App = () => {
     const sendToAPI = async () => {
         setIsLoading(true);
         const humanMessage = { role: "user", content: message, images: imageDataUrls };
-        let context = {}
+        let context = {};
         if (sendLocation) {
             try {
                 let location = await getLocation();
-                context.location = `${location.latitude},${location.longitude}`
+                context.location = `${location.latitude},${location.longitude}`;
             } catch {
-                context.location = "Not Avalable"
+                context.location = "Not Available";
             }
-        }
-        console.log(overideContent);
-        if (overideContent) {
-            console.log("Overide Enabled" + `overideContent is set to ${overideContent}`);
         }
         fetch(apiUrl, {
             method: "POST",
@@ -126,79 +131,65 @@ export const App = () => {
             .catch(error => console.error("Error sending message: ", error))
             .finally(() => setIsLoading(false));
     };
+
     const handleSetOverideContent = () => {
         setOverideContent(!overideContent);
-        console.log(`overideContent is set to ${!overideContent}`);
         if (!overideContent) {
-            console.log("Overide Enabled");
             setTempChatId(chatId);
             setChatId("mock");
         } else {
             setChatId(tempChatId);
         }
+    };
 
-    }
+    return (
+        <>
+            <h1>Mock AI API Tester</h1>
+            <img style={{ height: "200px" }} src={userIconBlob} alt="CATS"/>
+            <br />
+            <input type="number" onChange={e => setIconChangeInterval(Number(e.target.value))} value={iconChangeInterval} hidden/>
+            <hr />
+            API Url: <input onChange={e => setApiUrl(e.target.value)} value={apiUrl} />
+            <br />
+            Chat ID: <input onChange={e => setChatId(e.target.value)} value={chatId} />
+            <br />
+            Send Location: <input type="checkbox" name="send location" checked={sendLocation} onChange={e => setSendLocation(e.target.checked)} />
+            <br />
+            Use Overide: <input type="checkbox" name="overide" checked={overideContent} onChange={handleSetOverideContent} />
+            <hr />
+            Images: <input type="file" name="myImage" multiple onChange={handleImageUpload} ref={fileInputRef} />
+            <br />
+            Message: <textarea style={{ verticalAlign: "top" }} onChange={e => setMessage(e.target.value)} value={message} />
+            <br />
+            <button onClick={sendToAPI}>Send</button>
+            {isLoading && <p>Loading...</p>}
 
-    return (<>
-        <h1>Mock AI API Tester</h1>
-
-        <img src={userIconBlob} alt="shit" />
-        <br />
-        API Url: <input onChange={e => setApiUrl(e.target.value)} value={apiUrl} />
-        <br />
-        Chat ID: <input onChange={e => setChatId(e.target.value)} value={chatId} />
-        <br />
-        Send Location: <input type="checkbox" name="send location" value={sendLocation} onChange={e => setSendLocation(e.target.value)} />
-        <br />
-        Use Overide: <input type="checkbox" name="overide" value={overideContent} onChange={handleSetOverideContent} />
-        <hr />
-
-        Images: <input
-            type="file"
-            name="myImage"
-            multiple
-            onChange={handleImageUpload}
-            ref={fileInputRef}
-        />
-
-        <br />
-
-        Message: <textarea style={{
-            verticalAlign: "top",
-        }} onChange={e => setMessage(e.target.value)} value={message} />
-
-        <br />
-
-        <button onClick={sendToAPI}>Send</button>
-
-        {isLoading && <p>Loading...</p>}
-
-        <hr />
-
-        <table border={{}}>
-            <thead>
-                <tr>
-                    <th>Role</th>
-                    <th>Content</th>
-                    <th>Images</th>
-                </tr>
-            </thead>
-            <tbody>
-                {messages.map((msg, index) => (
-                    <tr key={index}>
-                        <td>{msg.role}</td>
-                        <td>{<CascatingTextOutput text={msg.content} />}</td>
-                        <td>
-                            {msg.images.map((url, imgIndex) => (
-                                <img key={imgIndex} src={url} alt={`Preview ${imgIndex}`} style={{ maxWidth: "100px", margin: "10px" }} />
-                            ))}
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-
-    </>);
-}
+            {messages.length > 0 && <><hr />
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>Content</th>
+                            <th>Images</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {messages.map((msg, index) => (
+                            <tr key={index}>
+                                <td>{msg.role}</td>
+                                <td><CascatingTextOutput text={msg.content} /></td>
+                                <td>
+                                    {msg.images.map((url, imgIndex) => (
+                                        <img key={imgIndex} src={url} alt={`Preview ${imgIndex}`} style={{ maxWidth: "100px", margin: "10px" }} />
+                                    ))}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </>}
+        </>
+    );
+};
 
 export default App;
