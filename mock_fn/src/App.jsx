@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown from "react-markdown";
 import { imageMapping } from "./images";
 
 export const CascatingTextOutput = ({ text }) => {
-    const [textDisplayed, setTextDisplayed] = useState('');
+    const [textDisplayed, setTextDisplayed] = useState("");
 
     const getRandomDelay = () => 20;
 
@@ -24,18 +24,24 @@ export const CascatingTextOutput = ({ text }) => {
 
 export const App = () => {
     const [apiUrl, setApiUrl] = useState("http://127.0.0.1:5000");
-    const [chatId, setChatId] = useState('');
+    const [chatId, setChatId] = useState("");
     const [message, setMessage] = useState("");
     const [imageDataUrls, setImageDataUrls] = useState([]);
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [sendLocation, setSendLocation] = useState(false);
     const [overideContent, setOverideContent] = useState(false);
-    const [tempChatId, setTempChatId] = useState('');
+    const [tempChatId, setTempChatId] = useState("");
     const fileInputRef = useRef(null);
-    const [userIconBlob, setIconBlob] = useState('');
-    const [iconChangeInterval, setIconChangeInterval] = useState(600);
-    const intervalIdRef = useRef(null);
+    const [userIconBlob, setIconBlob] = useState("");
+
+    // Initialize App
+    useEffect(() => {
+        setChatId(crypto.randomUUID());
+        // load image
+        const randomIndex = Math.floor(Math.random() * imageMapping.length);
+        setIconBlob(imageMapping[randomIndex]);
+    }, []);
 
     const handleImageUpload = (event) => {
         const files = Array.from(event.target.files);
@@ -51,30 +57,6 @@ export const App = () => {
         Promise.all(promises)
             .then(dataUrls => setImageDataUrls(dataUrls))
             .catch(error => console.error("Error reading files: ", error));
-    };
-
-    useEffect(() => {
-        setChatId(crypto.randomUUID());
-        const cleanup = startRandomImage();
-        return cleanup;
-    }, []);
-
-    useEffect(() => {
-        if (intervalIdRef.current) {
-            clearInterval(intervalIdRef.current);
-        }
-        const cleanup = startRandomImage();
-        return cleanup;
-    }, [iconChangeInterval]);
-
-    const startRandomImage = () => {
-        const updateIcon = () => {
-            const randomIndex = Math.floor(Math.random() * imageMapping.length);
-            setIconBlob(imageMapping[randomIndex]);
-        };
-        updateIcon();
-        intervalIdRef.current = setInterval(updateIcon, iconChangeInterval);
-        return () => clearInterval(intervalIdRef.current);
     };
 
     const getLocation = () => {
@@ -122,7 +104,7 @@ export const App = () => {
             .then(data => {
                 const aiMessage = { role: "AI", content: data.message, images: [] };
                 setMessages([...messages, humanMessage, aiMessage]);
-                setMessage('');
+                setMessage("");
                 setImageDataUrls([]);
                 if (fileInputRef.current) {
                     fileInputRef.current.value = "";
@@ -145,10 +127,9 @@ export const App = () => {
     return (
         <>
             <h1>Mock AI API Tester</h1>
-            <img style={{ height: "200px" }} src={userIconBlob} alt="CATS"/>
-            <br />
-            <input type="number" onChange={e => setIconChangeInterval(Number(e.target.value))} value={iconChangeInterval} hidden/>
+            <img style={{ height: "200px" }} src={userIconBlob} alt="CATS" />
             <hr />
+            <h2>Settings</h2>
             API Url: <input onChange={e => setApiUrl(e.target.value)} value={apiUrl} />
             <br />
             Chat ID: <input onChange={e => setChatId(e.target.value)} value={chatId} />
@@ -157,6 +138,7 @@ export const App = () => {
             <br />
             Use Overide: <input type="checkbox" name="overide" checked={overideContent} onChange={handleSetOverideContent} />
             <hr />
+            <h2>Inputs</h2>
             Images: <input type="file" name="myImage" multiple onChange={handleImageUpload} ref={fileInputRef} />
             <br />
             Message: <textarea style={{ verticalAlign: "top" }} onChange={e => setMessage(e.target.value)} value={message} />
