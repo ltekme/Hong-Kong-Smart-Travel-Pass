@@ -84,6 +84,7 @@ export const App = () => {
       }}>export</button>
       <button onClick={() => fileInputRef.current.click()}>import</button>
       <input type="file" accept="application/json" onChange={handleFileUpload} style={{ display: 'none' }} ref={fileInputRef} />
+      <button onClick={() => setMessafe([])}>Clear</button>
     </div>
 
     {/* List of messages */}
