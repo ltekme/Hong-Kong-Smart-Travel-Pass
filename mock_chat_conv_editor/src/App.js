@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { Buffer } from 'buffer';
 import ReactMarkdown from 'react-markdown';
 
 export const App = () => {
@@ -64,10 +63,9 @@ export const App = () => {
       <br />
       <button onClick={() => {
         const data = JSON.stringify(messages.map((msg) => {
-          const encodeing = 'utf-8';
           return {
-            question: Buffer.from(msg.content, encodeing).toString(encodeing),
-            response: Buffer.from(msg.response, encodeing).toString(encodeing),
+            question: msg.content,
+            response: msg.response,
           }
         }), null, 2);
         if (!chatId) {
