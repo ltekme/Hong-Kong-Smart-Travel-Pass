@@ -215,11 +215,14 @@ class LLMModelBase:
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool],
-                 overides_content: list[dict],  # should switch to chroma
+                 # Not Used
+                 overide_chat_content: list = [],
+                 overide_direct_output=False,
                  ) -> None:
         self.llm = llm
         self.tools = tools
-        self.overide_chat_content = overides_content
+        self.overide_direct_output = overide_direct_output
+        self.overide_chat_content = overide_chat_content
 
     def process_invoke_context(self, context: str) -> str:
         new_context = "Current local datetime: {}\n".format(
@@ -245,11 +248,6 @@ class LLMModelBase:
 
         system_message += "\n\n" + self.process_invoke_context(context)
 
-        if self.overide_chat_content:
-            for m in self.overide_chat_content:
-                if m["question"] in last_user_message.content.text:
-                    return Message('ai', MessageContent(m["response"]))
-
         prompt = ChatPromptTemplate(
             [("system", system_message),
              MessagesPlaceholder('chat_history'),
@@ -272,8 +270,10 @@ class LLMChainModel(LLMModelBase):
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool],
-                 overide_chat_content: list = []) -> None:
-        super().__init__(llm, tools, overide_chat_content)
+                 overide_chat_content: list = [],
+                 overide_direct_output: bool = False,
+                 ) -> None:
+        super().__init__(llm, tools, overide_chat_content, overide_direct_output)
 
     def get_response_from_llm(self,
                               last_user_message: Message,
@@ -332,6 +332,8 @@ class LLMChainModel(LLMModelBase):
         if self.overide_chat_content:
             for m in self.overide_chat_content:
                 if m["question"] in last_user_message.content.text:
+                    if self.overide_direct_output:
+                        return Message('ai', MessageContent(m["response"]))
                     standard_response.append(m["response"])
 
         # only include the standard response if there are more than the headers

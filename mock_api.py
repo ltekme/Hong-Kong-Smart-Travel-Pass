@@ -68,7 +68,7 @@ def chat_messages() -> JsonResponse:
 
     # Handle preflight option request
     if request.method == HTTPMethod.OPTIONS:
-        response.response_content = ""
+        response.response_content = {}
         response.status = HTTPStatus.OK
         return response
 
