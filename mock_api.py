@@ -147,6 +147,7 @@ def chat_messages() -> JsonResponse:
         mediaObj = chat_llm.MessageContentMedia.from_uri(
             mediaContent)
         if mediaObj is not None:
+            print(f"{mediaObj.data=}")
             messageMedia.append(mediaObj)
 
     # Send to llm

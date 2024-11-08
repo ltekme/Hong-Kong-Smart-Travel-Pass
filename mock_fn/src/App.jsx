@@ -95,7 +95,7 @@ export const App = () => {
                 chatId: chatId,
                 content: {
                     message: humanMessage.content,
-                    images: humanMessage.images,
+                    media: humanMessage.images,
                 },
                 context: context,
                 overideContent: overideContent,

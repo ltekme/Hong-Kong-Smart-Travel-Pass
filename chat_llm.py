@@ -24,9 +24,9 @@ load_dotenv()
 
 class MessageContentMedia:
     def __init__(self, format: str, data: str, media_type: str = "image") -> None:
-        self.format = format
-        self.data = data
-        self.media_type = media_type
+        self.format: str = format
+        self.data: str = data
+        self.media_type: str = media_type
 
     @property
     def uri(self) -> str:
@@ -50,6 +50,7 @@ class MessageContentMedia:
             data = uri.split(',')[1]
             return MessageContentMedia(format=format, data=data, media_type=media_type)
         except Exception as e:
+            print(f"Error encoding media {e}")
             return None
 
 
@@ -298,8 +299,6 @@ class LLMChainModel(LLMModelBase):
             verbose=True,
             handle_parsing_errors=True,
         )
-        # print(prompt.messages)
-        print(f"{last_user_message.content.media=}")
 
         return executor.invoke({
             "existing_system_prompt": system_message,
@@ -341,7 +340,7 @@ class LLMChainModel(LLMModelBase):
         # only include the standard response if there are more than the headers
         if len(standard_response) > 2:
             standard_response.append("End of Standard Response")
-            print(f"Using {standard_response=}")
+            print(f"LLMChainModel.invoke => Using {standard_response=}")
         else:
             standard_response = []
 
@@ -411,7 +410,6 @@ class ChatLLM:
         if not message:
             return Message('system', "Please provide a message.")
         user_message = Message('human', MessageContent(message, media))
-
         self.chatRecords.append(user_message)
         ai_message = self.llm_model.invoke(self.chatRecords, context)
         self.chatRecords.append(ai_message)
