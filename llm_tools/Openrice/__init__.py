@@ -62,7 +62,9 @@ class GetOpenriceRestaurantRecommendationTool(OpenricaApiToolBase):
     name: str = "Get Openrice Restaurant Recommendation"
     description: str = """Used to get restaurant recommendation from Openrice. When no resault is found an empty list will be returned.
 Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool.
-When no input is provided, general recommendations will be provided."""
+When no input is provided, general recommendations will be provided.
+Use the `Get Openrice Filters` tool to find openrice filter first before using this tool, 
+"""
     args_schema: t.Type[BaseModel] = ToolArgs
 
     def _run(self,
@@ -96,13 +98,13 @@ class GetOpenriceFilterTool(OpenricaApiToolBase):
         super().__init__(**kwargs)
 
     class ToolArgs(BaseModel):
-        filter_ketword: str = Field(
-            description="Filter to search for. don't provide the filter type, just the keyword. e.g. 'dim sum' for dish, `kowloon bay station` for landmark, `romantic` for theme, `pet friendly` for amenity, `below $50` for price range."
+        filter_option_find_input: str = Field(
+            description="""Used to get avalable filter options from keyword. Enter the keyword of the filter option like 'dim sum' for dish, 'kowloon bay station' for landmark, 'romantic' for theme, 'pet friendly' for amenity, 'below $50' for price range. This tool will return all avaliable filters that match the keyword."""
         )
 
     name: str = "Get Openrice Filters"
-    description: str = "Used to get filter options from Openrice. All avaliable filters can be obtained using this tool. Enter the filter keyword to search for avaliable filters."
+    description: str = "Used to get filter options from Openrice. All avaliable filters can be obtained using this tool. Enter the filter keyword to search for avaliable filters. YOU MUST USE THIS TOOL TO GET AVALABLE FILTERS. THIS TOOL IS REQUIRED TO USE `Get Openrice Restaurant Recommendation` TOOL TO MAKE SURE THE CORRECTNESS OF EACH FILTER ID."
     args_schema:  t.Type[BaseModel] = ToolArgs
 
-    def _run(self, filter_ketword: str, **kwargs) -> str:
-        return '\n\n'.join([str(doc) for doc in self.openrice.filters.search(filter_ketword)])
+    def _run(self, filter_option_find_input: str, **kwargs) -> str:
+        return '\n\n'.join([str(doc) for doc in self.openrice.filters.search(filter_option_find_input)])

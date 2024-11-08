@@ -298,6 +298,8 @@ class LLMChainModel(LLMModelBase):
             verbose=True,
             handle_parsing_errors=True,
         )
+        # print(prompt.messages)
+        print(f"{last_user_message.content.media=}")
 
         return executor.invoke({
             "existing_system_prompt": system_message,

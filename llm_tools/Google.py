@@ -11,15 +11,15 @@ import googlemaps
 class GoogleToolBase(BaseTool):
 
     def __init__(self,
-                 google_api_key: str = None,
-                 google_cse_id: str = None,
+                 google_api_key: str = "",
+                 google_cse_id: str = "",
                  verbose: bool = False,
                  **kwargs):
         super().__init__(**kwargs)
         self._google_api_key: str = google_api_key or os.getenv(
-            "GOOGLE_API_KEY")
+            "GOOGLE_API_KEY", "")
         self._google_cse_id: str = google_cse_id or os.getenv(
-            "GOOGLE_CSE_ID")
+            "GOOGLE_CSE_ID", "")
         self.verbose = verbose
 
     def print_log(self, msg: str):
@@ -80,9 +80,9 @@ class ReverseGeocodeConvertionTool(GoogleToolBase):
             return "Cannot Perform Reverse Geocode Search"
         self.print_log(f"Finding {longitude}, {latitude}")
         maps = googlemaps.Client(key=self._google_api_key)
-        resault = maps.reverse_geocode((latitude, longitude))
+        resault = maps.reverse_geocode((latitude, longitude))  # type: ignore
         addresses = list(map(lambda a: a['formatted_address'], resault))
-        self.print_log("Got addresses" + addresses)
+        self.print_log(f"Got addresses {addresses}")
         return "\n".join(addresses)
 
 
@@ -100,12 +100,12 @@ class GetGeocodeFromPlaces(GoogleToolBase):
     description: str = "Used to get latitude, longitude of the place if exists"
     args_schema: t.Type[BaseModel] = ToolArgs
 
-    def _run(self, place: str, **kwargs) -> t.Tuple[int, int]:
+    def _run(self, place: str, **kwargs) -> t.Tuple[int, int] | str:
         if not self._google_api_key:
             self.print_log("No google api key defined, returning not avalable")
             return "Cannot Perform Reverse Geocode Search"
         maps = googlemaps.Client(key=self._google_api_key)
-        geocode_result = maps.geocode(place)
+        geocode_result = maps.geocode(place)  # type: ignore
         location = None
         if geocode_result:
             location = geocode_result[0]['geometry']['location']
@@ -113,4 +113,4 @@ class GetGeocodeFromPlaces(GoogleToolBase):
             geolocation = location["lat"], location["lng"]
             self.print_log("got location " + str(geolocation))
             return geolocation
-        return None
+        return "No location found"

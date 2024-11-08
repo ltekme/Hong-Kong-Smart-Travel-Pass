@@ -55,8 +55,9 @@ export const App = () => {
         });
 
         Promise.all(promises)
-            .then(dataUrls => setImageDataUrls(dataUrls))
+            .then(dataUrls => setImageDataUrls([...imageDataUrls, ...dataUrls]))
             .catch(error => console.error("Error reading files: ", error));
+        fileInputRef.current.value = "";
     };
 
     const getLocation = () => {
@@ -139,9 +140,39 @@ export const App = () => {
             Use Overide: <input type="checkbox" name="overide" checked={overideContent} onChange={handleSetOverideContent} />
             <hr />
             <h2>Inputs</h2>
-            Images: <input type="file" name="myImage" multiple onChange={handleImageUpload} ref={fileInputRef} />
+            {imageDataUrls.length > 0 &&
+                <>
+                    Images Selected:<br></br>
+                    {imageDataUrls.map((url, index) => (
+                        <img key={index} src={url} alt={`Preview ${index}`} style={{ maxWidth: "30px", marginLeft: "3px" }} />
+                    ))}
+                    <br />
+                </>}
+            Images:
+            <input type="button" value="Clear" onClick={() => setImageDataUrls([])} />
+            <input type="file" multiple onChange={handleImageUpload} ref={fileInputRef} style={{ display: "none" }} />
+            <input type="button" value="Select Image" onClick={() => fileInputRef.current.click()} />
             <br />
-            Message: <textarea style={{ verticalAlign: "top" }} onChange={e => setMessage(e.target.value)} value={message} />
+            Message: <textarea onPaste={async (e) => {
+                if (e.clipboardData.items[0].type === "text/plain") {
+                    const text = await new Promise(resolve => e.clipboardData.items[0].getAsString(resolve));
+                    setMessage(message + text);
+                    return;
+                }
+                e.preventDefault();
+                const items = e.clipboardData.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf("image") !== -1) {
+                        const blob = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            console.log("pasting image");
+                            setImageDataUrls(prevUrls => [...prevUrls, e.target.result]);
+                        };
+                        reader.readAsDataURL(blob);
+                    }
+                }
+            }} style={{ verticalAlign: "top" }} onChange={e => setMessage(e.target.value)} value={message} />
             <br />
             <button onClick={sendToAPI}>Send</button>
             {isLoading && <p>Loading...</p>}

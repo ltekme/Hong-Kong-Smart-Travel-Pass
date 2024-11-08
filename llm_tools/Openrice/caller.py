@@ -17,7 +17,7 @@ def divide_chunks(data, chunk_size):
 
 class OpenriceBase():
 
-    lang_dict_options: dict = ["en", "tc", "sc"]
+    lang_dict_options: list = ["en", "tc", "sc"]
 
     def __init__(self, verbose: bool):
         self.verbose = verbose
@@ -39,7 +39,7 @@ class FilterBase(OpenriceBase):
                  credentials: Credentials,
                  store_data: bool = True,
                  verbose: bool = False,
-                 searchKey: str = None,
+                 searchKey: str = "",
                  searchKeyParentKey: list[str] = [],
                  data_base_path: str = "./data",
                  chroma_db_path: str = "./chroma_db",
@@ -102,19 +102,25 @@ class FilterBase(OpenriceBase):
             # get the items from list of dict keys
             searchKeyMap = self.raw_data
             for layer in searchKeyParentKey:
-                searchKeyMap = searchKeyMap[layer]
+                if isinstance(searchKeyMap, dict):
+                    searchKeyMap = searchKeyMap[layer]
+                else:
+                    raise TypeError(f"Expected a dictionary for raw data but got {type(searchKeyMap)}")
 
             # parse to dict
             self._data = list(map(lambda d: {
-                self.searchKey: d["searchKey"].split("=")[1],
-                **{f"name{l.upper()}": d["nameLangDict"][l] for l in self.lang_dict_options},
+                self.searchKey: d["searchKey"].split("=")[1] if isinstance(d, dict) else " ",  # type: ignore
+                **{f"name{l.upper()}": d["nameLangDict"][l] for l in self.lang_dict_options},  # type: ignore
             }, searchKeyMap))
 
             # store data to file if enabled
             if self.store_data:
                 write_json_file(self._data, self.data_path)
 
-        self.init_chroma_data(self._data)
+        if isinstance(self._data, list) and all(isinstance(i, dict) for i in self._data):
+            self.init_chroma_data(self._data)
+        else:
+            raise TypeError("Expected self._data to be a list of dictionaries")
 
         self.logger(f"filter {searchKey} data loaded")
 
@@ -138,7 +144,10 @@ class FilterBase(OpenriceBase):
         raw_data = fetch(self.data_url)
         if self.store_data:
             self.logger("storage enabled, writing raw data to file")
-            write_json_file(raw_data, self.raw_data_path)
+            if isinstance(raw_data, (dict, list)):
+                write_json_file(raw_data, self.raw_data_path)
+            else:
+                raise TypeError("Expected raw_data to be a dictionary or list")
         self.logger("got raw data from API, returning")
         return raw_data
 
@@ -179,9 +188,11 @@ class FilterBase(OpenriceBase):
 
     @property
     def all(self) -> list:
-        return self._data
+        if isinstance(self._data, list):
+            return self._data
+        return []
 
-    def search(self, keyword: str) -> list[Document]:
+    def search(self, keyword: str) -> list[str]:
         search_param = {
             "query": keyword,
             "k": 5,
@@ -204,7 +215,7 @@ class FilterBase(OpenriceBase):
         resault = list(filter(
             # is is compairing string because my dumb fuck decided to get the id from search key string so everything is compatable.
             lambda flt: flt[self.searchKey] == f"{id}",
-            self._data
+            self._data if isinstance(self._data, list) else []
         ))
         if resault != []:
             return resault[0]
@@ -367,7 +378,7 @@ class RestaurantSearchApi(OpenriceBase):
                 "remarks": raw_data.get("phoneRemarks"),
                 "numbers": raw_data.get("phones"),
             },
-            "priceRangeId": self.filters.priceRange.by_id(raw_data.get("priceRangeId")),
+            "priceRangeId": self.filters.priceRange.by_id(raw_data.get("priceRangeId", -1)),
             "shortUrl": raw_data.get("shortenUrl"),
             "district": raw_data.get("district", {}).get("name"),
             "categories": list(map(lambda n: n.get("name"), raw_data.get("categories", []))),
@@ -471,14 +482,18 @@ class RestaurantSearchApi(OpenriceBase):
             f"&startAt=0&&rows={count}&keyword={keywords}&uiLang=en"
 
         resault = fetch(searchUrl)
-        if resault.get('success') == False:
-            self.logger('Error: from API\n', resault)
+        if isinstance(resault, dict) and resault.get('success') == False:
+            self.logger(f'Error: from API\n{resault}')
             return []
 
-        return list(map(
-            self.format_raw_restaurant_data,
-            resault["paginationResult"]["results"]
-        ))
+        if isinstance(resault, dict) and "paginationResult" in resault and "results" in resault["paginationResult"]:
+            return list(map(
+                self.format_raw_restaurant_data,
+                resault["paginationResult"]["results"]
+            ))
+        else:
+            self.logger(f'Unexpected API response format: {resault}')
+            return []
 
 
 if __name__ == "__main__":

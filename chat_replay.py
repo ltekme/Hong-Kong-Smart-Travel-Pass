@@ -31,8 +31,8 @@ for message in chat.as_list:
 
     print(color + "="*5 + f" {message.role.capitalize()} " + "="*5 + RESET)
     print(color + message.content.text + RESET)
-    if message.content.images:
+    if message.content.media:
         print(color + "-" * 10 + " Images " + "-" * 10 + RESET)
-        for img in message.content.images:
+        for img in message.content.media:
             print(color + "Image(snipped): " + img.data[:10] + RESET)
     print("\n" + "-"*20 + "\n")
