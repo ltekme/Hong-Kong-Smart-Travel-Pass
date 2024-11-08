@@ -5,8 +5,6 @@ import copy
 import base64
 import typing as t
 import datetime
-import math
-from time import sleep
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
@@ -57,8 +55,8 @@ class MessageContentMedia:
 
 class MessageContent:
     def __init__(self, text: str, media: list[MessageContentMedia] = []) -> None:
-        self.text = text
-        self.media = media
+        self.text: str = text
+        self.media: list[MessageContentMedia] = media
 
 
 class Message:
@@ -76,7 +74,7 @@ class Message:
             self.content: MessageContent = MessageContent(str(content))
 
     @property
-    def message_list(self) -> list[dict[t.Any, t.Any]]:
+    def message_list(self) -> list[dict[str, t.Any]]:
         """Return the human message list in the format of langchain template message"""
         return [{
             "type": "text",
@@ -85,7 +83,7 @@ class Message:
 
     @property
     def lcMessage(self) -> t.Union[AIMessage, SystemMessage, HumanMessage]:
-        return self.lcMessageMapping[self.role](content=self.message_list)
+        return self.lcMessageMapping[self.role](content=self.message_list)  # type: ignore
 
 
 class Chat:
@@ -211,18 +209,71 @@ class LLMChainTools:
         return self.llm_tools.getall()
 
 
-class LLMChainModel:
-    system_prompt_template = """{existing_system_prompt}\n\nAdditional Contexts:{additional_context}\n\nYou have access to the following tools:\n\n{tools}\n\nAll content from tools are real-time data.\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation"""
+class LLMModelBase:
+    # used for typing
 
-    _overide_file_path = ""
+    def __init__(self,
+                 llm: BaseChatModel,
+                 tools: list[BaseTool],
+                 overides_content: list[dict],  # should switch to chroma
+                 ) -> None:
+        self.llm = llm
+        self.tools = tools
+        self.overide_chat_content = overides_content
+
+    def process_invoke_context(self, context: str) -> str:
+        new_context = "Current local datetime: {}\n".format(
+            datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"))
+        return new_context + context
+
+    def invoke(
+        self,
+        messages: Chat,
+        context: str,
+    ) -> Message:
+        messages_copy: Chat = copy.deepcopy(messages)
+
+        last_user_message = messages_copy.last_message
+        if not last_user_message:
+            return Message("system", "Please provide a message")
+
+        messages_copy.remove_last_message()
+        system_message = ""
+        if messages_copy.system_message is not None:
+            system_message = messages_copy.system_message.content.text
+            messages_copy.remove_system_message()
+
+        system_message += "\n\n" + self.process_invoke_context(context)
+
+        if self.overide_chat_content:
+            for m in self.overide_chat_content:
+                if m["question"] in last_user_message.content.text:
+                    return Message('ai', MessageContent(m["response"]))
+
+        prompt = ChatPromptTemplate(
+            [("system", system_message),
+             MessagesPlaceholder('chat_history'),
+             ("user", [{
+                 "type": "text",
+                 "text": "{question}",
+             }] + [img.as_lcMessageDict for img in last_user_message.content.media]
+                if last_user_message and last_user_message.content else [])]
+        )
+
+        response = self.llm.invoke(prompt.invoke({
+            "chat_history": messages_copy.as_list_of_lcMessages,
+        }))
+        return Message('ai', MessageContent(str(response.content)))
+
+
+class LLMChainModel(LLMModelBase):
+    system_prompt_template = """{existing_system_prompt}\n\nAdditional Contexts:{additional_context}\n\nYou have access to the following tools:\n\n{tools}\n\nAll content from tools are real-time data.\n\nUse a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\nValid "action" values: "Final Answer" or {tool_names}\n\nProvide only ONE action per $JSON_BLOB, as shown:\n\n```\n{{\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nFollow this format:\n\nQuestion: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n... (repeat Thought/Action/Observation N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Final Answer",\n  "action_input": "Final response to human"\n}}\n\nBegin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation"""
 
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool],
                  overide_chat_content: list = []) -> None:
-        self.llm = llm
-        self.tools = tools
-        self.overide_chat_content = overide_chat_content
+        super().__init__(llm, tools, overide_chat_content)
 
     def get_response_from_llm(self,
                               last_user_message: Message,
@@ -280,10 +331,8 @@ class LLMChainModel:
 
         if self.overide_chat_content:
             for m in self.overide_chat_content:
-                print(f"Checking {m=} against {last_user_message.content.text}")
-                if m.get("question") in last_user_message.content.text:
-                    standard_response.append(m.get("response"))
-
+                if m["question"] in last_user_message.content.text:
+                    standard_response.append(m["response"])
 
         # only include the standard response if there are more than the headers
         if len(standard_response) > 2:
@@ -326,7 +375,7 @@ class ChatLLM:
     _chatId = str(uuid.uuid4())
 
     def __init__(self,
-                 llm_model: LLMChainModel,
+                 llm_model: LLMModelBase,
                  chatId: str = "",
                  chatRecordFolderPath: str = './chat_data',
                  store_chat_records: bool = True
