@@ -1,3 +1,12 @@
+from dotenv import load_dotenv
+from llm_tools import LLMTools
+from google.oauth2.service_account import Credentials
+from langchain.agents import create_structured_chat_agent, AgentExecutor  # type: ignore
+from langchain_core.tools import BaseTool
+from langchain_google_vertexai import ChatVertexAI
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 import os
 import json
 import uuid
@@ -5,21 +14,25 @@ import copy
 import base64
 import typing as t
 import datetime
+import facebook
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_google_vertexai import ChatVertexAI
-from langchain_core.tools import BaseTool
-
-from langchain.agents import create_structured_chat_agent, AgentExecutor  # type: ignore
-
-from google.oauth2.service_account import Credentials
-
-from llm_tools import LLMTools
-
-from dotenv import load_dotenv
 load_dotenv()
+
+
+class UserProfile():
+
+    facebook_access_token: str = ""
+    id: str = ""
+    name: str = ""
+
+    @classmethod
+    def from_facebook_access_token(cls, facebook_access_token: str) -> "UserProfile":
+        graph = facebook.GraphAPI(access_token=facebook_access_token, version="2.12")
+        profile = graph.get_object(id="me", fields="id,name")
+        print(profile)
+        profile = cls()
+        profile.facebook_access_token = facebook_access_token
+        return profile
 
 
 class MessageContentMedia:
