@@ -1,53 +1,46 @@
+import os
 import facebook
 import requests
 import base64
-# import json
+import json
 from langchain_google_vertexai import ChatVertexAI
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-
 from google.oauth2.service_account import Credentials
 
 
-class UserProfile():
-
-    def logger(self, msg: str):
-        if self.verbose:
-            print("\033[47m\033[34m[Facebook Profile] " + str(msg) + "\033[0m")
-
+class UserProfile:
     verbose: bool = False
     id: str = ""
     name: str = ""
     _details: dict = {}
-    _summory: str = ""
+    _summary: str = ""
     _facebook_access_token: str = ""
     _gcp_credentials: Credentials | None = None
+
+    def logger(self, msg: str):
+        if self.verbose:
+            print(f"\033[47m\033[34m[Facebook Profile] {msg}\033[0m")
 
     @property
     def facebook_access_token(self) -> str:
         raise AttributeError("Access Token is not readable")
 
-    @classmethod  # as init
-    def from_facebook_access_token(cls,
-                                   facebook_access_token: str,
-                                   gcp_credentials: Credentials | None = None,
-                                   verbose: bool = False,
-                                   ) -> "UserProfile":
-        this = cls()
-        this.verbose = verbose
-        this.logger("Initializing UserProfile from Facebook access token")
-        this._facebook_access_token = facebook_access_token
+    @classmethod
+    def from_facebook_access_token(cls, facebook_access_token: str, gcp_credentials: Credentials | None = None, verbose: bool = False) -> "UserProfile":
+        instance = cls()
+        instance.verbose = verbose
+        instance.logger("Initializing UserProfile from Facebook access token")
+        instance._facebook_access_token = facebook_access_token
         if gcp_credentials is not None:
-            this._gcp_credentials = gcp_credentials
+            instance._gcp_credentials = gcp_credentials
         try:
-            fbProfile = this.facebook_graph_api.get_object(id="me", fields="id,name")
-            this.id = fbProfile["id"]
-            this.name = fbProfile["name"]
-            this.logger(f"Profile loaded: {this.id} ({this.name})")
-            return this
+            fb_profile = instance.facebook_graph_api.get_object(id="me", fields="id,name")
+            instance.id = fb_profile["id"]
+            instance.name = fb_profile["name"]
+            instance.logger(f"Profile loaded: {instance.id} ({instance.name})")
         except Exception as e:
-            this.logger(f"Failed to get profile {e=}")
-            return this
+            instance.logger(f"Failed to get profile {e=}")
+        return instance
 
     @property
     def credentials(self) -> Credentials:
@@ -61,19 +54,18 @@ class UserProfile():
     def facebook_graph_api(self) -> facebook.GraphAPI:
         return facebook.GraphAPI(access_token=self._facebook_access_token, version="2.12")
 
-    @property
-    def details(self) -> dict:
+    def get_details(self, refresh: bool = False) -> dict:
         self.logger("Fetching profile details")
-        if self._details:
+        if self._details and not refresh:
             self.logger("Returning cached profile details")
             return self._details
 
-        self.logger("Details not cached, fetching from facebook")
+        self.logger("Forcing refresh of profile details" if refresh else "Details not cached, fetching from Facebook")
 
         def process_dict(d):
             keys_to_remove = []
             for key, value in d.items():
-                if key == "id" or key == "paging":
+                if key in ["id", "paging"]:
                     keys_to_remove.append(key)
                 elif key == "full_picture":
                     image_url = value
@@ -96,27 +88,29 @@ class UserProfile():
             )
             process_dict(profile_details)
             self.logger("Profile details fetched and processed")
-            return profile_details
+            self._details = profile_details
         except Exception as e:
             self.logger(f"Failed to get profile details {e=}\nReturning empty dict")
-            return {}
+            self._details = {}
+        return self._details
 
-    @property
-    def summory(self) -> str:
+    def get_summory(self, refresh: bool = False) -> str:
         self.logger("Generating profile summary")
-        if self._summory:
+        if self._summary and not refresh:
             self.logger("Returning cached profile summary")
-            return self._summory
+            return self._summary
+
+        self.logger("Forcing refresh of profile summary" if refresh else "No cached summary, generating new summary")
 
         if self._gcp_credentials is None:
             self.logger("No GCP Credentials, cannot create LLM for summary")
-            return "No GCP Credentials, cannot create LLM for summory"
+            return "No GCP Credentials, cannot create LLM for summary"
 
-        self.logger(f"Getting profile details for summary")
-        profile_details = self.details
+        self.logger("Getting profile details for summary")
+        profile_details = self.get_details(refresh)
         if not profile_details:
             self.logger(f"No Profile Details, cannot create summary, {profile_details=}")
-            return "No Profile Details, cannot create summory"
+            return "No Profile Details, cannot create summary"
 
         self.logger("Creating LLM for summary")
         llm = ChatVertexAI(
@@ -165,9 +159,48 @@ EOF
             "name": self.name,
             "details": profile_details,
         })
-        self._summory = str(response.content)
+        self._summary = str(response.content)
         self.logger("Returning profile summary")
-        return self._summory
+        return self._summary
+
+    def save_to_file(self, path: str) -> None:
+        if not path:
+            raise ValueError("Path is required to save profile")
+        self.logger(f"Saving profile to file: {path}")
+        if not os.path.exists(os.path.dirname(path)) and path.startswith("./"):
+            self.logger(f"Creating directory for file: {os.path.dirname(path)}")
+            if os.path.dirname(path):
+                os.makedirs(os.path.dirname(path))
+        self.logger("Writing profile to file")
+        with open(path, "w") as f:
+            f.write(json.dumps({
+                "id": self.id,
+                "name": self.name,
+                "details": self.get_details(),
+                "summary": self.get_summory(),
+            }, indent=4))
+
+    @classmethod
+    def load_from_file(cls, path: str) -> "UserProfile":
+        if not path:
+            raise ValueError("Path is required to load profile")
+        instance = cls()
+        instance.logger(f"Loading profile from file: {path}")
+        if not os.path.exists(path):
+            instance.logger(f"File not found: {path}")
+            return instance
+        instance.logger("Reading profile from file")
+        with open(path, "r") as f:
+            data = json.load(f)
+            if not data or not isinstance(data, dict):
+                instance.logger("Failed to read profile data from file")
+                return instance
+            instance.id = data.get("id", "")
+            instance.name = data.get("name", "")
+            instance._details = data.get("details", {})
+            instance._summary = data.get("summary", "")
+        instance.logger("Profile loaded from file")
+        return instance
 
     def __repr__(self) -> str:
         if not self.id and not self.name:

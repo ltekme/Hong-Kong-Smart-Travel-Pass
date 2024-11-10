@@ -16,5 +16,11 @@ if __name__ == "__main__":
         credentials,
         True
     )
-    last_10 = fb.summory
-    print(last_10)
+    summ = fb.get_summory()
+    print(summ)
+    print("Save to file")
+    fb.save_to_file("profile.json")
+    print("Load from file")
+    fb.load_from_file("profile.json")
+    summ = fb.get_summory()
+    print(summ)
