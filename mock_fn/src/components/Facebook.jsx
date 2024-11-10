@@ -8,7 +8,7 @@ export const initFacebookSdk = async () => {
         appId: fbAppId,
         status: true,
         xfbml: true,
-        version: 'v21.0' // or v2.7, v2.6, v2.5, v2.4, v2.3
+        version: 'v2.7' // or v2.7, v2.6, v2.5, v2.4, v2.3
     });
 };
 
@@ -18,11 +18,14 @@ export const getFacebookAccessToken = async () => {
         window.FB.getLoginStatus((response) => {
             if (response.status === 'not_authorized') {
                 reject("User cancelled login or did not fully authorize.");
-            } else if (response.status !== 'connected') {
-                resolve(null);
-            } else {
-                resolve(response.authResponse);
+                return;
             }
+            if (response.status !== 'connected') {
+                resolve(null);
+                return;
+            }
+            resolve(response.authResponse);
+            return;
         });
     });
 
@@ -135,7 +138,8 @@ export const FacebookLogin = ({
                         User ID: {userId}
                         <br />
                         <button onClick={handleLogout}>Logout</button>
-                        <button onClick={() => {
+                        <button onClick={async () => {
+                            let accessToken = await getFacebookAccessToken();
                             navigator.clipboard.writeText(accessToken);
                         }}>copy access token</button>
                         {/* <button onClick={handleGetSession}>Get Session</button> */}

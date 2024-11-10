@@ -14,25 +14,8 @@ import copy
 import base64
 import typing as t
 import datetime
-import facebook
 
 load_dotenv()
-
-
-class UserProfile():
-
-    facebook_access_token: str = ""
-    id: str = ""
-    name: str = ""
-
-    @classmethod
-    def from_facebook_access_token(cls, facebook_access_token: str) -> "UserProfile":
-        graph = facebook.GraphAPI(access_token=facebook_access_token, version="2.12")
-        profile = graph.get_object(id="me", fields="id,name")
-        print(profile)
-        profile = cls()
-        profile.facebook_access_token = facebook_access_token
-        return profile
 
 
 class MessageContentMedia:
