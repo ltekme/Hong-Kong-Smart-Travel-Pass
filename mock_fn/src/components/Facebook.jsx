@@ -24,6 +24,15 @@ export const getFacebookAccessToken = async () => {
                 resolve(null);
                 return;
             }
+            // check for expired access_token
+            let currrentEpoch = Math.floor(new Date().getTime() / 1000);
+            let expireEpoch = response.authResponse.data_access_expiration_time;
+            if (expireEpoch <= currrentEpoch) {
+                console.debug("Access token expired, need to re-auth")
+                resolve(null);
+                return
+            }
+            console.debug("Current session:", response.status, "\nAuth Token expire epoch:", expireEpoch, "\nCurrent Epoch:", currrentEpoch);
             resolve(response.authResponse);
             return;
         });
@@ -90,7 +99,7 @@ export const FacebookLogin = ({
     useEffect(() => {
         const grepInfo = async () => {
             const profile = await getFacebookProfile(accessToken);
-            console.log("Profile: ", profile);
+            console.log(`User profile connected. \nCurrent profile: ${profile.id}(${profile.name})`);
             setUsername(profile.name);
             setUsernameCallback(profile.name);
             setUserId(profile.id);
