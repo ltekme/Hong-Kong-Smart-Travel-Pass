@@ -1,4 +1,4 @@
-from chat_llm import Chat
+from ChatLLM.ChatRecord import ChatRecord
 from colorama import Fore, Style, init
 
 # Initialize colorama
@@ -12,7 +12,7 @@ RESET = Style.RESET_ALL
 
 chatId = "a5d44788-0954-4a26-bc47-7fb7e2466537"
 
-chat = Chat()
+chat = ChatRecord()
 chat.get_from_file("./chat_data/" + chatId + ".json")
 
 chatPlayMsg = f"Playing Chat {chatId}"

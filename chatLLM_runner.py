@@ -1,11 +1,9 @@
-from chat_llm import *
+from ChatLLM import *
 import os
 from google.oauth2.service_account import Credentials
 from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages import HumanMessage
 
-import chat_llm as cllm
-import chat_llm_graph as cllmGraph
 
 if __name__ == "__main__":
     credentials_path = os.getenv(
@@ -13,7 +11,7 @@ if __name__ == "__main__":
     credentials = Credentials.from_service_account_file(credentials_path)
 
     llm = ChatVertexAI(
-        model="gemini-1.5-pro-002",
+        model="gemini-1.5-pro",
         temperature=1,
         max_tokens=8192,
         timeout=None,
@@ -23,9 +21,13 @@ if __name__ == "__main__":
         project=credentials.project_id,
         region="us-central1",
     )
-    llmGraph = cllmGraph.LLMGraphModel(llm=llm)
-    llmGraph.show("./data/graph.png")
-    chatLLM = cllm.ChatLLM(llm_model=llmGraph)
+    tools = LLMTools(credentials).all
+    llmChain = LLMChainModel(
+        llm=llm,
+        tools=tools,
+    )
+    # llmGraph.show("./data/graph.png") 
+    chatLLM = ChatManager(llm_model=llmChain)
 
     while True:
         try:
@@ -36,7 +38,7 @@ if __name__ == "__main__":
                 print("Goodbye!")
                 break
             HumanMessage(user_input).pretty_print()
-            message = cllm.Message('human', user_input)
+            message = ChatMessage('human', user_input)
             resault = chatLLM.new_message(message.content.text)
             resault.lcMessage.pretty_print()
         except KeyboardInterrupt:

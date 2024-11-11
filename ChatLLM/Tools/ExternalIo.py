@@ -76,5 +76,16 @@ def write_file(data: str, path: str, log_print=True):
     if log_print:
         print(
             f'\033[31m[{inspect.stack()[1][3]}] Writing data to {path}\x1b[0m')
-    with open(path, 'w', encoding="utf-8") as f: 
+    with open(path, 'w', encoding="utf-8") as f:
         f.write(data)
+
+
+def read_file(path: str, log_print=True):
+    if log_print:
+        print(
+            f'\033[31m[{inspect.stack()[1][3]}] Trying to read data from {path}\x1b[0m')
+    try:
+        with open(path, 'r', encoding="utf-8") as f:
+            return f.read()
+    except:
+        return None

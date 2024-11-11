@@ -6,7 +6,7 @@ from langchain_google_vertexai import VertexAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-from ..ExternalIo import fetch, write_file
+from ..ExternalIo import fetch, write_file, read_file
 
 
 class MTRApi():
@@ -68,8 +68,7 @@ class MTRApi():
             if self.store:
                 write_file(raw_data, self.data_csv_file_path)
         else:
-            data_file = open(self.data_csv_file_path, 'r', encoding="utf-8")
-            raw_data = data_file.read()
+            raw_data = read_file(self.data_csv_file_path)
 
         # Replace " with none
         raw_data = raw_data.replace("\"", "")
@@ -167,31 +166,16 @@ class MTRApi():
             for fare in route['fares']:
                 text.append(f"  {fare['fareTitle']}:")
                 for category, prices in dict(fare['fareInfo']).items():
-                    text.append(
-                        f"    {str(category).capitalize()}: Octopus - {dict(prices).get('octopus')}, Single Journey - {dict(prices).get('sj')}")
+                    text.append(f"    {str(category).capitalize()}: Octopus - {dict(prices).get('octopus')
+                                                                               }, Single Journey - {dict(prices).get('sj')}")
             text.append("Path:(Sequence of Stations)")
             for path in route['path']:
                 path_text = "{}: Station: {}, Time: {} minutes, {}".format(
                     path['linkType'],
-                    self.get_station_from_station_id(
-                        path['ID'])['English Name'],
+                    self.get_station_from_station_id(path['ID'])['English Name'],
                     path['time'],
                     path['linkText'] if path['linkText'] else '',
                 )
                 text.append(f"  {path_text}")
 
         return "\n".join(text)
-
-
-if __name__ == "__main__":
-    credentials = Credentials.from_service_account_file('gcp_cred-ai.json')
-    mtr = MTRApi(credentials=credentials, verbose=True)
-    # print(mtr.stations)
-    # print(mtr.prettify_station(mtr.stations))
-    # print(mtr.prettify_station(mtr.get_station_from_station_name("Kowlon Bay")))
-    # station = mtr.get_station_from_station_code("AWE")
-    # print(mtr.prettify_station(mtr.stations))
-    start = mtr.get_station_from_station_name("Sheung Shui")[0]
-    end = mtr.get_station_from_station_name("South Horizons")[0]
-    print(mtr.get_from_and_to_station_path(
-        start.get('Station ID', 1), end.get('Station ID', 1)))

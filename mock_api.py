@@ -2,16 +2,12 @@ import os
 import json
 import typing as t
 import uuid
-
 from http import HTTPStatus, HTTPMethod
-
 from flask import Flask, Response, request
-
 from google.oauth2.service_account import Credentials
-
 from langchain_google_vertexai import ChatVertexAI
 
-import chat_llm
+import ChatLLM as chat_llm
 
 
 class JsonResponse(Response):
@@ -57,9 +53,9 @@ llm_model = chat_llm.LLMChainModel(
         project=credentials.project_id,
         region="us-central1",
     ),
-    tools=chat_llm.LLMChainTools(credentials).all,
+    tools=chat_llm.LLMTools(credentials).all,
 )
-chatLLM = chat_llm.ChatLLM(llm_model)
+chatLLM = chat_llm.ChatManager(llm_model)
 
 
 @app.route("/", methods=[HTTPMethod.POST, HTTPMethod.GET, HTTPMethod.OPTIONS])
@@ -78,22 +74,22 @@ def chat_messages() -> JsonResponse:
         response.response_content = {"message": "Method not allowed"}
         return response
 
-    Example_Request_Schema = {
-        # Context will directly appeded to str and sent to system prompt
-        "context": {
-            "location": "lat, lon",
-            "language": "en"
-        },
-        # message and media will be transformed
-        "content": {
-            "message": "user message",
-            "media": ["data url", "data url", "data url"]
-        },
-        # chat id to use
-        "chatId": "chat id",
-        # weather to follow overide file, will also use file with {chatId}_overide.json
-        "overideContent": False | True,
-    }
+    # Example_Request_Schema = {
+    #     # Context will directly appeded to str and sent to system prompt
+    #     "context": {
+    #         "location": "lat, lon",
+    #         "language": "en"
+    #     },
+    #     # message and media will be transformed
+    #     "content": {
+    #         "message": "user message",
+    #         "media": ["data url", "data url", "data url"]
+    #     },
+    #     # chat id to use
+    #     "chatId": "chat id",
+    #     # weather to follow overide file, will also use file with {chatId}_overide.json
+    #     "overideContent": False | True,
+    # }
 
     no_data = {"no": "data"}
     request_json: dict = request.json or no_data
@@ -133,14 +129,7 @@ def chat_messages() -> JsonResponse:
         context.keys()
     )))
 
-    # Expected media is a list of string containing src data url for image
-    # media = list(filter(
-    #     lambda x: bool(x), list(map(
-    #         lambda content:
-    #             chat_llm.MessageContentMedia.from_uri(
-    #                 content) if content else None,
-    #         media
-    #     ))))
+    # get user profile
 
     messageMedia = []
     for mediaContent in media:

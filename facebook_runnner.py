@@ -1,9 +1,8 @@
 import getpass
-import chat_llm_profile as cllmP
+import ChatLLM.UserProfile as cllmP
 
 from google.oauth2.service_account import Credentials
 import os
-import json
 
 if __name__ == "__main__":
 
@@ -19,8 +18,7 @@ if __name__ == "__main__":
     summ = fb.get_summory()
     print(summ)
     print("Save to file")
-    fb.save_to_file("profile.json")
     print("Load from file")
-    fb.load_from_file("profile.json")
+    fb.save()
     summ = fb.get_summory()
     print(summ)

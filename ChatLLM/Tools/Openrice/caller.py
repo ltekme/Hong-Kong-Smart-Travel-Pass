@@ -355,7 +355,7 @@ class RestaurantSearchApi(OpenriceBase):
                         f"Holiday Eve: {entry['period2Start']} - {entry['period2End']}")
             else:
                 day_name = day_map.get(day_of_week, "Unknown")
-                period1 = f"{entry['period1Start']} - {entry['period1End']}"
+                period1 = f"{entry['period1Start']} - {entry['period1End']}" if "period1Start" in entry else ""
                 period2 = f"{entry['period2Start']} - {entry['period2End']}" if "period2Start" in entry else ""
                 periods = f"{period1} {period2}".strip()
                 days[day_name].append(f"{day_name}: {periods}")

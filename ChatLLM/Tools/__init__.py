@@ -19,6 +19,10 @@ class LLMTools:
         self.google_api_key = google_api_key or os.getenv("GOOGLE_API_KEY")
         self.google_cse_id = google_cse_id or os.getenv("GOOGLE_CSE_ID")
 
+    @property
+    def all(self) -> list:
+        return self.getall()
+
     def getall(self):
         return [
             # Hong Kong Observery

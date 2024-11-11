@@ -12,7 +12,10 @@ from langchain_core.language_models.chat_models import BaseChatModel
 
 from google.oauth2.service_account import Credentials
 
-import chat_llm as cllm
+
+from . import Base
+from ..ChatRecord import ChatRecord
+from ..ChatMessage import ChatMessage
 
 
 class LgController:
@@ -34,7 +37,7 @@ class LgController:
         }
 
 
-class LLMGraphModel(cllm.LLMModelBase):
+class LLMGraphModel(Base.LLMModelBase):
     def __init__(self,
                  llm: BaseChatModel,
                  ) -> None:
@@ -51,13 +54,13 @@ class LLMGraphModel(cllm.LLMModelBase):
         with open(img_path, "wb") as f:
             f.write(self.graph.get_graph().draw_mermaid_png())
 
-    def invoke(self, messages: cllm.Chat, context=None) -> cllm.Message:
-        if not isinstance(messages, cllm.Chat):
+    def invoke(self, messages: ChatRecord, context=None) -> ChatMessage:
+        if not isinstance(messages, ChatRecord):
             raise ValueError("messages must be an instance of Chat")
 
         messages.remove_system_message()
         # print(messages.as_list_of_lcMessages)
         for event in self.graph.stream({"messages": messages.as_list_of_lcMessages}):
             for value in event.values():
-                return cllm.Message("ai", str(value["messages"][0].content))
-        return cllm.Message("ai", "No response generated.")
+                return ChatMessage("ai", str(value["messages"][0].content))
+        return ChatMessage("ai", "No response generated.")
