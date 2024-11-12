@@ -19,7 +19,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
     const [locationError, setLocationError] = useState(false);
     const apiUrlRef = useRef(apiUrl);
 
-    const defaultApiUrl = "/api";
+    const defaultApiUrl = process.env.SERVER_API_BASE || "/api";
 
 
     //inti
@@ -28,14 +28,14 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
             setChatId(crypto.randomUUID());
 
             // Initial api url
-            const apiUrlInSettings = localStorage.getItem("odhApiUrl");
+            const apiUrlInSettings = localStorage.getItem("ApiUrl");
             const finalApiUrl = apiUrlInSettings || defaultApiUrl;
             setApiUrl(finalApiUrl);
-            console.log(finalApiUrl);
+            console.log("Setting API URL to", finalApiUrl);
             apiUrlRef.current = finalApiUrl;
             // setApiUrl(apiUrlInSettings || defaultApiUrl);
             if (!apiUrlInSettings) {
-                localStorage.setItem("odhApiUrl", defaultApiUrl);
+                localStorage.setItem("ApiUrl", defaultApiUrl);
             }
         };
         initializeApp();

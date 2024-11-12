@@ -7,15 +7,15 @@ export const SettingsPannel = () => {
     const [apiUrl, setApiUrl] = useState(DEFAUTL_API_URL);
 
     useEffect(() => {
-        const apiUrlInSettings = localStorage.getItem("odhApiUrl");
+        const apiUrlInSettings = localStorage.getItem("ApiUrl");
         setApiUrl(apiUrlInSettings || DEFAUTL_API_URL);
         if (!apiUrlInSettings) {
-            localStorage.setItem("odhApiUrl", DEFAUTL_API_URL);
+            localStorage.setItem("ApiUrl", DEFAUTL_API_URL);
         }
     }, [])
 
     useEffect(() => {
-        localStorage.setItem("odhApiUrl", apiUrl);
+        localStorage.setItem("ApiUrl", apiUrl);
     }, [apiUrl])
 
     return (
