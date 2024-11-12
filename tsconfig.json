@@ -23,10 +23,20 @@
     "jsx": "react-jsx",
     "baseUrl": "./",
     "paths": {
-      "*": ["node_modules/*", "src/types/*"]
+      "*": [
+        "node_modules/*",
+        "src/types/*"
+      ]
+    },
   },
-  
-  },
-  "include": ["**/*.ts", "**/*.tsx", "src"],
-  "exclude": ["node_modules", "node_modules/", "**/node_modules"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "node_modules/",
+    "**/node_modules"
+  ],
 }
