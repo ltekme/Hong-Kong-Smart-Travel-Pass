@@ -41,11 +41,20 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
         let audioData = [];
 
         if (!isRecording) {
-
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            sttButton.style.backgroundColor = "#f44336";
-            const newMediaRecorder = new MediaRecorder(stream);
-
+            let stream;
+            let newMediaRecorder;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                sttButton.style.backgroundColor = "#f44336";
+                newMediaRecorder = new MediaRecorder(stream);
+                // handle permission deny
+            } catch (error) {
+                console.error("Error getting user media", error);
+                alert("Please allow microphone access to use this feature");
+                sttButton.style.backgroundColor = "#fff";
+                sttButton.style.display = "none";
+                return;
+            }
 
             newMediaRecorder.ondataavailable = (event) => {
                 console.log('stt data', event.data);
@@ -67,15 +76,20 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
                     const base64data = reader.result;
                     console.log('stt base64 ok');
 
-
-                    const response = await fetch('http://localhost:5000/stt', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ audioData: base64data })
-                    });
-
+                    let response;
+                    try {
+                        response = await fetch('http://localhost:5000/stt', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ audioData: base64data })
+                        });
+                    } catch (error) {
+                        alert("Error sending audio data");
+                        console.error("Error sending audio data", error);
+                        return;
+                    }
                     const result = await response.json();
                     console.log('result.message', result.message);
                     // setText(result.message);
