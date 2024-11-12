@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import ReactMarkdown from 'react-markdown';
+import MDEditor from '@uiw/react-md-editor';
 
 export const App = () => {
   const [chatId, setChatId] = useState('mock');
@@ -44,11 +45,21 @@ export const App = () => {
       <br />
       Question Match:
       <br />
-      <input onChange={e => setNewMessageContent(e.target.value)} value={newMessageContent} placeholder="question match" />
+      <textarea onChange={e => setNewMessageContent(e.target.value)} value={newMessageContent} placeholder="question match" rows={3} cols={50} />
       <br />
       Question Standard Response:
-      <br />
-      <textarea onChange={e => setNewMessageResponse(e.target.value)} value={newMessageResponse} placeholder="response" rows={25} cols={100} />
+      {/* <br /> */}
+      {/* <textarea onChange={e => setNewMessageResponse(e.target.value)} value={newMessageResponse} placeholder="response" rows={25} cols={100} /> */}
+      {/* <br /> */}
+      <div data-color-mode="light">
+        <MDEditor
+          value={newMessageResponse}
+          onChange={setNewMessageResponse}
+          height={400}
+          theme="bright"
+        />
+        {/* <MDEditor.Markdown source={newMessageResponse} style={{ whiteSpace: 'pre-wrap' }} /> */}
+      </div>
       <br />
       <button onClick={() => {
         if (newMessageContent === "" || !newMessageResponse === "") {
@@ -101,6 +112,7 @@ export const App = () => {
             <tr key={i}>
               <td>{message.content}</td>
               <td><ReactMarkdown>{message.response}</ReactMarkdown></td>
+              {/* <td data-color-mode="light"><MDEditor.Markdown source={message.response} style={{ whiteSpace: 'pre-wrap' }} /></td> */}
               <td>
                 <button onClick={() => {
                   setMessafe(messages.filter((msg, index) => index !== i));
