@@ -4,7 +4,11 @@ import userImage from "./image/image.jpg";
 import aiImage from "./image/gemini.svg";
 import ReactMarkdown from 'react-markdown';
 
-export const Chatbox = ({ message, keyIdx }) => {
+export const Chatbox = ({
+    message,
+    keyIdx,
+    profilePictureUrl,
+}) => {
     const [delayDisplayText, setDelayDisplayText] = useState("");
 
     const delayBetweenChar = 20;
@@ -28,8 +32,8 @@ export const Chatbox = ({ message, keyIdx }) => {
         // If message.role is loading -> display the loading class (spin avatar image)
         <div key={keyIdx} className={`message incoming${message?.role === "loading" && message?.text === undefined ? " loading" : ""}`}>
             <div className="message-content">
-                <img src={message?.role === "ai" || message?.role === "loading" ? aiImage : sessionStorage.getItem('userPicture') || userImage} alt="AI" className="avatar" />
-                <div style={{ display: "inline-block", overflow: "auto"}}>
+                <img src={message?.role === "ai" || message?.role === "loading" ? aiImage : profilePictureUrl || userImage} alt="AI" className="avatar" />
+                <div style={{ display: "inline-block", overflow: "auto" }}>
                     {message.media && message.media.map((content, idx) => {
                         if (content.startsWith("data:image")) {
                             return (<div key={`${keyIdx}-${idx}`}>
@@ -53,11 +57,14 @@ export const Chatbox = ({ message, keyIdx }) => {
     );
 }
 
-export const UserChatList = (args) => {
+export const UserChatList = ({
+    messageList,
+    profilePictureUrl,
+}) => {
     return (
-        <div id="c2">  
+        <div id="c2">
             <div className="chat-list">
-                {args.messageList.map((item, idx) => <Chatbox message={item} key={idx} />)}
+                {messageList.map((item, idx) => <Chatbox message={item} key={idx} profilePictureUrl={profilePictureUrl} />)}
             </div>
         </div>
     );

@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
-
-const DEFAUTL_API_URL = "http://localhost:5000";
+import { defaultApiUrl } from "../Config";
 
 export const SettingsPannel = () => {
 
-    const [apiUrl, setApiUrl] = useState(DEFAUTL_API_URL);
+    const [apiUrl, setApiUrl] = useState(defaultApiUrl);
 
     useEffect(() => {
         const apiUrlInSettings = localStorage.getItem("ApiUrl");
-        setApiUrl(apiUrlInSettings || DEFAUTL_API_URL);
+        setApiUrl(apiUrlInSettings || defaultApiUrl);
         if (!apiUrlInSettings) {
-            localStorage.setItem("ApiUrl", DEFAUTL_API_URL);
+            localStorage.setItem("ApiUrl", defaultApiUrl);
         }
     }, [])
 

@@ -65,6 +65,7 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
                     icon: 'warning',
                 });
                 sttButton.style.backgroundColor = orginalMicInputBgColor;
+                // sttButton.style.display = "none";
                 return;
             }
 

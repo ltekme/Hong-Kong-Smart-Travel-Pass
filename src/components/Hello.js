@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react"
-import "./css/style.css"
-import "./css/font-awesome.min.css"
+import { useState, useEffect } from "react";
+import "./css/style.css";
+import "./css/font-awesome.min.css";
+import { facebookAppId } from "../Config";
 
-export const Hello = ({ updateUsernameCallback, confirmAgree }) => { // outside for set here
+export const Hello = ({
+    confirmAgree,
+    setFacebookProfile,
+}) => { // outside for set here
     const [showLogin, setShowLogin] = useState(true);
     const [showImage, setShowImage] = useState(window.innerWidth >= 400);
     // const showImage = window.innerWidth >= 400;
@@ -29,7 +33,7 @@ export const Hello = ({ updateUsernameCallback, confirmAgree }) => { // outside 
 
         window.fbAsyncInit = function () {
             window.FB.init({
-                appId: '1592228174832411',
+                appId: facebookAppId,
                 xfbml: true,
                 version: 'v21.0' // the-graph-api-version-for-your-app
             });
@@ -40,41 +44,23 @@ export const Hello = ({ updateUsernameCallback, confirmAgree }) => { // outside 
         console.log('Click FB Login');
 
         if (window.FB) {
-            window.FB.login(function (response) {
-                if (response.authResponse) {
+            window.FB.login(function (loginResponse) {
+                if (loginResponse.authResponse) {
                     console.log('Welcome!  Fetching your information.... ');
                     window.FB.api('/me', {
-                        fields: 'id, name, picture, gender, posts, likes' //me?fields=posts{full_picture,message} 能拿到post中圖片
-                    }, async function (responses) {
-                        console.log(responses);
-                        console.log(responses.picture.data.url);
-                        updateUsernameCallback(responses.name);
-
-
-                        console.log("id", responses.id);
-                        
-                        let accessToken = response.authResponse.accessToken;
-                        console.log('accessToken :', accessToken);
-
-                        // 
-                        // const responseOK = await fetch('http://localhost:5000/', {
-                        //     method: 'POST',
-                        //     headers: {
-                        //         'Content-Type': 'application/json'
-                        //     },
-                        //     body: JSON.stringify({ fbAccessToken: accessToken })
-                        // });
-
-                        // console.log('responseOK', responseOK);
-                        
-
+                        fields: 'id, name, picture, gender' //me?fields=posts{full_picture,message} 能拿到post中圖片
+                    }, async function (profileDetails) {
                         // change picture to base 64
-                        const data = responses.picture.data.url  // https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=523024447160668&height=50&width=50&ext=1733251735&hash=AbZ3mHor3ZeZmBCb4eFd3qC2
-                        const base64 = await convertToBase64(data);
-                        sessionStorage.setItem('userPicture', base64);
-
-                        console.log('base64', base64);
-
+                        const data = profileDetails.picture.data.url;  // https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=523024447160668&height=50&width=50&ext=1733251735&hash=AbZ3mHor3ZeZmBCb4eFd3qC2
+                        const profileBase64 = await convertToBase64(data);
+                        console.log(`Got faceboot response ${JSON.stringify(profileDetails, null, 4)} for ${profileDetails.name}`);
+                        setFacebookProfile({
+                            accessToken: loginResponse.authResponse.accessToken,
+                            profilePicture: profileBase64,
+                            id: profileDetails.id,
+                            name: profileDetails.name,
+                            gender: profileDetails.gender,
+                        })
                         setShowLogin(false)
                     });
                 }
@@ -105,11 +91,11 @@ export const Hello = ({ updateUsernameCallback, confirmAgree }) => { // outside 
             <section className="w3l-hotair-form fade-out">
                 <div className="container">
                     <div className="workinghny-form-grid">
-                        <div className={`main-hotair ${showImage ? "main-hotair-with-img": ""}`}>
+                        <div className={`main-hotair ${showImage ? "main-hotair-with-img" : ""}`}>
                             <div onClick={e => setShowLogin(false)} className="alert-close">
                                 <span onClick={e => setShowLogin(false)} className="fa fa-close"></span>
                             </div>
-                            <div className={`content-wthree ${!showImage ? "content-wthree-without-img": ""}`}>
+                            <div className={`content-wthree ${!showImage ? "content-wthree-without-img" : ""}`}>
                                 <h2>To Connect With Your Social Media</h2>
                                 <div className="social-icons w3layouts">
                                     <ul>

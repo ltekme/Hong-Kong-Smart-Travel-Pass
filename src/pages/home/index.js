@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { UserChatList } from '../../components/ChatMessages';
 import { InputControls } from '../../components/Input';
 import { Hello } from "../../components/Hello";
+import { defaultApiUrl } from "src/Config";
 import './index.css'
 
 import Swal from "sweetalert2";
@@ -13,14 +14,13 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
     const [chatId, setChatId] = useState("");
     const [lastUserMessageMedia, setLastUserMessageMedia] = useState([]);
     const [displayHello, setDisplayHello] = useState(true);
-    const [userName, setUserName] = useState("");
     const [apiUrl, setApiUrl] = useState("");
     const [userLocationLegent, setUserLocationLegent] = useState("");
     const [locationError, setLocationError] = useState(false);
     const apiUrlRef = useRef(apiUrl);
 
-    const defaultApiUrl = process.env.SERVER_API_BASE || "/api";
-
+    const [facebookProfile, setFacebookProfile] = useState({});
+    const [username, setUsername] = useState('');
 
     //inti
     useEffect(() => {
@@ -41,6 +41,15 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
         initializeApp();
     }, [defaultApiUrl])
 
+    useEffect(() => {
+        if (facebookProfile.id) {
+            console.log("Updating facebook profile to\n" + `${JSON.stringify({
+                id: facebookProfile.id,
+                username: facebookProfile.name
+            }, null, 4)}`)
+            setUsername(facebookProfile.name)
+        }
+    }, [facebookProfile])
 
     // Check messageList length
     useEffect(() => {
@@ -219,13 +228,13 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
 
     return (
         <>
-            <UserChatList messageList={messageList} />
+            <UserChatList messageList={messageList} profilePictureUrl={facebookProfile.profilePicture} />
             <InputControls setMessageMedia={setMessageMedia} sendMessage={sendMessage} clearMessages={e => setMessageList([])} />
             {displayHello && (<div id="hello2">
-                <h1 className="title">Hello! {userName}</h1>
+                <h1 className="title">Hello! {username}</h1>
                 <p className="subtitle">How can I help you today?</p>
             </div>)}
-            <Hello updateUsernameCallback={setUserName} confirmAgree={confirmAgree} />
+            <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} />
             {confirmAgree && !locationError ? <div className="address">用戶位置: {userLocationLegent}</div> : null}
         </>
     )
