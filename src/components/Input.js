@@ -23,6 +23,14 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
 
     const handleSendMessage = (e) => {
         e.preventDefault();
+        if (!text) {
+            console.warn("Got empty message from input box");
+            MySwal.fire({
+                title: "Cannot send empty message",
+                icon: 'warning',
+            })
+            return;
+        }
         sendMessage(text);
         clearCurrentState();
     }
@@ -43,6 +51,7 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
         if (!isRecording) {
             let stream;
             let newMediaRecorder;
+            let orginalMicInputBgColor = sttButton.style.backgroundColor;
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 sttButton.style.backgroundColor = "#f44336";
@@ -50,9 +59,12 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
                 // handle permission deny
             } catch (error) {
                 console.error("Error getting user media", error);
-                alert("Please allow microphone access to use this feature");
-                sttButton.style.backgroundColor = "#fff";
-                sttButton.style.display = "none";
+                MySwal.fire({
+                    title: "Cannot use microphone input feature",
+                    text: "Please allow microphone access to use this feature",
+                    icon: 'warning',
+                });
+                sttButton.style.backgroundColor = orginalMicInputBgColor;
                 return;
             }
 
@@ -86,14 +98,19 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
                             body: JSON.stringify({ audioData: base64data })
                         });
                     } catch (error) {
-                        alert("Error sending audio data");
-                        console.error("Error sending audio data", error);
+                        MySwal.fire({
+                            title: "Error processing audio data",
+                            icon: 'error',
+                        });
+                        console.error("Error sending audio data:\n", error);
                         return;
                     }
                     const result = await response.json();
-                    console.log('result.message', result.message);
-                    // setText(result.message);
-                    sendMessage(result.message);
+                    console.log('TTS resault message:\n', result.message);
+                    setText(ext => {
+                        return ext + result.message;
+                    });
+                    // sendMessage(result.message);
                     console.log('settext', text);
                     // handleSendMessage(result.message);
 
@@ -101,7 +118,7 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
                 reader.readAsDataURL(audioBlob);
 
                 stream.getTracks().forEach(track => track.stop());
-                sttButton.style.backgroundColor = "#383838";
+                sttButton.style.backgroundColor = orginalMicInputBgColor;
 
             };
             newMediaRecorder.start();
@@ -131,11 +148,10 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
                 "aria-label": "Upload images or videos",
             },
             icon: 'info',
-
         })
             // .then(file => { file.value })
             .then(response => {
-                console.log(response)
+                // console.log(response)
                 if (!response.isConfirmed || response.isDismissed) {
                     console.warn("dropped images =")
                     return
