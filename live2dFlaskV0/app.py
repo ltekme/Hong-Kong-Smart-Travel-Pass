@@ -5,19 +5,20 @@ import json
 import os
 import base64
 
-from gcp_tts import GoogleTTS
+from gcp_tts import GoogleServices
 
 from google.oauth2.service_account import Credentials
 # from hardcodequestion import CustomDict
 
-from chat_llm import ChatLLM, MessageContentMedia, LLMChainModel, LLMChainTools
+from ..ChatLLM import ChatManager, MessageContentMedia, LLMChainModel
+from ..ChatLLM import LLMTools
 from langchain_google_vertexai import ChatVertexAI
 
 credentialsFiles = list(filter(lambda f: f.startswith(
     'gcp_cred') and f.endswith('.json'), os.listdir('.')))
 credentials = Credentials.from_service_account_file(
     credentialsFiles[0])
-googleTTS = GoogleTTS(credentials)
+googleTTS = GoogleServices(credentials)
 
 app = Flask(__name__)
 CORS(app)
@@ -35,9 +36,9 @@ llm_model = LLMChainModel(
         project=credentials.project_id,
         region="us-central1",
     ),
-    tools=LLMChainTools(credentials).all,
+    tools=LLMTools(credentials).all,
 )
-chatLLM = ChatLLM(llm_model)
+chatLLM = ChatManager(llm_model)
 
 UPLOAD_FOLDER = 'static/temporary'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -59,12 +60,12 @@ def get_sst():
     )
 
     print("*" * 60)
-    imageData = request.json.get('audioData')
+    imageData = request.json.get('audioData') if request.json else ""
     print("!" * 60)
     base64ImageData0 = imageData.split(',')[1]
     base64ImageData1 = base64.b64decode(base64ImageData0)
 
-    text = GoogleTTS.speakToText(base64ImageData1)
+    text = GoogleServices.speakToText(base64ImageData1)
     response.data = json.dumps({"message": text})
     print(response)
 
@@ -94,18 +95,18 @@ def get_information():
         lambda img: MessageContentMedia.from_uri(img),
         images
     ))
-    
+
     # Send to llm
     chatLLM.chatId = request_json.get('chatId', str(uuid.uuid4()))
     ai_response = chatLLM.new_message(
-        message=message, media=messageMedia, context=client_context)
+        message=message, media=messageMedia, context=client_context)  # type: ignore
 
     print("3: " + ai_response.content.text)
     # audio = googleTTS.speak(ai_response.content.text)
     # print("audio: " + audio)
     response.data = json.dumps(
-        {"message": ai_response.content.text, 
-        #  "ttsAudio": audio,
+        {"message": ai_response.content.text,
+         #  "ttsAudio": audio,
          "chatId": chatLLM.chatId,
          })
     return response
@@ -116,7 +117,7 @@ def get_geocoding():
     response = Response(
         content_type="application/json"
     )
-    lat_lon = request.json.get("location") or ""
+    lat_lon = request.json.get("location", "") if request.json else ""
 
     latitude = lat_lon.split(",")[0]
     longitude = lat_lon.split(",")[1]
