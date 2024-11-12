@@ -5,6 +5,7 @@ import { InputControls } from '../../components/Input';
 import { Hello } from "../../components/Hello";
 import './index.css'
 
+import Swal from "sweetalert2";
 
 
 const Home = ({ confirmAgree, l2dSpeak }) => {
@@ -15,6 +16,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
     const [userName, setUserName] = useState("");
     const [apiUrl, setApiUrl] = useState("");
     const [userLocationLegent, setUserLocationLegent] = useState("");
+    const [locationError, setLocationError] = useState(false);
     const apiUrlRef = useRef(apiUrl);
 
     const defaultApiUrl = "/api";
@@ -194,11 +196,18 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
                 });
                 const result = await addressResponse.json();
                 addressOutput = result.localtion;
+                console.log("Current User adddress: \n" + addressOutput);
+                setUserLocationLegent(addressOutput);
+                setLocationError(false);
             } catch (error) {
-                addressOutput = "無法取得地址";
+                console.error("Error getting user location", error);
+                Swal.fire({
+                    title: "Cannot get user location",
+                    text: "Please make sure you have allowed location access",
+                    icon: 'error',
+                });
+                setLocationError(true);
             }
-            console.log(addressOutput);
-            setUserLocationLegent(addressOutput)
         };
 
         getAddressFromCoordinates();
@@ -217,7 +226,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
                 <p className="subtitle">How can I help you today?</p>
             </div>)}
             <Hello updateUsernameCallback={setUserName} confirmAgree={confirmAgree} />
-            {confirmAgree && <div className="address">用戶位置: {userLocationLegent}</div>}
+            {confirmAgree && !locationError ? <div className="address">用戶位置: {userLocationLegent}</div> : null}
         </>
     )
 }
