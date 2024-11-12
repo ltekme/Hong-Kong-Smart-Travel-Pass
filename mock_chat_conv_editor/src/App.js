@@ -31,6 +31,31 @@ export const App = () => {
     fileInputRef.current.value = null;
   };
 
+  const handleExport = () => {
+    const data = JSON.stringify(messages.map((msg) => {
+      return {
+        question: msg.content,
+        response: msg.response,
+      }
+    }), null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${chatId}_overide.json`;
+    a.click();
+    a.remove();
+  }
+
+
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 's') {
+      // Prevent the Save dialog to open
+      e.preventDefault();
+      // Place your code here
+      handleExport();
+    }
+  });
 
   return (<div style={{
     margin: "20px"
@@ -70,27 +95,8 @@ export const App = () => {
         setNewMessageResponse('');
       }}>Add</button>
 
-
       <br />
-      <button onClick={() => {
-        const data = JSON.stringify(messages.map((msg) => {
-          return {
-            question: msg.content,
-            response: msg.response,
-          }
-        }), null, 2);
-        if (!chatId) {
-          alert("no chat id");
-          return
-        }
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${chatId}_overide.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }}>export</button>
+      <button onClick={handleExport}>export</button>
       <button onClick={() => fileInputRef.current.click()}>import</button>
       <input type="file" accept="application/json" onChange={handleFileUpload} style={{ display: 'none' }} ref={fileInputRef} />
       <button onClick={() => setMessafe([])}>Clear</button>
