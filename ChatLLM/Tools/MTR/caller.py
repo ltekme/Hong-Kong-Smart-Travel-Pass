@@ -66,12 +66,12 @@ class MTRApi():
             raw_data = fetch(self.data_url)
 
             if self.store:
-                write_file(raw_data, self.data_csv_file_path)
+                write_file(str(raw_data), self.data_csv_file_path)
         else:
             raw_data = read_file(self.data_csv_file_path)
 
         # Replace " with none
-        raw_data = raw_data.replace("\"", "")
+        raw_data = str(raw_data).replace("\"", "")
         data_lines = str(raw_data).split("\n")
 
         # Read csv headers
@@ -118,7 +118,7 @@ class MTRApi():
     @staticmethod
     def prettify_station(stations: list[dict[str, str]] | dict[str, str]) -> str:
         if type(stations) is not list:
-            stations = [stations]
+            stations = [stations] if isinstance(stations, dict) else stations
         headers = ",".join(stations[0].keys())
         values = "\n".join(
             [",".join(str(value) for value in station.values()) for station in stations])
@@ -152,13 +152,16 @@ class MTRApi():
             url="https://www.mtr.com.hk/share/customer/jp/api/HRRoutes/?" + queryParams,
             log_print=self.verbose
         )
-        if json_data.get("errorCode") != "0":
-            return json_data.get("errorMsg")
+        if isinstance(json_data, dict) and json_data.get("errorCode") != "0":
+            return json_data.get("errorMsg", "Unknown error")
         text = []
         text.append("Terms and Conditions:")
-        text.append(json_data['tnc'])
+        if isinstance(json_data, dict) and 'tnc' in json_data:
+            text.append(json_data['tnc'])
 
-        for route in json_data['routes']:
+        if not isinstance(json_data, dict):
+            return "No Data"
+        for route in json_data.get('routes', []):
             text.append(f"\nRoute Option Name: {route['routeName']}")
             text.append(f"Total Time: {route['time']} minutes")
             text.append(f"Walking Time: {route['walkingTime']} minutes")
@@ -166,13 +169,17 @@ class MTRApi():
             for fare in route['fares']:
                 text.append(f"  {fare['fareTitle']}:")
                 for category, prices in dict(fare['fareInfo']).items():
-                    text.append(f"    {str(category).capitalize()}: Octopus - {dict(prices).get('octopus')
-                                                                               }, Single Journey - {dict(prices).get('sj')}")
+                    text.append("    {}: Octopus - {}, Single Journey - {}".format(
+                        str(category).capitalize(),
+                        dict(prices).get('octopus'),
+                        dict(prices).get('sj'),
+                    ))
+
             text.append("Path:(Sequence of Stations)")
             for path in route['path']:
                 path_text = "{}: Station: {}, Time: {} minutes, {}".format(
                     path['linkType'],
-                    self.get_station_from_station_id(path['ID'])['English Name'],
+                    (self.get_station_from_station_id(path.get("ID") or -1) or {}).get('English Name', 'Unknown Station'),
                     path['time'],
                     path['linkText'] if path['linkText'] else '',
                 )

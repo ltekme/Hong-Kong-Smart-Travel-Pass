@@ -45,6 +45,15 @@ export const App = () => {
     a.download = `${chatId}_overide.json`;
     a.click();
     a.remove();
+  };
+
+  const handleAddMessage = () => {
+    if (newMessageContent === "" || !newMessageResponse === "") {
+      return;
+    }
+    setMessafe([...messages, { content: newMessageContent, response: newMessageResponse }]);
+    setNewMessageContent('');
+    setNewMessageResponse('');
   }
 
 
@@ -57,100 +66,66 @@ export const App = () => {
     }
   });
 
-  return (<div style={{
-    margin: "20px"
-  }}>
+  return (<div style={{ margin: "20px" }}>
 
     {/* Input field */}
     <div>
       <h1>Create mock overide file</h1>
-      Chat ID:
-      <br />
-      <input onChange={e => setChatId(e.target.value)} value={chatId} />
-      <br />
-      Question Match:
-      <br />
-      <textarea onChange={e => setNewMessageContent(e.target.value)} value={newMessageContent} placeholder="question match" rows={3} cols={50} />
-      <br />
+      Chat ID: <br />
+      <input value={chatId} onChange={e => setChatId(e.target.value)} /><br />
+      Question Match:<br />
+      <textarea value={newMessageContent} onChange={e => setNewMessageContent(e.target.value)} placeholder="question match" rows={3} cols={50} /><br />
       Question Standard Response:
-      {/* <br /> */}
-      {/* <textarea onChange={e => setNewMessageResponse(e.target.value)} value={newMessageResponse} placeholder="response" rows={25} cols={100} /> */}
-      {/* <br /> */}
-      <div data-color-mode="light">
-        <MDEditor
-          value={newMessageResponse}
-          onChange={setNewMessageResponse}
-          height={400}
-          theme="bright"
-        />
-        {/* <MDEditor.Markdown source={newMessageResponse} style={{ whiteSpace: 'pre-wrap' }} /> */}
-      </div>
-      <br />
-      <button onClick={() => {
-        if (newMessageContent === "" || !newMessageResponse === "") {
-          return;
-        }
-        setMessafe([...messages, { content: newMessageContent, response: newMessageResponse }]);
-        setNewMessageContent('');
-        setNewMessageResponse('');
-      }}>Add</button>
-
+      <div data-color-mode="light"><MDEditor value={newMessageResponse} onChange={setNewMessageResponse} height={400} /></div><br />
+      <button onClick={handleAddMessage}>Add</button>
       <br />
       <button onClick={handleExport}>export</button>
-      <button onClick={() => fileInputRef.current.click()}>import</button>
       <input type="file" accept="application/json" onChange={handleFileUpload} style={{ display: 'none' }} ref={fileInputRef} />
+      <button onClick={() => fileInputRef.current.click()}>import</button>
       <button onClick={() => setMessafe([])}>Clear</button>
     </div>
 
     {/* List of messages */}
-    {messages.length > 0 && <>
+    {messages.length > 0 ? <>
       <hr />
       <table>
-        <thead>
-          <tr>
-            <th>Question</th>
-            <th>Response</th>
-            <th>Action</th>
+        <thead><tr><th>Question</th><th>Response</th><th>Action</th></tr></thead>
+        <tbody>{messages.map((message, i) => (
+          <tr key={i}>
+            <td>{message.content}</td>
+            <td><ReactMarkdown>{message.response}</ReactMarkdown></td>
+            <td>
+              <button onClick={() => {
+                setMessafe(messages.filter((msg, index) => index !== i));
+              }}>Delete</button>
+              <button onClick={() => {
+                setNewMessageContent(message.content);
+                setNewMessageResponse(message.response);
+                setMessafe(messages.filter((msg, index) => index !== i));
+              }}>Edit</button>
+              <button onClick={() => {
+                if (i > 0) {
+                  const newMessages = [...messages];
+                  const temp = newMessages[i - 1];
+                  newMessages[i - 1] = newMessages[i];
+                  newMessages[i] = temp;
+                  setMessafe(newMessages);
+                }
+              }}>Move Up</button>
+              <button onClick={() => {
+                if (i < messages.length - 1) {
+                  const newMessages = [...messages];
+                  const temp = newMessages[i + 1];
+                  newMessages[i + 1] = newMessages[i];
+                  newMessages[i] = temp;
+                  setMessafe(newMessages);
+                }
+              }}>Move down</button>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {messages.map((message, i) => (
-            <tr key={i}>
-              <td>{message.content}</td>
-              <td><ReactMarkdown>{message.response}</ReactMarkdown></td>
-              {/* <td data-color-mode="light"><MDEditor.Markdown source={message.response} style={{ whiteSpace: 'pre-wrap' }} /></td> */}
-              <td>
-                <button onClick={() => {
-                  setMessafe(messages.filter((msg, index) => index !== i));
-                }}>Delete</button>
-                <button onClick={() => {
-                  setNewMessageContent(message.content);
-                  setNewMessageResponse(message.response);
-                  setMessafe(messages.filter((msg, index) => index !== i));
-                }}>Edit</button>
-                <button onClick={() => {
-                  if (i > 0) {
-                    const newMessages = [...messages];
-                    const temp = newMessages[i - 1];
-                    newMessages[i - 1] = newMessages[i];
-                    newMessages[i] = temp;
-                    setMessafe(newMessages);
-                  }
-                }}>Move Up</button>
-                <button onClick={() => {
-                  if (i < messages.length - 1) {
-                    const newMessages = [...messages];
-                    const temp = newMessages[i + 1];
-                    newMessages[i + 1] = newMessages[i];
-                    newMessages[i] = temp;
-                    setMessafe(newMessages);
-                  }
-                }}>Move down</button>
-              </td>
-            </tr>
-          ))}
+        ))}
         </tbody>
       </table>
-    </>}
+    </> : null}
   </div>)
 }

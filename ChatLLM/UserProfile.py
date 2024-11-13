@@ -80,6 +80,25 @@ class UserProfile:
             instance.logger("Profile loaded from Facebook")
         return instance
 
+    @classmethod
+    def from_facebook_id(cls,
+                         facebook_id: str,
+                         use_cache: bool = True,
+                         verbose: bool = False,
+                         ) -> "UserProfile":
+        instance = cls(
+            verbose=verbose
+        )
+        instance.logger("Initializing UserProfile from Facebook id")
+        instance.id = facebook_id
+        if use_cache:
+            instance.logger("Attempting to get details and summary from saved profile")
+            profile_read = instance.read(os.path.join(instance.storage_path, f"{instance.id}.json"))
+            if profile_read:
+                instance.logger("Details and summory loaded from file")
+            instance.logger("Failed to load details and summory from file")
+        return instance
+
     @property
     def facebook_access_token(self) -> None:
         return None

@@ -4,6 +4,7 @@ from .Models import *
 from .Tools import *
 from .ChatRecord import *
 from .ChatMessage import *
+from .UserProfile import *
 
 
 class ChatManager:
@@ -23,6 +24,7 @@ class ChatManager:
     chatRecordFolderPath = './chat_data'
     store_chat_records = True
     _chatId = str(uuid.uuid4())
+    _profile: UserProfile | None = None
 
     def __init__(self,
                  llm_model: LLMModelBase,
@@ -48,6 +50,14 @@ class ChatManager:
         self._chatId = value
         if self.store_chat_records:
             self.chatRecords.get_from_file(self.chatRecordFilePath)
+
+    @property
+    def profile(self) -> UserProfile | None:
+        return self._profile
+
+    @profile.setter
+    def profile(self, value: UserProfile) -> None:
+        self._profile = value
 
     @property
     def chatRecordFilePath(self) -> str:

@@ -8,17 +8,24 @@ import base64
 from .ChatLLM.gcpServices import GoogleServices
 
 from google.oauth2.service_account import Credentials
+
+import time
+
 # from hardcodequestion import CustomDict
 
 from .ChatLLM import ChatManager, MessageContentMedia, LLMChainModel
 from .ChatLLM import LLMTools
+from .ChatLLM.UserProfile import UserProfile
 from langchain_google_vertexai import ChatVertexAI
 
 credentialsFiles = list(filter(lambda f: f.startswith(
     'gcp_cred') and f.endswith('.json'), os.listdir('.')))
 credentials = Credentials.from_service_account_file(
     credentialsFiles[0])
-googleTTS = GoogleServices(credentials)
+googleService = GoogleServices(
+    credentials,
+    maps_api_key=os.getenv('GOOGLE_MAPS_API_KEY')
+)
 
 app = Flask(__name__)
 CORS(app)
@@ -47,10 +54,53 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @app.route('/')
 def index():
     user_agent = request.headers.get('User-Agent')
-    if 'Mobile' in user_agent:
+    if user_agent and 'Mobile' in user_agent:
         return render_template('m_index.html')
     else:
         return render_template('index.html')
+
+
+@app.route('/get_session', methods=["POST"])
+def get_session():
+    response = Response(
+        content_type="application/json"
+    )
+
+    no_data = {"no": "data"}
+    request_json: dict = request.json or no_data
+    content: dict = request_json.get('content', no_data)
+    facebook_access_token = content.get("accessToken", "")
+
+    if not facebook_access_token:
+        response.data = json.dumps({"error": "No access token"})
+        response.status_code = 400
+        return response
+
+    facebook_profile = UserProfile.from_facebook_access_token(facebook_access_token)
+    if not facebook_profile.id:
+        response.data = json.dumps({"error": "Invalid access token"})
+        response.status_code = 400
+        return response
+
+    facebook_profile.get_summory()
+
+    current_unix_time = int(time.time())
+    session_timeout_seconds = 600
+    session_expire_unix_time = current_unix_time + session_timeout_seconds
+    random_session_id = str(uuid.uuid4())
+
+    session_object = {
+        "expire": session_expire_unix_time,
+        "sessionId": random_session_id,
+    }
+
+    with open(f"./session_data/{facebook_profile.id}.json", "w") as f:
+        session_object_copy = session_object
+        session_object_copy["accessToken"] = facebook_profile
+        f.write(json.dumps(session_object_copy, indent=4))
+
+    response.data = json.dumps(session_object)
+    return response
 
 
 @app.route('/stt', methods=['POST'])
@@ -65,7 +115,7 @@ def get_sst():
     base64ImageData0 = imageData.split(',')[1]
     base64ImageData1 = base64.b64decode(base64ImageData0)
 
-    text = GoogleServices.speakToText(base64ImageData1)
+    text = googleService.speakToText(base64ImageData1)
     response.data = json.dumps({"message": text})
     print(response)
 
@@ -102,7 +152,7 @@ def get_information():
         message=message, media=messageMedia, context=client_context)  # type: ignore
 
     print("3: " + ai_response.content.text)
-    # audio = googleTTS.speak(ai_response.content.text)
+    # audio = googleService.speak(ai_response.content.text)
     # print("audio: " + audio)
     response.data = json.dumps(
         {"message": ai_response.content.text,
@@ -122,7 +172,7 @@ def get_geocoding():
     latitude = lat_lon.split(",")[0]
     longitude = lat_lon.split(",")[1]
 
-    geocode_result = googleTTS.geocoding(latitude, longitude)
+    geocode_result = googleService.geocoding(latitude, longitude)
 
     response.data = json.dumps({"localtion": geocode_result})
 

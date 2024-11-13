@@ -1,6 +1,5 @@
 from google.cloud import texttospeech, speech
 from google.oauth2 import service_account
-import google.generativeai as genai
 import os
 import dotenv
 import requests
@@ -29,8 +28,6 @@ class GoogleServices:
             audio_encoding=texttospeech.AudioEncoding.LINEAR16,
             speaking_rate=1
         )
-
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
 
         self.sstCredentials = speech.SpeechClient(credentials=credentials)
 
@@ -75,13 +72,13 @@ class GoogleServices:
         print("Url", url)
         response = requests.get(url)
         print(response)
+        localtion = ""
         if response.status_code == 200:
             data = response.json()
             print("Response Data1:", data)
 
             localtion = data['results'][1]['formatted_address'][2:]
             print("Response Data2:", localtion)
-
         else:
             print("Error:", response.status_code, response.text)
         return localtion
