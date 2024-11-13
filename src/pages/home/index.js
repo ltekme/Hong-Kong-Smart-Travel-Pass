@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 import { UserChatList } from '../../components/ChatMessages';
 import { InputControls } from '../../components/Input';
@@ -14,10 +14,8 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
     const [chatId, setChatId] = useState("");
     const [lastUserMessageMedia, setLastUserMessageMedia] = useState([]);
     const [displayHello, setDisplayHello] = useState(true);
-    const [apiUrl, setApiUrl] = useState("");
     const [userLocationLegent, setUserLocationLegent] = useState("");
     const [locationError, setLocationError] = useState(false);
-    const apiUrlRef = useRef(apiUrl);
 
     const [facebookProfile, setFacebookProfile] = useState({});
     const [username, setUsername] = useState('');
@@ -26,24 +24,13 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
     useEffect(() => {
         const initializeApp = async () => {
             setChatId(sessionStorage.getItem('mockChatID') || crypto.randomUUID()); // 114115 crypto.randomUUID()
-
-            // Initial api url
-            const apiUrlInSettings = localStorage.getItem("ApiUrl");
-            const finalApiUrl = apiUrlInSettings || defaultApiUrl;
-            setApiUrl(finalApiUrl);
-            console.log("Setting API URL to", finalApiUrl);
-            apiUrlRef.current = finalApiUrl;
-            // setApiUrl(apiUrlInSettings || defaultApiUrl);
-            if (!apiUrlInSettings) {
-                localStorage.setItem("ApiUrl", defaultApiUrl);
-            }
         };
         initializeApp();
-    }, [defaultApiUrl])
+    }, [])
 
     useEffect(() => {
         if (facebookProfile.id) {
-            console.log("Updating facebook profile to\n" + `${JSON.stringify({
+            console.log(`Updating facebook profile to\n${JSON.stringify({
                 id: facebookProfile.id,
                 username: facebookProfile.name
             }, null, 4)}`)
@@ -62,7 +49,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
 
     // Fetch from server
     const sendToLLM = async (userMessageObject) => {
-        const response = await fetch(`${apiUrlRef.current}/chat_api`, { // "/chat_api"
+        const response = await fetch(`${defaultApiUrl}/chat_api`, { // "/chat_api"
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userMessageObject),
@@ -194,7 +181,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
             let addressOutput;
             try {
                 const location = await getLocation();
-                const addressResponse = await fetch(`${apiUrlRef.current}/api/geocode`, {
+                const addressResponse = await fetch(`${defaultApiUrl}/api/geocode`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -234,7 +221,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
                 <h1 className="title">Hello! {username}</h1>
                 <p className="subtitle">How can I help you today?</p>
             </div>)}
-            <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} />
+            <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} apiUrl={defaultApiUrl} />
             {confirmAgree && !locationError ? <div className="address">用戶位置: {userLocationLegent}</div> : null}
         </>
     )

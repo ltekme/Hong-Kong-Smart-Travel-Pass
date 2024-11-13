@@ -3,12 +3,18 @@ import "./css/style.css";
 import "./css/font-awesome.min.css";
 import { facebookAppId } from "../Config";
 
+import Swal from "sweetalert2";
+
 export const Hello = ({
     confirmAgree,
     setFacebookProfile,
+    apiUrl,
 }) => { // outside for set here
     const [showLogin, setShowLogin] = useState(true);
     const [showImage, setShowImage] = useState(window.innerWidth >= 400);
+
+    const [facebookInited, setFacebookInited] = useState(false);
+
     // const showImage = window.innerWidth >= 400;
     useEffect(() => {
         const handleResize = () => {
@@ -22,53 +28,89 @@ export const Hello = ({
     }, []);
 
     useEffect(() => {
-        (function (d, s, id) {
-            var js, fjs = d.getElementsByTagName(s)[0];
-            if (d.getElementById(id)) { return; }
-            js = d.createElement(s); js.id = id;
-            js.src = "https://connect.facebook.net/en_US/sdk.js";
-            fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
+        if (!confirmAgree) {
+            (function (d, s, id) {
+                var js, fjs = d.getElementsByTagName(s)[0];
+                if (d.getElementById(id)) { return; }
+                js = d.createElement(s); js.id = id;
+                js.src = "https://connect.facebook.net/en_US/sdk.js";
+                fjs.parentNode.insertBefore(js, fjs);
+            }(document, 'script', 'facebook-jssdk'));
 
 
-        window.fbAsyncInit = function () {
-            window.FB.init({
-                appId: facebookAppId,
-                xfbml: true,
-                version: 'v21.0' // the-graph-api-version-for-your-app
-            });
-        };
+            window.fbAsyncInit = function () {
+                window.FB.init({
+                    appId: facebookAppId,
+                    xfbml: true,
+                    version: 'v21.0' // the-graph-api-version-for-your-app
+                });
+            };
+        }
+        setFacebookInited(true);
     }, []);
 
     const handleFBLogin = () => {
         console.log('Click FB Login');
 
-        if (window.FB) {
+        if (!facebookInited) {
+            return
+        }
+
+        try {
+            const processProfileData = async (profileDetails, loginResponse) => {
+                try {
+                    const data = profileDetails.picture.data.url;  // https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=523024447160668&height=50&width=50&ext=1733251735&hash=AbZ3mHor3ZeZmBCb4eFd3qC2
+                    const profileBase64 = await convertToBase64(data);
+                    console.log(`Got faceboot response ${JSON.stringify(profileDetails, null, 4)} for ${profileDetails.name}`);
+
+
+                    const sessionData = await fetch(`${apiUrl}/get_session`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            'accessToken': loginResponse.authResponse.accessToken
+                        })
+                    })
+                    const jsonSessionData = await sessionData.json();
+
+                    setFacebookProfile({
+                        accessToken: loginResponse.authResponse.accessToken,
+                        profilePicture: profileBase64,
+                        id: profileDetails.id,
+                        name: profileDetails.name,
+                        gender: profileDetails.gender,
+                        sessionId: jsonSessionData.sessionId,
+                        sessionExpire: jsonSessionData.expire,
+                    });
+                } catch (e) {
+                    console.error(`Error processing user profile\n${e}`)
+                    Swal.fire({
+                        title: "Error processing your profile",
+                        text: "See console for details",
+                        icon: "error"
+                    });
+                }
+                setShowLogin(false);
+            };
+
             window.FB.login(function (loginResponse) {
                 if (loginResponse.authResponse) {
                     console.log('Welcome!  Fetching your information.... ');
                     window.FB.api('/me', {
                         fields: 'id, name, picture, gender' //me?fields=posts{full_picture,message} 能拿到post中圖片
-                    }, async function (profileDetails) {
-                        // change picture to base 64
-                        const data = profileDetails.picture.data.url;  // https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=523024447160668&height=50&width=50&ext=1733251735&hash=AbZ3mHor3ZeZmBCb4eFd3qC2
-                        const profileBase64 = await convertToBase64(data);
-                        console.log(`Got faceboot response ${JSON.stringify(profileDetails, null, 4)} for ${profileDetails.name}`);
-                        setFacebookProfile({
-                            accessToken: loginResponse.authResponse.accessToken,
-                            profilePicture: profileBase64,
-                            id: profileDetails.id,
-                            name: profileDetails.name,
-                            gender: profileDetails.gender,
-                        })
-                        setShowLogin(false)
-                    });
+                    }, e => { processProfileData(e, loginResponse) });
                 }
             });
-        } else {
-            console.error('Facebook SDK not loaded');
+        } catch (e) {
+            console.error(e);
             setShowLogin(false);
-            alert('Error')
+            Swal.fire({
+                title: "Facebook login failed or canceled",
+                text: "See console for details",
+                icon: "warning"
+            });
         }
     };
 

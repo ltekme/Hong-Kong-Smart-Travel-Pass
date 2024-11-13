@@ -2,21 +2,13 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import { App } from './App';
-import { SettingsPannel } from './pages/settings';
 
 
-const MockRouter = () => {
-  const useSettingPage = sessionStorage.getItem("settingPannel") === "true";
-  return (
-    useSettingPage ? <SettingsPannel /> : <App />
-  )
-}
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    {/* <div style={{color : 'red'}}>=</div> */}
-    <MockRouter />
+    <App />
   </React.StrictMode>
 );
 
