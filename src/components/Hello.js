@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./css/style.css";
 import "./css/font-awesome.min.css";
-import { facebookAppId } from "../Config";
+import { facebookAppId, defaultApiUrl } from "../Config";
 
 import Swal from "sweetalert2";
 
@@ -63,8 +63,7 @@ export const Hello = ({
                     const profileBase64 = await convertToBase64(data);
                     console.log(`Got faceboot response ${JSON.stringify(profileDetails, null, 4)} for ${profileDetails.name}`);
 
-
-                    const sessionData = await fetch(`${apiUrl}/get_session`, {
+                    const sessionData = await fetch(`${defaultApiUrl}/get_session`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -73,7 +72,12 @@ export const Hello = ({
                             'accessToken': loginResponse.authResponse.accessToken
                         })
                     })
+                    if (!sessionData.ok) {
+                        throw `Error cannot process profile\n ${JSON.stringify(sessionData.json())}`
+                    }
+
                     const jsonSessionData = await sessionData.json();
+
 
                     setFacebookProfile({
                         accessToken: loginResponse.authResponse.accessToken,
