@@ -15,8 +15,11 @@ class MessageContentMedia:
     @property
     def as_lcMessageDict(self) -> dict[str, t.Any]:
         return {
-            "type": "image_url",
-            "image_url": {"url": self.uri}
+            # "type": "image_url",
+            # "image_url": {"url": self.uri}
+            "type": "media",
+            "data": self.uri.split(",")[1],
+            "mime_type": self.uri.split(";")[0].split(":")[1],
         }
 
     @staticmethod

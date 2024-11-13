@@ -201,11 +201,7 @@ class UserProfile:
             keys_to_remove = []
             for key, value in d.items():
                 if key == "full_picture":
-                    print(value)
-                    # image_data_url = f"data:image/jpeg;base64,{value}"
                     picture_data.append({
-                        # "type": "image_url",
-                        # "image_url": {"url": image_data_url},
                         "type": "media",
                         "data": value.split(",")[1],
                         "mime_type": value.split(";")[0].split(":")[1],

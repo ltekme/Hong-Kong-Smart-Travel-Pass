@@ -11,12 +11,20 @@ dotenv.load_dotenv()
 
 class GoogleServices:
 
+    verbose = False
+
+    def logger(self, msg: str):
+        # \033[92m
+        if self.verbose:
+            print("\033[92m[gcpService]" + str(msg) + "\033[0m")
+
     def __init__(self,
                  credentials: service_account.Credentials,
-                 maps_api_key: str | None = None
+                 maps_api_key: str | None = None,
+                 verbose: bool = False,
                  ) -> None:
         self.maps_api_key = maps_api_key
-
+        self.verbose = verbose
         self.client = texttospeech.TextToSpeechClient(
             credentials=credentials
         )
@@ -28,25 +36,22 @@ class GoogleServices:
             audio_encoding=texttospeech.AudioEncoding.LINEAR16,
             speaking_rate=1
         )
-
         self.sstCredentials = speech.SpeechClient(credentials=credentials)
 
     def speak(self, textData: str) -> str:
+        self.logger(f"Synthesis starting for {textData}")
         input_text = texttospeech.SynthesisInput(text=textData)
-
         response = self.client.synthesize_speech(
             request={"input": input_text, "voice": self.voice,
                      "audio_config": self.audio_config}
         )
-
         base64EncodedStr = base64.b64encode(response.audio_content)
-        print('base64url', base64EncodedStr)
+        self.logger(f'Speach to text response preview {base64EncodedStr[:10]=}')
         return base64EncodedStr.decode('utf-8')
 
     def speakToText(self, wav):
-
+        self.logger(f"Staring Recognition for {wav[:10]=}")
         audio_file = speech.RecognitionAudio(content=wav)
-
         config = speech.RecognitionConfig(
             enable_automatic_punctuation=True,
             enable_spoken_emojis=False,
@@ -63,25 +68,28 @@ class GoogleServices:
         transcript = ''
         for result in response.results:
             transcript += result.alternatives[0].transcript
-        print(transcript)
+        self.logger(f"Finish Recognition for {wav[:10]=} got {transcript[:10]=}")
         return transcript
 
     def geocoding(self, latitude, longitude):
-        url = f"https://maps.googleapis.com/maps/api/geocode/json?language=zh-HK&latlng={
-            latitude},{longitude}&key={self.maps_api_key}"
-        print("Url", url)
+        self.logger(f"querying geocoding api for {latitude=},{longitude=}")
+        url = "https://maps.googleapis.com/maps/api/geocode/json?language=zh-HK&latlng={},{}&key={}".format(
+            latitude, longitude, self.maps_api_key
+        )
         response = requests.get(url)
-        print(response)
         localtion = ""
-        if response.status_code == 200:
-            data = response.json()
-            print("Response Data1:", data)
-
-            localtion = data['results'][1]['formatted_address'][2:]
-            print("Response Data2:", localtion)
-        else:
-            print("Error:", response.status_code, response.text)
-        return localtion
+        try:
+            if response.status_code == 200:
+                data = response.json()
+                self.logger(f"Response Data1: {data}", )
+                localtion = data['results'][1]['formatted_address'][2:]
+                self.logger(f"Response Data2: {localtion}")
+            else:
+                self.logger(f"Error: {response.status_code}, {response.text}")
+            return localtion
+        except Exception as e:
+            self.logger(f"Error getting geo data {e}")
+            return "Error getting data"
 
 
 if __name__ == "__main__":

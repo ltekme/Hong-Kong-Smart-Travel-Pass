@@ -5,7 +5,7 @@ import json
 import os
 import base64
 
-from .ChatLLM.gcpServices import GoogleServices
+from ChatLLM.gcpServices import GoogleServices
 
 from google.oauth2.service_account import Credentials
 
@@ -13,9 +13,9 @@ import time
 
 # from hardcodequestion import CustomDict
 
-from .ChatLLM import ChatManager, MessageContentMedia, LLMChainModel
-from .ChatLLM import LLMTools
-from .ChatLLM.UserProfile import UserProfile
+from ChatLLM import ChatManager, MessageContentMedia, LLMChainModel
+from ChatLLM import LLMTools
+from ChatLLM.UserProfile import UserProfile
 from langchain_google_vertexai import ChatVertexAI
 
 credentialsFiles = list(filter(lambda f: f.startswith(
@@ -24,13 +24,11 @@ credentials = Credentials.from_service_account_file(
     credentialsFiles[0])
 googleService = GoogleServices(
     credentials,
-    maps_api_key=os.getenv('GOOGLE_MAPS_API_KEY')
+    maps_api_key=os.getenv('GOOGLE_API_KEY')
 )
 
 app = Flask(__name__)
-CORS(app)
 
-#
 llm_model = LLMChainModel(
     llm=ChatVertexAI(
         model="gemini-1.5-pro-002",
@@ -43,33 +41,35 @@ llm_model = LLMChainModel(
         project=credentials.project_id,
         region="us-central1",
     ),
-    tools=LLMTools(credentials).all,
+    tools=LLMTools(credentials, verbose=True).all,
 )
 chatLLM = ChatManager(llm_model)
 
-UPLOAD_FOLDER = 'static/temporary'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+class JsonResponse(Response):
+    def __init__(self):
+        super().__init__(
+            headers={
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Max-Age': '300',
+                "Content-Type": "application/json",
+            },
+            content_type="application/json"
+        )
 
 
-@app.route('/')
-def index():
-    user_agent = request.headers.get('User-Agent')
-    if user_agent and 'Mobile' in user_agent:
-        return render_template('m_index.html')
-    else:
-        return render_template('index.html')
-
-
-@app.route('/get_session', methods=["POST"])
+@app.route('/get_session', methods=["POST", "OPTIONS"])
 def get_session():
-    response = Response(
-        content_type="application/json"
-    )
+    response = JsonResponse()
+
+    if request.method == "OPTIONS":
+        return response
 
     no_data = {"no": "data"}
     request_json: dict = request.json or no_data
-    content: dict = request_json.get('content', no_data)
-    facebook_access_token = content.get("accessToken", "")
+    facebook_access_token: str = request_json.get('accessToken', "")
 
     if not facebook_access_token:
         response.data = json.dumps({"error": "No access token"})
@@ -94,9 +94,12 @@ def get_session():
         "sessionId": random_session_id,
     }
 
+    if not os.path.exists("./session_data"):
+        os.makedirs("./session_data")
+
     with open(f"./session_data/{facebook_profile.id}.json", "w") as f:
         session_object_copy = session_object
-        session_object_copy["accessToken"] = facebook_profile
+        session_object_copy["accessToken"] = facebook_access_token
         f.write(json.dumps(session_object_copy, indent=4))
 
     response.data = json.dumps(session_object)
@@ -105,28 +108,18 @@ def get_session():
 
 @app.route('/stt', methods=['POST'])
 def get_sst():
-    response = Response(
-        content_type="application/json"
-    )
-
-    print("*" * 60)
+    response = JsonResponse()
     imageData = request.json.get('audioData') if request.json else ""
-    print("!" * 60)
     base64ImageData0 = imageData.split(',')[1]
     base64ImageData1 = base64.b64decode(base64ImageData0)
-
     text = googleService.speakToText(base64ImageData1)
     response.data = json.dumps({"message": text})
-    print(response)
-
     return response
 
 
 @app.route('/chat_api', methods=['POST'])
 def get_information():
-    response = Response(
-        content_type="application/json"
-    )
+    response = JsonResponse()
 
     no_data = {"no": "data"}
     request_json: dict = request.json or no_data
@@ -151,22 +144,19 @@ def get_information():
     ai_response = chatLLM.new_message(
         message=message, media=messageMedia, context=client_context)  # type: ignore
 
-    print("3: " + ai_response.content.text)
-    # audio = googleService.speak(ai_response.content.text)
+    audio = googleService.speak(ai_response.content.text)
     # print("audio: " + audio)
-    response.data = json.dumps(
-        {"message": ai_response.content.text,
-         #  "ttsAudio": audio,
-         "chatId": chatLLM.chatId,
-         })
+    response.data = json.dumps({
+        "message": ai_response.content.text,
+        "ttsAudio": audio,
+        "chatId": chatLLM.chatId,
+    })
     return response
 
 
 @app.route('/api/geocode', methods=['POST'])
 def get_geocoding():
-    response = Response(
-        content_type="application/json"
-    )
+    response = JsonResponse()
     lat_lon = request.json.get("location", "") if request.json else ""
 
     latitude = lat_lon.split(",")[0]
@@ -180,6 +170,5 @@ def get_geocoding():
 
 
 if __name__ == '__main__':
-    print("Starting")
     # app.run(host="0.0.0.0", port=5000)
     app.run(debug=True)
