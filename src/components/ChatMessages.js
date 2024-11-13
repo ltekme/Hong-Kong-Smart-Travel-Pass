@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import userImage from "./image/image.jpg";
 import aiImage from "./image/gemini.svg";
@@ -61,9 +61,16 @@ export const UserChatList = ({
     messageList,
     profilePictureUrl,
 }) => {
+
+    const chatListRef = useRef(null);
+
+    useEffect(() => {
+        chatListRef.current.scrollTo(0, document.body.scrollHeight);
+    }, [messageList]);
+
     return (
         <div id="c2">
-            <div className="chat-list">
+            <div className="chat-list" ref={chatListRef}>
                 {messageList.map((item, idx) => <Chatbox message={item} key={idx} profilePictureUrl={profilePictureUrl} />)}
             </div>
         </div>

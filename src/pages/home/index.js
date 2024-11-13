@@ -146,7 +146,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
                 ]);
                 if (responList.audioBase64 !== "") {
                     l2dSpeak(`data:audio/wav;base64,${responList.audioBase64}`);
-                }  // 'data:audio/wav;base64,'
+                }
             })
             .catch(e => {
                 console.error(e);
