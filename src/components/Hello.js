@@ -6,6 +6,7 @@ import { facebookAppId } from "../Config";
 export const Hello = ({
     confirmAgree,
     setFacebookProfile,
+    apiUrl,
 }) => { // outside for set here
     const [showLogin, setShowLogin] = useState(true);
     const [showImage, setShowImage] = useState(window.innerWidth >= 400);
@@ -54,12 +55,26 @@ export const Hello = ({
                         const data = profileDetails.picture.data.url;  // https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=523024447160668&height=50&width=50&ext=1733251735&hash=AbZ3mHor3ZeZmBCb4eFd3qC2
                         const profileBase64 = await convertToBase64(data);
                         console.log(`Got faceboot response ${JSON.stringify(profileDetails, null, 4)} for ${profileDetails.name}`);
+
+                        const sessionData = await fetch(`${apiUrl}/get_session`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                'accessToken': loginResponse.authResponse.accessToken
+                            })
+                        })
+                        const jsonSessionData = await sessionData.json();
+
                         setFacebookProfile({
                             accessToken: loginResponse.authResponse.accessToken,
                             profilePicture: profileBase64,
                             id: profileDetails.id,
                             name: profileDetails.name,
                             gender: profileDetails.gender,
+                            sessionId: jsonSessionData.sessionId,
+                            sessionExpire: jsonSessionData.expire,
                         })
                         setShowLogin(false)
                     });
