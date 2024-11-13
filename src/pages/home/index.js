@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { UserChatList } from '../../components/ChatMessages';
 import { InputControls } from '../../components/Input';
 import { Hello } from "../../components/Hello";
-import { defaultApiUrl } from "src/Config";
+import { defaultApiUrl } from "../../Config";
 import './index.css'
 
 import Swal from "sweetalert2";
@@ -23,7 +23,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
     //inti
     useEffect(() => {
         const initializeApp = async () => {
-            setChatId(crypto.randomUUID());
+            setChatId(sessionStorage.getItem('mockChatID') || crypto.randomUUID()); // 114115 crypto.randomUUID()
         };
         initializeApp();
     }, [])
@@ -49,7 +49,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
 
     // Fetch from server
     const sendToLLM = async (userMessageObject) => {
-        const response = await fetch(`${defaultApiUrl}/chat_api`, {
+        const response = await fetch(`${defaultApiUrl}/chat_api`, { // "/chat_api"
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userMessageObject),
