@@ -57,7 +57,7 @@ export default function useLive2D() {
   // make 
   const speak = async (url: string) => {
 
-    console.log('Moving mouse shit');
+    console.log('move speak');
     var aud = new Audio(url);
     await aud.play();
     Live2DManager.getInstance().startVoiceConversation(url);

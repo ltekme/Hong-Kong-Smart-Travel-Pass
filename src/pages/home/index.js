@@ -24,6 +24,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
     useEffect(() => {
         const initializeApp = async () => {
             setChatId(sessionStorage.getItem('mockChatID') || crypto.randomUUID()); // 114115 crypto.randomUUID()
+            // console.log("checkHaveChatID: ", chatId);
         };
         initializeApp();
     }, [])
@@ -55,6 +56,9 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
             body: JSON.stringify(userMessageObject),
         });
         const jsonResponse = await response.json();
+
+        console.log("jsonResponseGetOK");
+        
 
         let responList = {
             audioBase64: jsonResponse.ttsAudio,
