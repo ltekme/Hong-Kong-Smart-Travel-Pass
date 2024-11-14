@@ -5,7 +5,6 @@ import { FacebookLogin } from "./components/Facebook";
 
 
 export const App = () => {
-    const [apiUrl, setApiUrl] = useState("http://127.0.0.1:5000");
     const [chatId, setChatId] = useState("");
     const [message, setMessage] = useState("");
     const [imageDataUrls, setImageDataUrls] = useState([]);
@@ -134,7 +133,7 @@ export const App = () => {
             <img style={{ height: "200px" }} src={imageMapping[randomIndex]} alt="CATS" />
             <hr />
             <h2>Settings</h2>
-            API Url: <input onChange={e => setApiUrl(e.target.value)} value={apiUrl} />
+            API Url: {apiUrl}
             <br />
             Chat ID: <input onChange={e => setChatId(e.target.value)} value={chatId} />
             <br />

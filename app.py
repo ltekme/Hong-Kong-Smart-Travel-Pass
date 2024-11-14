@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, Response
-from flask_cors import CORS
+import typing as t
+from http import HTTPStatus, HTTPMethod
 import uuid
 import json
 import os
@@ -47,8 +48,10 @@ chatLLM = ChatManager(llm_model)
 
 
 class JsonResponse(Response):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
+            content_type=kwargs.get("content_type", "application/json"),
+            status=kwargs.get("status", HTTPStatus.OK),
             headers={
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE',
@@ -56,15 +59,25 @@ class JsonResponse(Response):
                 'Access-Control-Max-Age': '300',
                 "Content-Type": "application/json",
             },
-            content_type="application/json"
+            **kwargs,
         )
 
+    @property
+    def response_content(self) -> t.Any:
+        return self.data
 
-@app.route('/get_session', methods=["POST", "OPTIONS"])
+    @response_content.setter
+    def response_content(self, value: str) -> None:
+        self.data = value
+
+
+@app.route('/get_session', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_session():
     response = JsonResponse()
 
-    if request.method == "OPTIONS":
+    if request.method == HTTPMethod.OPTIONS:
+        response.response_content = json.dumps({})
+        response.status = HTTPStatus.OK
         return response
 
     no_data = {"no": "data"}
@@ -72,13 +85,13 @@ def get_session():
     facebook_access_token: str = request_json.get('accessToken', "")
 
     if not facebook_access_token:
-        response.data = json.dumps({"error": "No access token"})
+        response.response_content = json.dumps({"error": "No access token"})
         response.status_code = 400
         return response
 
     facebook_profile = UserProfile.from_facebook_access_token(facebook_access_token)
     if not facebook_profile.id:
-        response.data = json.dumps({"error": "Invalid access token"})
+        response.response_content = json.dumps({"error": "Invalid access token"})
         response.status_code = 400
         return response
 
@@ -102,24 +115,35 @@ def get_session():
         session_object_copy["accessToken"] = facebook_access_token
         f.write(json.dumps(session_object_copy, indent=4))
 
-    response.data = json.dumps(session_object)
+    response.response_content = json.dumps(session_object)
     return response
 
 
-@app.route('/stt', methods=['POST'])
+@app.route('/stt', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_sst():
     response = JsonResponse()
+
+    if request.method == HTTPMethod.OPTIONS:
+        response.response_content = json.dumps({})
+        response.status = HTTPStatus.OK
+        return response
+
     imageData = request.json.get('audioData') if request.json else ""
     base64ImageData0 = imageData.split(',')[1]
     base64ImageData1 = base64.b64decode(base64ImageData0)
     text = googleService.speakToText(base64ImageData1)
-    response.data = json.dumps({"message": text})
+    response.response_content = json.dumps({"message": text})
     return response
 
 
-@app.route('/chat_api', methods=['POST'])
+@app.route('/chat_api', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_information():
     response = JsonResponse()
+
+    if request.method == HTTPMethod.OPTIONS:
+        response.response_content = json.dumps({})
+        response.status = HTTPStatus.OK
+        return response
 
     no_data = {"no": "data"}
     request_json: dict = request.json or no_data
@@ -146,7 +170,7 @@ def get_information():
 
     audio = googleService.speak(ai_response.content.text)
     # print("audio: " + audio)
-    response.data = json.dumps({
+    response.response_content = json.dumps({
         "message": ai_response.content.text,
         "ttsAudio": audio,
         "chatId": chatLLM.chatId,
@@ -154,9 +178,15 @@ def get_information():
     return response
 
 
-@app.route('/api/geocode', methods=['POST'])
+@app.route('/api/geocode', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_geocoding():
     response = JsonResponse()
+
+    if request.method == HTTPMethod.OPTIONS:
+        response.response_content = json.dumps({})
+        response.status = HTTPStatus.OK
+        return response
+
     lat_lon = request.json.get("location", "") if request.json else ""
 
     latitude = lat_lon.split(",")[0]
@@ -164,7 +194,7 @@ def get_geocoding():
 
     geocode_result = googleService.geocoding(latitude, longitude)
 
-    response.data = json.dumps({"localtion": geocode_result})
+    response.response_content = json.dumps({"localtion": geocode_result})
 
     return response
 

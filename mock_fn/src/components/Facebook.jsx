@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 
-
-export const fbAppId = "1592228174832411";
+import { facebookAppId } from "../Config";
 
 export const initFacebookSdk = async () => {
     await window.FB.init({
-        appId: fbAppId,
+        appId: facebookAppId,
         status: true,
         xfbml: true,
         version: 'v2.7' // or v2.7, v2.6, v2.5, v2.4, v2.3

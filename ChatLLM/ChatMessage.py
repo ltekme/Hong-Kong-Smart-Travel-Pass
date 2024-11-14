@@ -14,12 +14,13 @@ class MessageContentMedia:
 
     @property
     def as_lcMessageDict(self) -> dict[str, t.Any]:
+        print("Converting to ")
         return {
             # "type": "image_url",
             # "image_url": {"url": self.uri}
             "type": "media",
-            "data": self.uri.split(",")[1],
-            "mime_type": self.uri.split(";")[0].split(":")[1],
+            "data": self.data,
+            "mime_type": f"{self.media_type}/{self.format}",
         }
 
     @staticmethod
@@ -60,10 +61,13 @@ class ChatMessage:
     @property
     def message_list(self) -> list[dict[str, t.Any]]:
         """Return the human message list in the format of langchain template message"""
-        return [{
+
+        msg_list = [{
             "type": "text",
             "text": str(self.content.text)
         }] + [image.as_lcMessageDict for image in self.content.media]
+        print("returning message list" + str(msg_list))
+        return msg_list
 
     @property
     def lcMessage(self) -> t.Union[AIMessage, SystemMessage, HumanMessage]:
