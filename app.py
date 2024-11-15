@@ -1,23 +1,18 @@
-from flask import Flask, request, render_template, Response
-import typing as t
-from http import HTTPStatus, HTTPMethod
+import os
+import time
 import uuid
 import json
-import os
 import base64
-
-from ChatLLM.gcpServices import GoogleServices
-
+import typing as t
+from flask import Flask, request, Response
+from http import HTTPStatus, HTTPMethod
+from langchain_google_vertexai import ChatVertexAI
 from google.oauth2.service_account import Credentials
-
-import time
-
-# from hardcodequestion import CustomDict
-
+from ChatLLM.gcpServices import GoogleServices
 from ChatLLM import ChatManager, MessageContentMedia, LLMChainModel
 from ChatLLM import LLMTools
 from ChatLLM.UserProfile import UserProfile
-from langchain_google_vertexai import ChatVertexAI
+
 
 credentialsFiles = list(filter(lambda f: f.startswith(
     'gcp_cred') and f.endswith('.json'), os.listdir('.')))
