@@ -16,10 +16,8 @@ class GoogleToolBase(BaseTool):
                  verbose: bool = False,
                  **kwargs):
         super().__init__(**kwargs)
-        self._google_api_key: str = google_api_key or os.getenv(
-            "GOOGLE_API_KEY", "")
-        self._google_cse_id: str = google_cse_id or os.getenv(
-            "GOOGLE_CSE_ID", "")
+        self._google_api_key: str = google_api_key
+        self._google_cse_id: str = google_cse_id
         self.verbose = verbose
 
     def print_log(self, msg: str):

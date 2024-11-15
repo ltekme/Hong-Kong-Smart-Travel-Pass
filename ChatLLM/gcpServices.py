@@ -1,12 +1,8 @@
+import os
+import requests
+import base64
 from google.cloud import texttospeech, speech
 from google.oauth2 import service_account
-import os
-import dotenv
-import requests
-
-import base64
-
-dotenv.load_dotenv()
 
 
 class GoogleServices:

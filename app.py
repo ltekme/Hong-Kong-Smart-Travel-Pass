@@ -4,15 +4,17 @@ import uuid
 import json
 import base64
 import typing as t
+from dotenv import load_dotenv
 from flask import Flask, request, Response
 from http import HTTPStatus, HTTPMethod
 from langchain_google_vertexai import ChatVertexAI
 from google.oauth2.service_account import Credentials
 from ChatLLM.gcpServices import GoogleServices
 from ChatLLM import ChatManager, MessageContentMedia, LLMChainModel
-from ChatLLM import LLMTools
+# from ChatLLM import LLMTools
 from ChatLLM.UserProfile import UserProfile
 
+load_dotenv('.env')
 
 credentialsFiles = list(filter(lambda f: f.startswith(
     'gcp_cred') and f.endswith('.json'), os.listdir('.')))
@@ -37,7 +39,7 @@ llm_model = LLMChainModel(
         project=credentials.project_id,
         region="us-central1",
     ),
-    tools=LLMTools(credentials, verbose=True).all,
+    # tools=LLMTools(credentials, verbose=True).all,
 )
 chatLLM = ChatManager(llm_model)
 
@@ -145,7 +147,7 @@ def get_information():
     content: dict = request_json.get('content', no_data)
     context: dict = request_json.get('context', no_data)
     message = content.get("message", "")
-    images = content.get('images', [])
+    media = content.get('media', [])
 
     # process context
     client_context = ""
@@ -155,7 +157,7 @@ def get_information():
     # Expected images is a list of string containing src data url for image
     messageMedia = list(map(
         lambda img: MessageContentMedia.from_uri(img),
-        images
+        media
     ))
 
     # Send to llm

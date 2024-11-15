@@ -3,39 +3,29 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 
 class MessageContentMedia:
-    def __init__(self, format: str, data: str, media_type: str = "image") -> None:
-        self.format: str = format
-        self.data: str = data
-        self.media_type: str = media_type
+    def __init__(self, data_uri: str) -> None:
+        if not data_uri.startswith("data"):
+            raise ValueError("Must be data url")
+        self._data_uri: str = data_uri
 
     @property
     def uri(self) -> str:
-        return f"data:{self.media_type}/{self.format};base64,{self.data}"
+        return self._data_uri
 
     @property
     def as_lcMessageDict(self) -> dict[str, t.Any]:
-        print("Converting to ")
+        print(self._data_uri.split(",")[1])
         return {
             # "type": "image_url",
             # "image_url": {"url": self.uri}
             "type": "media",
-            "data": self.data,
-            "mime_type": f"{self.media_type}/{self.format}",
+            "data": self._data_uri.split(",")[1],
+            "mime_type": self._data_uri.split(";")[0].split(":")[1],
         }
 
     @staticmethod
     def from_uri(uri: str) -> t.Union["MessageContentMedia", None]:
-        try:
-            if not uri.startswith('data:'):
-                pass
-            header = uri.split(';')[0].split('/')
-            format = header[1]
-            media_type = header[0].split(':')[1]
-            data = uri.split(',')[1]
-            return MessageContentMedia(format=format, data=data, media_type=media_type)
-        except Exception as e:
-            print(f"Error encoding media {e}")
-            return None
+        return MessageContentMedia(uri)
 
 
 class MessageContent:

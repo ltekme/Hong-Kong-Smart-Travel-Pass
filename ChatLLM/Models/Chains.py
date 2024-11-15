@@ -3,9 +3,11 @@ import copy
 import typing as t
 import datetime
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import BaseTool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import create_structured_chat_agent, AgentExecutor  # type: ignore
+from google.api_core.exceptions import InvalidArgument
 
 from . import Base
 from ..ChatRecord import ChatRecord
@@ -17,7 +19,7 @@ class LLMChainModel(Base.LLMModelBase):
 
     def __init__(self,
                  llm: BaseChatModel,
-                 tools: list[BaseTool],
+                 tools: list[BaseTool] = [],
                  overide_chat_content: list = [],
                  overide_direct_output: bool = False,
                  ) -> None:
@@ -30,15 +32,15 @@ class LLMChainModel(Base.LLMModelBase):
                               system_message: str,
                               standard_response: list[str] = [],
                               ) -> t.Dict[str, t.Any]:
-        prompt = ChatPromptTemplate([
+        messages = [
             ("system", self.system_prompt_template),
             MessagesPlaceholder('chat_history'),
-            ("user", [{
-                "type": "text",
-                "text": "Input: {question}\n\n{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what)"
-            }] + [img.as_lcMessageDict for img in last_user_message.content.media])
-        ])
-
+            HumanMessage(
+                content=[f"Input: {last_user_message.content.text} "] +
+                [img.as_lcMessageDict for img in last_user_message.content.media]),
+            ("system",
+             "{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what and response with markdown in the Final Answer response json blob.)")]
+        prompt = ChatPromptTemplate(messages)
         executor = AgentExecutor(
             agent=create_structured_chat_agent(
                 self.llm, self.tools, prompt),
@@ -46,11 +48,9 @@ class LLMChainModel(Base.LLMModelBase):
             verbose=True,
             handle_parsing_errors=True,
         )
-
         return executor.invoke({
             "existing_system_prompt": system_message,
             "chat_history": messages_copy.as_list_of_lcMessages,
-            "question": last_user_message.content.text,
             "additional_context": full_context,
             "standard_response": "\n".join(standard_response),
         })
@@ -95,12 +95,19 @@ class LLMChainModel(Base.LLMModelBase):
             datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"))
         full_context += context
 
-        result = self.get_response_from_llm(
-            last_user_message,
-            messages_copy,
-            full_context,
-            system_message_content if system_message_content is not None else "",
-            standard_response,
-        )
+        result = {}
+        try:
+            result = self.get_response_from_llm(
+                last_user_message,
+                messages_copy,
+                full_context,
+                system_message_content if system_message_content is not None else "",
+                standard_response,
+            )
+        except InvalidArgument as e:
+            if "image" in e.message and "not valid" in e.message:
+                result["output"] = "An invalid image is provided"
+            else:
+                result["output"] = "Something went wrong"
 
         return ChatMessage('ai', MessageContent(result['output']))

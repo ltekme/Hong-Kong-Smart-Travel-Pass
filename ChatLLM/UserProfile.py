@@ -151,8 +151,10 @@ class UserProfile:
                 elif key == "full_picture":
                     image_url = value
                     image_data = requests.get(image_url).content
-                    image_data_url = f"data:image/{str(value).split("?")
-                                                   [0].split(".")[-1]};base64,{base64.b64encode(image_data).decode()}"
+                    image_data_url = "data:image/{};base64,{}".format(
+                        str(value).split("?")[0].split(".")[-1],
+                        base64.b64encode(image_data).decode()
+                    )
                     d[key] = image_data_url
                 elif isinstance(value, dict):
                     process_dict(value)
