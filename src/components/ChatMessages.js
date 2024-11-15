@@ -8,6 +8,7 @@ export const Chatbox = ({
     message,
     keyIdx,
     profilePictureUrl,
+    chatListRef
 }) => {
     const [delayDisplayText, setDelayDisplayText] = useState("");
 
@@ -28,6 +29,14 @@ export const Chatbox = ({
         setText();
     }, [message.text]);
 
+    useEffect(() => {
+        chatListRef.current.scrollTo({
+            top: chatListRef.current.scrollHeight,
+            left: 0,
+            behavior: "smooth",
+        });
+    }, [delayDisplayText]);
+
     return (
         // If message.role is loading -> display the loading class (spin avatar image)
         <div key={keyIdx} className={`message incoming${message?.role === "loading" && message?.text === undefined ? " loading" : ""}`}>
@@ -42,10 +51,15 @@ export const Chatbox = ({
                         }
                         if (content.startsWith("data:video")) {
                             return (<div key={`${keyIdx}-${idx}`}>
-                                <video key={keyIdx + "-" + idx} controls style={{ maxWidth: '80%', maxHeight: '200px' }} ><source src={content} type="video/mp4" /></video>
+                                <video key={keyIdx + "-" + idx} controls style={{ maxWidth: '80%', maxHeight: '200px' }} src={content} type={content.split(";")[0].split(":")[1]} />
                             </div>)
                         }
-                        return null;
+                        if (content.startsWith("data:audio")) {
+                            return (<div key={`${keyIdx}-${idx}`}>
+                                <audio key={keyIdx + "-" + idx} controls src={content} type={content.split(";")[0].split(":")[1]} />
+                            </div>)
+                        }
+                        return null
                     })}
                     {(message.text !== undefined && !message.placeHolder) && <ReactMarkdown className={`${message.role}-chat-message usertext`}>{
                         message.role === "user" || message.error ? message.text : delayDisplayText
@@ -65,13 +79,17 @@ export const UserChatList = ({
     const chatListRef = useRef(null);
 
     useEffect(() => {
-        chatListRef.current.scrollTo(0, document.body.scrollHeight);
+        chatListRef.current.scrollTo({
+            top: chatListRef.current.scrollHeight,
+            left: 0,
+            behavior: "smooth",
+        });
     }, [messageList]);
 
     return (
         <div id="c2">
             <div className="chat-list" ref={chatListRef}>
-                {messageList.map((item, idx) => <Chatbox message={item} key={idx} profilePictureUrl={profilePictureUrl} />)}
+                {messageList.map((item, idx) => <Chatbox message={item} key={idx} profilePictureUrl={profilePictureUrl} chatListRef={chatListRef} />)}
             </div>
         </div>
     );

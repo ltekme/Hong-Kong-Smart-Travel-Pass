@@ -140,15 +140,15 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
 
     const handleFileUpload = () => {
         MySwal.fire({
-            title: "Upload images or videos",
+            title: "Upload attachments",
             input: "file",
+            text: "Upload images, videos or audio",
             inputAttributes: {
-                "accept": "image/*,video/*",
+                "accept": "image/*,video/*,audio/*",
                 'multiple': 'multiple',
                 'required': 'required',
-                "aria-label": "Upload images or videos",
+                "aria-label": "Upload images, videos or audio",
             },
-            icon: 'info',
         })
             // .then(file => { file.value })
             .then(response => {
