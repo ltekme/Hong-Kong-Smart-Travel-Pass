@@ -105,21 +105,8 @@ export class Live2DManager {
   public startVoiceConversation(url: string): void {  // tts live2d speak
     for (let i = 0; i < this._models.getSize(); i++) {
       if (Define.DebugLogEnable) {
-        Pal.printMessage(
-          `startConversation`
-        );
-
-        // console.log('url', url);
+        Pal.printMessage(`[Live2dManager][startVoiceConversation]starting with ${url.slice(0, 10)}`);
         this._models.at(i)._wavFileHandler.loadWavFile(url);  // 只有口型?
-        // this._models.at(i)._wavFileHandler.start(url)
-
-        // this._models
-        //   .at(i)
-        //   .startRandomMotion(
-        //     Define.MotionGroupTapBody,
-        //     Define.PriorityNormal,
-        //     this._finishedMotion
-        //   );
       };
     }
   }
@@ -175,13 +162,13 @@ export class Live2DManager {
     let modelJsonName: string = Define.ModelDir[index];
     modelJsonName += ".model3.json";
 
-    console.log('modelPath', modelPath + modelJsonName);
+    Pal.printMessage(`[Live2dManager] Attempting to load ${modelPath + modelJsonName}`);
 
     this.releaseAllModel();
     this._models.pushBack(new Model());
     this._models.at(0).loadAssets(modelPath, modelJsonName);
 
-    console.log('model3', this._models);
+    Pal.printMessage(`[Live2dManager] Loaded model ${this._models}`);
 
   }
 
@@ -193,6 +180,5 @@ export class Live2DManager {
 
   _finishedMotion = (self: ACubismMotion): void => {
     Pal.printMessage(`Motion Finished:`);
-    console.log(self);
   };
 }

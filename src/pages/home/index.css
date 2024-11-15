@@ -67,6 +67,7 @@
   --text-color: #ffffff;
   --subheading-color: #828282;
   --placeholder-color: #a6a6a6;
+  --primary-background-color: #d5d5d5;
   --primary-color: #626060;
   /* #242424 */
   --secondary-color: #383838;
@@ -89,7 +90,7 @@
 
 body {
   width: 100%;
-  background: var(--primary-color);
+  background: var(--primary-background-color);
   overflow-y: scroll;
   margin: 0;
   padding: 0;
@@ -260,7 +261,7 @@ body.hide-header #hello2 {
 }
 
 .ai-chat-message {
-  background-color: #f0f0f0;  
+  background-color: #f0f0f0;
   justify-content: flex-end !important;
 }
 

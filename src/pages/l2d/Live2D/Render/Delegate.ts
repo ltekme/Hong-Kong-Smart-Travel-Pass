@@ -10,6 +10,11 @@ export let s_instance: Delegate | null = null;
 export let gl: WebGLRenderingContext | null = null;
 export let frameBuffer: WebGLFramebuffer | null = null;
 
+export interface IDelegateInitialize {
+  avatarCanvus: HTMLCanvasElement,
+  avatarSupportTouch?: boolean,
+}
+
 export class Delegate {
   private static s_instance: Delegate | null = null;
   private _cubismOption: Option = new Option();
@@ -64,7 +69,7 @@ export class Delegate {
     return this._textureManager;
   }
 
-  public startVoiceConversation(url : string): void {
+  public startVoiceConversation(url: string): void {
     Live2DManager.getInstance().startVoiceConversation(url);
   }
 
@@ -88,7 +93,6 @@ export class Delegate {
     if (canvas === null) {
       return;
     }
-
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
   }
@@ -103,12 +107,11 @@ export class Delegate {
     this._view.initializeSprite();
   }
 
-  public initialize(): boolean {
-    canvas = window.document.getElementById("can") as HTMLCanvasElement;
+  public initialize(args: IDelegateInitialize): boolean {
+    canvas = args.avatarCanvus;
     if (this._view === null) {
       return false;
     }
-
     if (Define.CanvasSize === "auto") {
       this._resizeCanvas();
     } else {
@@ -141,7 +144,7 @@ export class Delegate {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    const supportTouch: boolean = "ontouchend" in canvas;
+    const supportTouch: boolean = args.avatarSupportTouch;
 
     if (supportTouch) {
       // タッチ関連コールバック関数登録
