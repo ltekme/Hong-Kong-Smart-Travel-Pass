@@ -1,5 +1,8 @@
 import typing as t
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from PIL import Image
+from io import BytesIO
+import base64
 
 
 class MessageContentMedia:
@@ -14,8 +17,6 @@ class MessageContentMedia:
     @property
     def as_lcMessageDict(self) -> dict[str, t.Any]:
         return {
-            # "type": "image_url",
-            # "image_url": {"url": self.uri}
             "type": "media",
             "data": self._data,
             "mime_type": self._mime_type,
@@ -27,6 +28,16 @@ class MessageContentMedia:
             raise ValueError("Must be data url")
         data = uri.split(",")[1]
         mime_type = uri.split(";")[0].split(":")[1]
+
+        # safe image processing
+        if mime_type.split("/")[0] == "image" and mime_type.split("/")[0] != "gif":
+            target_format = "png"
+            processed_image = BytesIO()
+            im = Image.open(BytesIO(base64.b64decode(data)))
+            im.save(processed_image, target_format)
+            data = base64.b64encode(processed_image.getvalue()).decode()
+            mime_type = f"image/{target_format}"
+
         return cls(data, mime_type)
 
 
@@ -53,13 +64,10 @@ class ChatMessage:
     @property
     def message_list(self) -> list[dict[str, t.Any]]:
         """Return the human message list in the format of langchain template message"""
-
-        msg_list = [{
+        return [{
             "type": "text",
             "text": str(self.content.text)
         }] + [image.as_lcMessageDict for image in self.content.media]
-        print("returning message list" + str(msg_list))
-        return msg_list
 
     @property
     def lcMessage(self) -> t.Union[AIMessage, SystemMessage, HumanMessage]:
