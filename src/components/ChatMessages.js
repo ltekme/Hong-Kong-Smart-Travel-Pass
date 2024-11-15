@@ -47,7 +47,7 @@ export const Chatbox = ({
                         }
                         return null;
                     })}
-                    {(message.text !== undefined && !message.placeHolder) && <ReactMarkdown className="usertext">{
+                    {(message.text !== undefined && !message.placeHolder) && <ReactMarkdown className={`${message.role}-chat-message usertext`}>{
                         message.role === "user" || message.error ? message.text : delayDisplayText
                     }</ReactMarkdown>}
                 </div>

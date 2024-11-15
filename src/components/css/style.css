@@ -37,7 +37,7 @@
  button,
  input,
  select {
-     -webkit-appearance: none;
+     /* -webkit-appearance: none; */
      outline: none;
      font-family: 'Noto Serif JP', serif;
  }
@@ -56,10 +56,10 @@
      max-width: 100%;
  }
 
- ul {
+ /* ul {
      margin: 0;
      padding: 0
- }
+ } */
 
  h1,
  h2,
@@ -199,8 +199,8 @@
      padding: 3em 3em;
      background: #fff;
      box-shadow: 2px 9px 49px -17px rgba(0, 0, 0, 0.1);
-    border-bottom-left-radius: 8px;
-    border-top-left-radius: 8px;
+     border-bottom-left-radius: 8px;
+     border-top-left-radius: 8px;
  }
 
  .w3l-workinghny-form .logo {
@@ -459,9 +459,6 @@
  .fade-out {
      animation: fadeOut 2s forwards;
  }
-
-
-
 
  /*-- //responsive design --*/
  /*-- //form styling --*/

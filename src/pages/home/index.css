@@ -7,13 +7,13 @@
   font-size: 18px;
 }
 
-.address{
+.address {
   display: flex;
   position: absolute;
   padding: 0 10px;
   margin-top: 22px;
   color: hsl(41, 48%, 37%);
-  font-size: 24px ;
+  font-size: 24px;
 }
 
 #c2 {
@@ -246,16 +246,6 @@ body.hide-header #hello2 {
   /* 添加上下边距 */
 }
 
-.chat-list .message.outgoing {
-  justify-content: flex-start;
-  /* 将用户消息对齐到右边 */
-}
-
-.chat-list .message.incoming {
-  justify-content: flex-start;
-  /* 将 AI 消息对齐到左边 */
-}
-
 .chat-list .message .message-content {
   display: flex;
   gap: 1.3rem;
@@ -264,9 +254,19 @@ body.hide-header #hello2 {
   /* 垂直居中对齐 */
   width: auto;
   /* 或者设置为具体宽度，确保不占满整个容器 */
-  max-width: 80%;
+  /* max-width: 80%; */
   /* 可选：限制最大宽度 */
   max-height: 80%;
+}
+
+.ai-chat-message {
+  background-color: #f0f0f0;  
+  justify-content: flex-end !important;
+}
+
+.user-chat-message {
+  background-color: #b3ffad;
+  justify-content: flex-start !important;
 }
 
 .chat-list .message .icon {
@@ -352,7 +352,7 @@ body.hide-header #hello2 {
   }
 }
 
-
+/* 
 .chat-list .message .text .usertext {
   color: var(--text-color);
 
@@ -367,7 +367,7 @@ body.hide-header #hello2 {
 .chat-list .message.loading .text .usertext {
   display: none;
 
-}
+} */
 
 
 .typing-area {
@@ -482,11 +482,11 @@ body.hide-header #hello2 {
 
 
 .usertext {
-  background-color: #e2e3dd;
-  color: rgb(0, 0, 0);
+  /* background-color: #e2e3dd; */
+  /* color: rgb(0, 0, 0); */
   padding: 10px;
   border-radius: 5px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  /* box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); */
   font-family: Arial, sans-serif;
   font-size: 20px;
 }
