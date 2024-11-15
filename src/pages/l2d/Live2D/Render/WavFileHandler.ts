@@ -306,7 +306,6 @@ export class WavFileHandler {
 
         ret = true;
       } catch (e) {
-        console.error("fucked wav file load", e);
         console.log(e);
       }
     })();

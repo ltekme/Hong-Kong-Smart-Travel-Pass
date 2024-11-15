@@ -43,7 +43,7 @@ export const ModelDir: string[] = [
 export const ModelDirSize: number = ModelDir.length;
 
 // 說話
-export const LipSyncWeight = 10.0;
+export const LipSyncWeight = 100000000.0;
 
 export const MotionGroupIdle = "Idle";
 export const MotionGroupTapBody = "TapBody";
