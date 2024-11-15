@@ -10,7 +10,7 @@ from http import HTTPStatus, HTTPMethod
 from langchain_google_vertexai import ChatVertexAI
 from google.oauth2.service_account import Credentials
 from ChatLLM.gcpServices import GoogleServices
-from ChatLLM import ChatManager, MessageContentMedia, LLMChainModel
+from ChatLLM import ChatManager, MessageContentMedia, LLMChainModel, LLMModelBase
 # from ChatLLM import LLMTools
 from ChatLLM.UserProfile import UserProfile
 
@@ -28,8 +28,10 @@ googleService = GoogleServices(
 app = Flask(__name__)
 
 llm_model = LLMChainModel(
+# audio input only work on base model
+# llm_model = LLMModelBase(
     llm=ChatVertexAI(
-        model="gemini-1.5-pro-002",
+        model="gemini-1.5-flash-002",
         temperature=1,
         max_tokens=8192,
         timeout=None,

@@ -3,6 +3,7 @@ import copy
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import BaseTool
+from langchain_core.messages import HumanMessage
 
 from ..ChatMessage import MessageContent, ChatMessage
 from ..ChatRecord import ChatRecord
@@ -13,7 +14,7 @@ class LLMModelBase:
 
     def __init__(self,
                  llm: BaseChatModel,
-                 tools: list[BaseTool],
+                 tools: list[BaseTool] = [],
                  # Not Used
                  overide_chat_content: list = [],
                  overide_direct_output=False,
@@ -47,16 +48,12 @@ class LLMModelBase:
 
         system_message += "\n\n" + self.process_invoke_context(context)
 
-        prompt = ChatPromptTemplate(
-            [("system", system_message),
-             MessagesPlaceholder('chat_history'),
-             ("user", [{
-                 "type": "text",
-                 "text": "{question}",
-             }] + [img.as_lcMessageDict for img in last_user_message.content.media]
-                if last_user_message and last_user_message.content else [])]
-        )
-
+        messages_list = [("system", system_message),
+                         MessagesPlaceholder('chat_history'),
+                         HumanMessage(content=[last_user_message.content.text]
+                                      + [img.as_lcMessageDict for img in last_user_message.content.media])
+                         ]
+        prompt = ChatPromptTemplate(messages_list)
         response = self.llm.invoke(prompt.invoke({
             "chat_history": messages_copy.as_list_of_lcMessages,
         }))
