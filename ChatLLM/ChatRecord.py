@@ -57,7 +57,7 @@ class ChatRecord:
                         message_content_text = content['text']
                     if content['type'] == 'image_url':
                         message_content_media.append(
-                            MessageContentMedia(content['image_url']['url']))
+                            MessageContentMedia.from_uri(content['image_url']['url']))
 
                 messages.append(ChatMessage(
                     role=msg['role'],

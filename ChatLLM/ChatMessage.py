@@ -3,29 +3,31 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 
 class MessageContentMedia:
-    def __init__(self, data_uri: str) -> None:
-        if not data_uri.startswith("data"):
-            raise ValueError("Must be data url")
-        self._data_uri: str = data_uri
+    def __init__(self, data: str, mime_type: str) -> None:
+        self._data = data
+        self._mime_type = mime_type
 
     @property
     def uri(self) -> str:
-        return self._data_uri
+        return f"data:{self._mime_type};base64,{self._data}"
 
     @property
     def as_lcMessageDict(self) -> dict[str, t.Any]:
-        print(self._data_uri.split(",")[1])
         return {
             # "type": "image_url",
             # "image_url": {"url": self.uri}
             "type": "media",
-            "data": self._data_uri.split(",")[1],
-            "mime_type": self._data_uri.split(";")[0].split(":")[1],
+            "data": self._data,
+            "mime_type": self._mime_type,
         }
 
-    @staticmethod
-    def from_uri(uri: str) -> t.Union["MessageContentMedia", None]:
-        return MessageContentMedia(uri)
+    @classmethod
+    def from_uri(cls, uri: str) -> "MessageContentMedia":
+        if not uri.startswith("data"):
+            raise ValueError("Must be data url")
+        data = uri.split(",")[1]
+        mime_type = uri.split(";")[0].split(":")[1]
+        return cls(data, mime_type)
 
 
 class MessageContent:
