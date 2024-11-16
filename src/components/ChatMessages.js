@@ -44,6 +44,7 @@ export const Chatbox = ({
                 <img src={message?.role === "ai" || message?.role === "loading" ? aiImage : profilePictureUrl || userImage} alt="AI" className="avatar" />
                 <div style={{ display: "inline-block", overflow: "auto" }}>
                     {message.media && message.media.map((content, idx) => {
+                        const mime_type = content.split(";")[0].split(":")[1]
                         if (content.startsWith("data:image")) {
                             return (<div key={`${keyIdx}-${idx}`}>
                                 <img key={keyIdx + "-" + idx} src={content} alt="media" style={{ maxWidth: '80%', maxHeight: '200px' }} />
@@ -51,12 +52,12 @@ export const Chatbox = ({
                         }
                         if (content.startsWith("data:video")) {
                             return (<div key={`${keyIdx}-${idx}`}>
-                                <video key={keyIdx + "-" + idx} controls style={{ maxWidth: '80%', maxHeight: '200px' }} src={content} type={content.split(";")[0].split(":")[1]} />
+                                <video key={keyIdx + "-" + idx} controls style={{ maxWidth: '80%', maxHeight: '200px' }} src={content} type={mime_type} />
                             </div>)
                         }
                         if (content.startsWith("data:audio")) {
-                            return (<div key={`${keyIdx}-${idx}`}>
-                                <audio key={keyIdx + "-" + idx} controls src={content} type={content.split(";")[0].split(":")[1]} />
+                            return (<div key={`${keyIdx}-Media${idx}`}>
+                                <audio key={keyIdx + "-" + idx} controls src={content} type={mime_type} />
                             </div>)
                         }
                         return null
@@ -89,7 +90,7 @@ export const UserChatList = ({
     return (
         <div id="c2">
             <div className="chat-list" ref={chatListRef}>
-                {messageList.map((item, idx) => <Chatbox message={item} key={idx} profilePictureUrl={profilePictureUrl} chatListRef={chatListRef} />)}
+                {messageList.map((item, idx) => <Chatbox message={item} key={`Chat${idx}`} profilePictureUrl={profilePictureUrl} chatListRef={chatListRef} />)}
             </div>
         </div>
     );
