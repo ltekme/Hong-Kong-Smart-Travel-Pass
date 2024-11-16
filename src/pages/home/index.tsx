@@ -5,19 +5,54 @@ import { InputControls } from '../../components/Input';
 import { Hello } from "../../components/Hello";
 import { defaultApiUrl } from "../../Config";
 import './index.css'
+import { IFacebookProfile } from "../../components/Hello";
 
 import Swal from "sweetalert2";
 
+export interface IHome {
+    confirmAgree: boolean,
+    l2dSpeak: (url: string) => void
+}
 
-const Home = ({ confirmAgree, l2dSpeak }) => {
-    const [messageList, setMessageList] = useState([]);
+export interface IMessage {
+    role: "user" | "ai" | "loading",
+    media?: string[],
+    placeHolder?: boolean,
+    text?: string,
+    time?: string,
+    error?: boolean,
+}
+
+export interface ILLMRequest {
+    chatId: string
+    content: {
+        message: string,
+        media: string[]
+    },
+    context?: object,
+}
+
+export interface ILLMResponse {
+    audioBase64: string,
+    respondMessage: string,
+}
+
+
+const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
+    const [messageList, setMessageList] = useState<IMessage[]>([]);
     const [chatId, setChatId] = useState("");
-    const [lastUserMessageMedia, setLastUserMessageMedia] = useState([]);
+    const [lastUserMessageMedia, setLastUserMessageMedia] = useState<string[]>(null);
     const [displayHello, setDisplayHello] = useState(true);
     const [userLocationLegent, setUserLocationLegent] = useState("");
     const [locationError, setLocationError] = useState(false);
 
-    const [facebookProfile, setFacebookProfile] = useState({});
+    const [facebookProfile, setFacebookProfile] = useState<IFacebookProfile>({
+        id: "",
+        name: "",
+        profilePicture: "",
+        gender: "",
+        accessToken: ""
+    });
     const [username, setUsername] = useState('');
 
     //inti
@@ -48,7 +83,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
     }, [messageList]);
 
     // Fetch from server
-    const sendToLLM = async (userMessageObject) => {
+    const sendToLLM = async (userMessageObject: ILLMRequest): Promise<ILLMResponse> => {
         console.debug(`[Home][setMessageMedia] Sending request to LLM API\n${JSON.stringify(userMessageObject, null, 4)}`)
         const response = await fetch(`${defaultApiUrl}/chat_api`, {
             method: "POST",
@@ -64,7 +99,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
         return responseObject // respondMessage
     }
 
-    const setMessageMedia = (media) => {
+    const setMessageMedia = (media: string[]) => {
         console.debug(`[Home][setMessageMedia] Setting Media\n${media.slice(0, 30)}`)
         setLastUserMessageMedia(media);
         setMessageList(prevMessage => {
@@ -83,12 +118,7 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
         });
     }
 
-    const sendMessage = (messageText) => {
-        let message = {
-            chatId: chatId,
-            role: "user",
-            content: {}
-        }
+    const sendMessage = (messageText: string): void => {
         setMessageList(prevMessage => {
             const newMessageList = [...prevMessage];
             if (newMessageList.at(-1)?.placeHolder) {
@@ -102,17 +132,19 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
             });
             return newMessageList;
         });
-        message.content.message = messageText
-        if (lastUserMessageMedia) {
-            message.content.media = lastUserMessageMedia;
-        }
         // TODO: context
         setMessageList(prevMessage => {
             const newMessageList = [...prevMessage];
             newMessageList.push({ role: "loading", });
             return newMessageList;
         });
-        sendToLLM(message)
+        sendToLLM({
+            chatId: chatId,
+            content: {
+                message: messageText,
+                media: lastUserMessageMedia
+            }
+        })
             .then(responList => {   // e
                 setMessageList(prevMessage => {
                     const newMessageList = [...prevMessage];
@@ -151,10 +183,10 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
                 ]);
             })
         // Clear contents
-        setLastUserMessageMedia([]);
+        setLastUserMessageMedia(null);
     }
 
-    const getLocation = () => {
+    const getLocation = (): Promise<GeolocationCoordinates> => {
         return new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(
                 (position) => resolve(position.coords),
@@ -208,13 +240,13 @@ const Home = ({ confirmAgree, l2dSpeak }) => {
 
     return (
         <>
-            <UserChatList messageList={messageList} profilePictureUrl={facebookProfile.profilePicture} />
-            <InputControls setMessageMedia={setMessageMedia} sendMessage={sendMessage} clearMessages={e => setMessageList([])} />
+            <UserChatList messageList={messageList} profilePictureUrl={facebookProfile?.profilePicture} />
+            <InputControls setMessageMedia={setMessageMedia} sendMessage={sendMessage} clearMessages={() => setMessageList([])} />
             {displayHello && (<div id="hello2">
                 <h1 className="title">Hello! {username}</h1>
                 <p className="subtitle">How can I help you today?</p>
             </div>)}
-            <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} apiUrl={defaultApiUrl} />
+            <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} />
             {confirmAgree && !locationError ? <div className="address">用戶位置: {userLocationLegent}</div> : null}
         </>
     )

@@ -1,19 +1,27 @@
 import { useEffect, useRef, useState } from "react";
-
-import userImage from "./image/image.jpg";
-import aiImage from "./image/gemini.svg";
 import ReactMarkdown from 'react-markdown';
+import { IMessage } from "../pages/home";
+
+export interface IChatBox {
+    message: IMessage,
+    keyIdx: string,
+    profilePictureUrl: string,
+    chatListRef: React.MutableRefObject<any>
+}
+export interface IUserChatList {
+    messageList: IMessage[],
+    profilePictureUrl: string,
+}
 
 export const Chatbox = ({
     message,
     keyIdx,
     profilePictureUrl,
     chatListRef
-}) => {
+}: IChatBox) => {
     const [delayDisplayText, setDelayDisplayText] = useState("");
-
-    const delayBetweenChar = 20;
-
+    const userImage = require("./image/image.jpg");
+    const aiImage = require("./image/gemini.svg").default;
     useEffect(() => {
         const setText = async () => {
             // helloTitle.style.display = 'none'
@@ -22,7 +30,7 @@ export const Chatbox = ({
                 for (const char of message.text) {
                     displayTexts += char;
                     setDelayDisplayText(displayTexts);
-                    await new Promise((resolve) => setTimeout(resolve, delayBetweenChar));
+                    await new Promise((resolve) => setTimeout(resolve, 20));
                 }
             }
         };
@@ -41,10 +49,9 @@ export const Chatbox = ({
         // If message.role is loading -> display the loading class (spin avatar image)
         <div key={keyIdx} className={`message incoming${message?.role === "loading" && message?.text === undefined ? " loading" : ""}`}>
             <div className="message-content">
-                <img src={message?.role === "ai" || message?.role === "loading" ? aiImage : profilePictureUrl || userImage} alt="AI" className="avatar" />
+                <img src={message.role === "ai" || message.role === "loading" ? aiImage : profilePictureUrl !== "" ? profilePictureUrl : userImage} alt={message.role} className="avatar" />
                 <div style={{ display: "inline-block", overflow: "auto" }}>
                     {message.media && message.media.map((content, idx) => {
-                        const mime_type = content.split(";")[0].split(":")[1]
                         if (content.startsWith("data:image")) {
                             return (<div key={`${keyIdx}-${idx}`}>
                                 <img key={keyIdx + "-" + idx} src={content} alt="media" style={{ maxWidth: '80%', maxHeight: '200px' }} />
@@ -52,12 +59,12 @@ export const Chatbox = ({
                         }
                         if (content.startsWith("data:video")) {
                             return (<div key={`${keyIdx}-${idx}`}>
-                                <video key={keyIdx + "-" + idx} controls style={{ maxWidth: '80%', maxHeight: '200px' }} src={content} type={mime_type} />
+                                <video key={keyIdx + "-" + idx} controls style={{ maxWidth: '80%', maxHeight: '200px' }} src={content} />
                             </div>)
                         }
                         if (content.startsWith("data:audio")) {
                             return (<div key={`${keyIdx}-Media${idx}`}>
-                                <audio key={keyIdx + "-" + idx} controls src={content} type={mime_type} />
+                                <audio key={keyIdx + "-" + idx} controls src={content} />
                             </div>)
                         }
                         return null
@@ -75,7 +82,7 @@ export const Chatbox = ({
 export const UserChatList = ({
     messageList,
     profilePictureUrl,
-}) => {
+}: IUserChatList) => {
 
     const chatListRef = useRef(null);
 
@@ -90,7 +97,13 @@ export const UserChatList = ({
     return (
         <div id="c2">
             <div className="chat-list" ref={chatListRef}>
-                {messageList.map((item, idx) => <Chatbox message={item} key={`Chat${idx}`} profilePictureUrl={profilePictureUrl} chatListRef={chatListRef} />)}
+                {messageList.map((item, idx) => <Chatbox
+                    key={`Chat${idx}`}
+                    message={item}
+                    keyIdx={`Chat${idx}`}
+                    profilePictureUrl={profilePictureUrl}
+                    chatListRef={chatListRef}
+                />)}
             </div>
         </div>
     );

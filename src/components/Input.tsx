@@ -1,30 +1,39 @@
-import { useState, useRef } from "react";
+import { useState, useRef, ReactElement } from "react";
 import Swal from 'sweetalert2'
 import withReactContent from 'sweetalert2-react-content'
 
-const MySwal = withReactContent(Swal)
+const MySwal = withReactContent(Swal);
 
-export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) => {
+export interface IInputControls {
+    setMessageMedia: (media: string[]) => void,
+    sendMessage: (media: string) => void,
+    clearMessages: () => void,
+}
+
+export const InputControls = ({
+    setMessageMedia,
+    sendMessage,
+    clearMessages
+}: IInputControls): ReactElement => {
+
+    type RecorderState = "recording" | "stopped" | "errored";
 
     const [text, setText] = useState("");
-    // const [media, setMedia] = useState([]);
-    // const [showAttachment, setShowAttachment] = useState(false);
-
+    const [recorderState, setRecorderState] = useState<RecorderState>("stopped");
     const [isRecording, setIsRecording] = useState(false);
     const [mediaRecorder, setMediaRecorder] = useState(null);
-
-    const inputRef = useRef();
+    const sttButtonRef = useRef<HTMLSpanElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const clearCurrentState = () => {
-        // setMedia([]);
         setText("");
         inputRef.current.blur();
     }
 
-    const handleSendMessage = (e) => {
+    const handleSendMessage = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         if (!text) {
-            console.warn("Got empty message from input box");
+            console.warn(`[InputControls][handleSendMessage] Got empty message from input box`);
             MySwal.fire({
                 title: "Cannot send empty message",
                 icon: 'warning',
@@ -35,21 +44,21 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
         clearCurrentState();
     }
 
-    const handleClearMessage = (e) => {
+    const handleClearMessage = () => {
         clearCurrentState();
         clearMessages();
     }
 
-    const handleSTT = async (e) => {
+    const handleSTT = async (e: React.MouseEvent<HTMLSpanElement>) => {
         e.preventDefault();
 
         const sttButton = document.getElementById("stt-button");
         // let mediaRecorder = null;
         // let userMessage = "";
-        let audioData = [];
+        let audioData: any[] = [];
 
         if (!isRecording) {
-            let stream;
+            let stream: MediaStream;
             let newMediaRecorder;
             let orginalMicInputBgColor = sttButton.style.backgroundColor;
             try {
@@ -152,7 +161,6 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
         })
             // .then(file => { file.value })
             .then(response => {
-                // console.log(response)
                 if (!response.isConfirmed || response.isDismissed) {
                     console.warn("dropped images =")
                     return
@@ -160,17 +168,17 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
                 const files = response.value
                 if (files.length > 0) {
 
-                    let mediaDataUris = [];
+                    let mediaDataUris: string[] = [];
 
                     let fileReadPromises = [];
                     for (let i = 0; i < files.length; i++) {
                         const file = files.item(i);
                         const reader = new FileReader();
-                        const fileReadPromise = new Promise((resolve, reject) => {
+                        const fileReadPromise = new Promise<void>((resolve, reject) => {
                             reader.onloadend = (e) => {
                                 console.log("loaded file", file.name);
                                 console.log("file preview", e.target.result.slice(0, 10));
-                                mediaDataUris.push(e.target.result);
+                                mediaDataUris.push(e.target.result as string);
                                 resolve();
                             };
                             reader.onerror = reject;
@@ -189,16 +197,23 @@ export const InputControls = ({ setMessageMedia, sendMessage, clearMessages }) =
     };
 
     return (
-        <div className="typing-area">
-            <form action="#" className="typing-form">
-                <div className="input-wrapper">
-                    <input type="text" ref={inputRef} value={text} onChange={e => setText(e.target.value)} placeholder="Enter a message here" className="typing-input"></input>
-                    <button onClick={handleSendMessage} className="icon material-symbols-rounded">send</button>
+        <div className="typing-area" >
+            <form action="#" className="typing-form" >
+                <div className="input-wrapper" >
+                    <input
+                        type="text"
+                        ref={inputRef}
+                        value={text}
+                        onChange={e => setText(e.target.value)}
+                        placeholder="Enter a message here"
+                        className="typing-input"
+                    />
+                    < button onClick={handleSendMessage} className="icon material-symbols-rounded" > send </button>
                 </div>
-                <div className="action-buttons">
-                    <span id="attachment" onClick={handleFileUpload} className="icon material-symbols-rounded">attachment</span>
-                    <span id="stt-button" onClick={handleSTT} className="icon material-symbols-rounded">mic</span>
-                    <span id="delete-chat-button" className="icon material-symbols-rounded" onClick={handleClearMessage}>delete</span>
+                < div className="action-buttons" >
+                    < span id="attachment" onClick={handleFileUpload} className="icon material-symbols-rounded" > attachment </span>
+                    < span id="stt-button" ref={sttButtonRef} onClick={handleSTT} className="icon material-symbols-rounded" > mic </span>
+                    < span id="delete-chat-button" className="icon material-symbols-rounded" onClick={handleClearMessage} > delete </span>
                 </div>
             </form >
         </div >
