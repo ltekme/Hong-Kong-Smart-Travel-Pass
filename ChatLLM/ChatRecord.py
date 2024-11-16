@@ -1,5 +1,6 @@
 import os
 import json
+import copy
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from .ChatMessage import ChatMessage, MessageContent, MessageContentMedia
 
@@ -122,3 +123,8 @@ class ChatRecord:
             if self._chat_messages[-1].role != 'system':
                 return self._chat_messages.pop(-1)
         return None
+
+    def __deepcopy__(self, memo):
+        new_record = ChatRecord()
+        new_record._chat_messages = copy.deepcopy(self._chat_messages, memo)
+        return new_record

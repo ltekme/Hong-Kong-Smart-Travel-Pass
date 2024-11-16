@@ -46,6 +46,12 @@ class MessageContent:
         self.text: str = text
         self.media: list[MessageContentMedia] = media
 
+    def as_str(self):
+        return f"{self.text};{";".join([str(m.as_lcMessageDict) for m in self.media])}"
+
+    def __repr__(self):
+        return self.as_str()
+
 
 class ChatMessage:
     lcMessageMapping: dict[str, t.Type[AIMessage | SystemMessage | HumanMessage]] = {
@@ -72,3 +78,9 @@ class ChatMessage:
     @property
     def lcMessage(self) -> t.Union[AIMessage, SystemMessage, HumanMessage]:
         return self.lcMessageMapping[self.role](content=self.message_list)  # type: ignore
+
+    def __repr__(self) -> str:
+        return f"{self.role};{self.content}"
+
+    def __deepcopy__(self, memo):
+        return ChatMessage(self.role, self.content)

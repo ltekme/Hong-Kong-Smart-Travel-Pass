@@ -27,9 +27,9 @@ googleService = GoogleServices(
 
 app = Flask(__name__)
 
-llm_model = LLMChainModel(
+# llm_model = LLMChainModel(
 # audio input only work on base model
-# llm_model = LLMModelBase(
+llm_model = LLMModelBase(
     llm=ChatVertexAI(
         model="gemini-1.5-flash-002",
         temperature=1,
