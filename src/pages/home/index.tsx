@@ -41,7 +41,7 @@ export interface ILLMResponse {
 const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
     const [messageList, setMessageList] = useState<IMessage[]>([]);
     const [chatId, setChatId] = useState("");
-    const [lastUserMessageMedia, setLastUserMessageMedia] = useState<string[]>(null);
+    const [lastUserMessageMedia, setLastUserMessageMedia] = useState<string[]>([]);
     const [displayHello, setDisplayHello] = useState(true);
     const [userLocationLegent, setUserLocationLegent] = useState("");
     const [locationError, setLocationError] = useState(false);
@@ -183,7 +183,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                 ]);
             })
         // Clear contents
-        setLastUserMessageMedia(null);
+        setLastUserMessageMedia([]);
     }
 
     const getLocation = (): Promise<GeolocationCoordinates> => {
