@@ -12,7 +12,7 @@ class Chat(Base):
     __tablename__ = "chats"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    chatId: so.Mapped[str] = so.mapped_column(nullable=False, default=str(uuid4()))
+    chatId: so.Mapped[str] = so.mapped_column(nullable=False, default=str(uuid4()), unique=True)
 
     # chat messages relations
     messages: so.Mapped[t.List["Message"]] = so.relationship(back_populates="chat")
