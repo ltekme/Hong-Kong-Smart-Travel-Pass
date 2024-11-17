@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 
 credentialsFiles = list(filter(lambda f: f.startswith(
     'gcp_cred') and f.endswith('.json'), os.listdir('.')))
-credentials = Credentials.from_service_account_file(
+credentials = Credentials.from_service_account_file(  # type: ignore
     credentialsFiles[0])
 googleService = GoogleServices(
     credentials,
