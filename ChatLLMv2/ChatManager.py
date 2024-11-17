@@ -15,20 +15,15 @@ class MessageAttachment(TableBase):
     __tablename__ = "message_attachments"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    type: so.Mapped[t.Literal["document", "media"]] = so.mapped_column(sa.String, nullable=False)
+    mime_type: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
     blob_name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
 
     # content attachment relations
     message_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"chat_messages.id"))
     message: so.Mapped["ChatMessage"] = so.relationship(back_populates="attachments")
 
-    # constraints
-    __table_args__ = (
-        sa.CheckConstraint("type IN ('document', 'media')", name="check_attachment_type"),
-    )
-
-    def __init__(self, type: t.Literal["document", "media"], blob_name: str):
-        self.type = type
+    def __init__(self, mime_type: str, blob_name: str):
+        self.mime_type = mime_type
         self.blob_name = blob_name
 
 

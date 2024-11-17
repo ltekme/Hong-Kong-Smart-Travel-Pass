@@ -21,11 +21,11 @@ class TestChatLLMv2DataBaseModel(TestsBase):
             text="Test Text 1",
             attachments=[
                 MessageAttachment(
-                    type="media",
+                    mime_type="text/plan",
                     blob_name="1234"
                 ),
                 MessageAttachment(
-                    type="media",
+                    mime_type="text/plan",
                     blob_name="2134"
                 )
             ]
@@ -35,7 +35,7 @@ class TestChatLLMv2DataBaseModel(TestsBase):
             text="Test Text 2",
             attachments=[
                 MessageAttachment(
-                    type="media",
+                    mime_type="text/plan",
                     blob_name="2134"
                 )
             ]
