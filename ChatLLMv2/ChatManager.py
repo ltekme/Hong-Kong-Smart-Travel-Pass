@@ -8,6 +8,7 @@ from io import BytesIO
 from uuid import uuid4
 import sqlalchemy as sa
 import sqlalchemy.orm as so
+import sqlalchemy.sql as sl
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 
@@ -16,6 +17,24 @@ logger = logging.getLogger(__name__)
 
 class TableBase(so.DeclarativeBase):
     pass
+
+
+class MessageContext(TableBase):
+    __tablename__ = "message_context"
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
+    value: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
+    message_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"chat_messages.id"))
+    message: so.Mapped["ChatMessage"] = so.relationship(back_populates="contexts")
+
+    # End of SqlAlchemyMapping
+    def __init__(self, name: str, value: str):
+        self.name = name
+        self.value = value
+
+    @property
+    def asText(self) -> str:
+        return f"{self.name}: {self.value}"
 
 
 class MessageAttachment(TableBase):
@@ -93,6 +112,8 @@ class ChatMessage(TableBase):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     role: so.Mapped[t.Literal["user", "ai", "system"]] = so.mapped_column(sa.String, nullable=False)
     text: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
+    dateTime: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime(timezone=True), default=sl.func.now())
+    contexts: so.Mapped[t.List["MessageContext"]] = so.relationship(back_populates="message")
     attachments: so.Mapped[t.List["MessageAttachment"]] = so.relationship(back_populates="message")
     chat_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"chats.id"))
     chat: so.Mapped["ChatRecord"] = so.relationship(back_populates="messages")
@@ -110,14 +131,14 @@ class ChatMessage(TableBase):
     lcMessageMapping: dict[str, t.Type[AIMessage | SystemMessage | HumanMessage]] = {
         "ai": AIMessage,
         "system": SystemMessage,
-        "human": HumanMessage
+        "user": HumanMessage
     }
 
     @property
     def asLcMessageList(self) -> list[dict[str, str]]:
         return [{
             "type": "text",
-            "text": self.text,
+            "text": f"{self.text}\n\nMessageContext\n<<EOF\n{'\n'.join(list(map(lambda c: c.asText, self.contexts)))}",
         }] + list(map(lambda x: x.asLcMessageDict, self.attachments))
 
     @property
@@ -135,14 +156,27 @@ class ChatMessage(TableBase):
 class ChatRecord(TableBase):
     __tablename__ = "chats"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    chatId: so.Mapped[str] = so.mapped_column(nullable=False, default=str(uuid4()), unique=True)
+    chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(uuid4()), nullable=False, unique=True)
     messages: so.Mapped[t.List["ChatMessage"]] = so.relationship(back_populates="chat")
+    systemMessage: so.Mapped[str] = so.mapped_column(sa.String, default="", unique=False,)
+    __allow_unmapped__ = True
 
     # End of SqlAlchemyMapping
+    dbSession: so.Session
 
-    def __init__(self, chatId: str = str(uuid4()), messages: list[ChatMessage] = []):
+    def __init__(self, chatId: str = str(uuid4()), messages: list[ChatMessage] = [], systemMessage: str = ""):
         self.chatId = chatId
         self.messages = messages
+        self.systemMessage = systemMessage
+
+    @classmethod
+    def init(cls, dbSession: so.Session, chatId: str = str(uuid4())) -> "ChatRecord":
+        logger.info(f"Initializing {__name__} from chatId")
+        instance = cls(chatId)
+        existingChat = dbSession.query(cls).filter(cls.chatId == chatId).first()
+        instance = existingChat if existingChat is not None else instance
+        dbSession.add(instance)
+        return instance
 
     def add_message(self, message: ChatMessage):
         logger.debug(f"Adding message to chat {self.chatId}, {message.role=}:{message.text[:10]=}")
@@ -157,5 +191,6 @@ class ChatRecord(TableBase):
         logger.debug(f"Checks passed added message to chat {self.chatId}, {message.role=}:{message.text[:10]=}")
         self.messages.append(message)
 
+    @property
     def asLcMessages(self) -> list[t.Union[AIMessage, SystemMessage, HumanMessage]]:
         return list(map(lambda msg: msg.asLcMessageObject, self.messages))
