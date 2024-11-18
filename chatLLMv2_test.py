@@ -15,47 +15,35 @@ class TestChatLLMv2DataBaseModel(TestsBase):
 
     def test_chat_record(self):
         TableBase.metadata.create_all(self.engine)
-
-        message = ChatMessage(
-            role="user",
-            text="Test Text 1",
-            attachments=[
-                MessageAttachment(
-                    mime_type="text/plan",
-                    blob_name="1234"
-                ),
-                MessageAttachment(
-                    mime_type="text/plan",
-                    blob_name="2134"
-                )
-            ]
-        )
-        message1 = ChatMessage(
-            role="ai",
-            text="Test Text 2",
-            attachments=[
-                MessageAttachment(
-                    mime_type="text/plan",
-                    blob_name="2134"
-                )
-            ]
-        )
-        chat = ChatRecord()
-        chat.messages = [message, message1]
-        self.session.add_all([chat])
+        expected_chat_id = "1234chat1234"
+        self.session.add_all([
+            ChatRecord(
+                chatId=expected_chat_id,
+                messages=[
+                    ChatMessage(
+                        role="user",
+                        text="Test Text 1",
+                        attachments=[]
+                    ),
+                    ChatMessage(
+                        role="ai",
+                        text="Test Text 2",
+                        attachments=[]
+                    )
+                ]
+            ),
+        ])
         self.session.commit()
 
         # append chatsattachment1 = Model.ContentAttachment()
         self.assertTrue(self.session.query(ChatRecord).count() == 1)
         self.assertTrue(self.session.query(ChatMessage).count() == 2)
-        self.assertTrue(self.session.query(MessageAttachment).count() == 3)
 
         retrieved_chat = self.session.query(ChatRecord).first()
         self.assertTrue(len(retrieved_chat.messages) == 2)  # type: ignore
         self.assertTrue(retrieved_chat.messages[0].text == "Test Text 1")  # type: ignore
         self.assertTrue(retrieved_chat.messages[1].text == "Test Text 2")  # type: ignore
-        self.assertTrue(retrieved_chat.messages[0].attachments[0].blob_name == "1234")  # type: ignore
-        self.assertTrue(retrieved_chat.messages[0].attachments[1].blob_name == "2134")  # type: ignore
+        self.assertEqual(expected_chat_id, retrieved_chat.chatId)  # type: ignore
 
 
 class ChatRecord_Test(TestsBase):
@@ -124,6 +112,58 @@ class ChatRecord_Test(TestsBase):
             text="Hi"
         )
         self.assertRaises(ValueError, self.chatRecord.add_message, invalid_message)
+
+
+class TestMessageAttachment(TestsBase):
+
+    def test_init_valid_data_url(self):
+        data_url = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ=="
+        attachment = MessageAttachment(data_url)
+        self.assertEqual(attachment.mime_type, "text/plain")
+        self.assertEqual(attachment.base64Data, "SGVsbG8sIFdvcmxkIQ==")
+
+    def test_init_invalid_data_url(self):
+        data_url = "invalid_data_url"
+        with self.assertRaises(ValueError):
+            MessageAttachment(data_url)
+
+    def test_base64Data_getter(self):
+        data_url = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ=="
+        attachment = MessageAttachment(data_url)
+        self.assertEqual(attachment.base64Data, "SGVsbG8sIFdvcmxkIQ==")
+
+    def test_base64Data_setter(self):
+        data_url = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ=="
+        attachment = MessageAttachment(data_url)
+        new_data = "SGVsbG8sIFRlc3Qh"
+        attachment.base64Data = new_data
+        self.assertEqual(attachment.base64Data, new_data)
+
+    def test_asLcMessageDict(self):
+        data_url = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ=="
+        attachment = MessageAttachment(data_url)
+        expected_dict = {
+            "type": "media",
+            "data": "SGVsbG8sIFdvcmxkIQ==",
+            "mime_type": "text/plain",
+        }
+        self.assertEqual(attachment.asLcMessageDict, expected_dict)
+
+    def test_save_and_retrieve_attachment(self):
+        TableBase.metadata.create_all(self.engine)
+        self.session.add(ChatRecord(
+            chatId="1234t1",
+            messages=[
+                ChatMessage("user", "Hi", attachments=[
+                    MessageAttachment("data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==")
+                ])
+            ]
+        ))
+        self.session.commit()
+
+        retrieved_attachment = self.session.query(MessageAttachment).first()
+        self.assertEqual(retrieved_attachment.mime_type, "text/plain")  # type: ignore
+        self.assertEqual(retrieved_attachment.base64Data, "SGVsbG8sIFdvcmxkIQ==")  # type: ignore
 
 
 if __name__ == '__main__':
