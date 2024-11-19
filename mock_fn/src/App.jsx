@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { imageMapping } from "./components/images";
 import { ChatLog } from "./components/ChatLog";
 import { FacebookLogin } from "./components/Facebook";
-
+import { apiUrl } from "./Config";
 
 export const App = () => {
     const [chatId, setChatId] = useState("");
