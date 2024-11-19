@@ -28,13 +28,16 @@ class MessageContext(TableBase):
     message: so.Mapped["ChatMessage"] = so.relationship(back_populates="contexts")
 
     # End of SqlAlchemyMapping
-    def __init__(self, name: str, value: str):
+    def __init__(self,
+                 name: str,
+                 value: str,
+                 ) -> None:
         self.name = name
         self.value = value
 
     @property
     def asText(self) -> str:
-        return f"{self.name}: {self.value}"
+        return f"{self.name}: {self.value};"
 
 
 class MessageAttachment(TableBase):
@@ -49,7 +52,10 @@ class MessageAttachment(TableBase):
     # End of SqlAlchemyMapping
     _base64Data: str = ""
 
-    def __init__(self, dataUrl: str, base_data_path: str = "./data/msg_attachment"):
+    def __init__(self,
+                 dataUrl: str,
+                 base_data_path: str = "./data/msg_attachment",
+                 ) -> None:
         logger.debug(f"Starting check for {dataUrl}")
 
         if not dataUrl.startswith("data"):
@@ -123,30 +129,32 @@ class ChatMessage(TableBase):
 
     # End of SqlAlchemyMapping
 
-    def __init__(self, role: t.Literal["user", "ai", "system"], text: str, attachments: t.List[MessageAttachment] = []):
+    def __init__(self,
+                 role: t.Literal["user", "ai", "system"],
+                 text: str,
+                 attachments: t.List[MessageAttachment] = [],
+                 contexts: t.List[MessageContext] = [],
+                 ) -> None:
         self.role = role
         self.text = text
         self.attachments = attachments
+        self.contexts = contexts
 
-    lcMessageMapping: dict[str, t.Type[AIMessage | SystemMessage | HumanMessage]] = {
-        "ai": AIMessage,
-        "system": SystemMessage,
-        "user": HumanMessage
-    }
+    @property
+    def lcMessageMapping(self) -> dict[str, t.Type[AIMessage | SystemMessage | HumanMessage]]:
+        return {
+            "ai": AIMessage,
+            "system": SystemMessage,
+            "user": HumanMessage
+        }
 
     @property
     def asLcMessageList(self) -> list[dict[str, str]]:
+        contextText = f"\n\nMessageContext\n<<EOF\n{'\n'.join(list(map(lambda c: c.asText, self.contexts)))}\nEOF"
         return [{
             "type": "text",
-            "text": f"{self.text}\n\nMessageContext\n<<EOF\n{'\n'.join(list(map(lambda c: c.asText, self.contexts)))}",
+            "text": self.text + (contextText if len(self.contexts) > 0 else ""),
         }] + list(map(lambda x: x.asLcMessageDict, self.attachments))
-
-    @property
-    def asExportDict(self) -> dict[str, str | list[dict[str, str]]]:
-        return {
-            "role": self.role,
-            "content": self.asLcMessageList
-        }
 
     @property
     def asLcMessageObject(self) -> t.Union[AIMessage, SystemMessage, HumanMessage]:
