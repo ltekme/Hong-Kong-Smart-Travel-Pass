@@ -1,13 +1,15 @@
+import uuid
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from dotenv import load_dotenv
 from langchain_google_vertexai import ChatVertexAI
 from google.oauth2.service_account import Credentials
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .ChatLLMv2 import (
+    ChatManager,
     ChatModel,
     ChatController,
     TableBase,
@@ -15,9 +17,11 @@ from .ChatLLMv2 import (
 from .APIv2.Config import (
     GCP_AI_SA_CREDENTIAL_PATH,
     CHATLLM_DB_URL,
+    CHATLLM_ATTACHMENT_URL,
 )
 from .APIv2.DataModel import (
     MessageRequest,
+    MessageResponse,
 )
 
 load_dotenv('.env')
@@ -51,6 +55,32 @@ TableBase.metadata.create_all(dbEngine, checkfirst=True)
 chatController = ChatController(dbSession=dbSession, llmModel=llmModel)
 
 
-@app.post("/chat")
-async def root(messageRequest: MessageRequest):
-    return messageRequest
+@app.post("/chatLLM")
+async def chatLLM(messageRequest: MessageRequest) -> MessageResponse:
+    requestChatId = messageRequest.chatId or str(uuid.uuid4())
+    requestMessageText = messageRequest.content.message
+    requestAttachmentList = messageRequest.content.media
+    requestContextDict = messageRequest.context
+
+    contexts = list(map(
+        lambda co: ChatManager.MessageContext(co, requestContextDict[co]),
+        requestContextDict.keys()
+    )) if requestContextDict is not None else []
+
+    try:
+        attachments = list(map(
+            lambda url: ChatManager.MessageAttachment(url, CHATLLM_ATTACHMENT_URL),
+            requestAttachmentList
+        )) if requestAttachmentList is not None else []
+    except:
+        raise HTTPException(status_code=400, detail="Invalid Image Provided")
+
+    message = ChatManager.ChatMessage("user", requestMessageText, attachments, contexts)
+
+    chatController.chatId = requestChatId
+    response = chatController.invokeLLM(message)
+
+    return MessageResponse(
+        message=response.text,
+        chatId=chatController.chatId
+    )

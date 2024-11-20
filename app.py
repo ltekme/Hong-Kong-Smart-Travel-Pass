@@ -135,7 +135,7 @@ def get_sst():
     return response
 
 
-@app.route('/chat_api', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
+@app.route('/chatLLM', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_information():
     response = JsonResponse()
 
@@ -177,7 +177,7 @@ def get_information():
     return response
 
 
-@app.route('/api/geocode', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
+@app.route('/geocode', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_geocoding():
     response = JsonResponse()
 

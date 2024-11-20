@@ -194,7 +194,7 @@ class ChatMessage_Test(TestBase):
         }])
         self.assertListEqual(self.chatMessage2.asLcMessageList, [{
             "type": "text",
-            "text": "hello\n\nMessageContext\n<<EOF\ntestParam1: testValue1;\ntestParam2: testValue2;\nEOF",
+            "text": "hello\n\nMessageContext << EOF\ntestParam1: testValue1;\ntestParam2: testValue2;\nEOF",
         }])
         self.assertListEqual(self.chatMessage3.asLcMessageList, [{
             "type": "text",
@@ -210,7 +210,7 @@ class ChatMessage_Test(TestBase):
         }])
         self.assertListEqual(self.chatMessage4.asLcMessageList, [{
             "type": "text",
-            "text": "hello\n\nMessageContext\n<<EOF\ntestParam3: testValue3;\ntestParam4: testValue4;\nEOF",
+            "text": "hello\n\nMessageContext << EOF\ntestParam3: testValue3;\ntestParam4: testValue4;\nEOF",
         }, {
             "type": "media",
             "data": self.b64String3,
@@ -236,7 +236,7 @@ class ChatMessage_Test(TestBase):
         }]))
         self.assertEqual(self.chatMessage2.asLcMessageObject, HumanMessage([{
             "type": "text",
-            "text": "hello\n\nMessageContext\n<<EOF\ntestParam1: testValue1;\ntestParam2: testValue2;\nEOF",
+            "text": "hello\n\nMessageContext << EOF\ntestParam1: testValue1;\ntestParam2: testValue2;\nEOF",
         }]))
         self.assertEqual(self.chatMessage3.asLcMessageObject, HumanMessage([{
             "type": "text",
@@ -252,7 +252,7 @@ class ChatMessage_Test(TestBase):
         }]))
         self.assertEqual(self.chatMessage4.asLcMessageObject, HumanMessage([{
             "type": "text",
-            "text": "hello\n\nMessageContext\n<<EOF\ntestParam3: testValue3;\ntestParam4: testValue4;\nEOF",
+            "text": "hello\n\nMessageContext << EOF\ntestParam3: testValue3;\ntestParam4: testValue4;\nEOF",
         }, {
             "type": "media",
             "data": self.b64String3,

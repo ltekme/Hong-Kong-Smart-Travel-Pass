@@ -150,7 +150,7 @@ class ChatMessage(TableBase):
 
     @property
     def asLcMessageList(self) -> list[dict[str, str]]:
-        contextText = f"\n\nMessageContext\n<<EOF\n{'\n'.join(list(map(lambda c: c.asText, self.contexts)))}\nEOF"
+        contextText = f"\n\nMessageContext << EOF\n{'\n'.join(list(map(lambda c: c.asText, self.contexts)))}\nEOF"
         return [{
             "type": "text",
             "text": self.text + (contextText if len(self.contexts) > 0 else ""),
