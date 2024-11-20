@@ -8,18 +8,18 @@ from google.oauth2.service_account import Credentials
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .ChatLLMv2 import (
+from ChatLLMv2 import (
     ChatManager,
     ChatModel,
     ChatController,
     TableBase,
 )
-from .APIv2.Config import (
+from APIv2.Config import (
     GCP_AI_SA_CREDENTIAL_PATH,
     CHATLLM_DB_URL,
     CHATLLM_ATTACHMENT_URL,
 )
-from .APIv2.DataModel import (
+from APIv2.DataModel import (
     MessageRequest,
     MessageResponse,
 )
@@ -55,7 +55,7 @@ TableBase.metadata.create_all(dbEngine, checkfirst=True)
 chatController = ChatController(dbSession=dbSession, llmModel=llmModel)
 
 
-@app.post("/chatLLM")
+@app.post("/chatLLM", response_model=MessageResponse)
 async def chatLLM(messageRequest: MessageRequest) -> MessageResponse:
     requestChatId = messageRequest.chatId or str(uuid.uuid4())
     requestMessageText = messageRequest.content.message
