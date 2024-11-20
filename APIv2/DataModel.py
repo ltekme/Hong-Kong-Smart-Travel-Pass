@@ -10,8 +10,10 @@ class MessageRequest(BaseModel):
     chatId: str
     content: MessageContext
     context: t.Optional[dict[str, str]] = None
+    disableTTS: t.Optional[bool] = False
 
 
 class MessageResponse(BaseModel):
     message: str
     chatId: str
+    ttsAudio: str

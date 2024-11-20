@@ -21,6 +21,7 @@ class APIv2App_Test(unittest.TestCase):
                 "currentTime": "11:00 - 20/11/2024",
             }
         })
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["chatId"], "abc")
         self.assertGreater(len(response.json()["message"]), 3)
 
@@ -39,6 +40,27 @@ class APIv2App_Test(unittest.TestCase):
         })
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["detail"], "Invalid Image Provided")
+
+    def test_chatLLM_noDisable_tts(self):
+        response = self.client.post("/chatLLM", json={
+            "chatId": "abc",
+            "content": {
+                "message": "hello12354"
+            }
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(response.json()["ttsAudio"]), 3)
+
+    def test_chatLLM_disable_tts(self):
+        response = self.client.post("/chatLLM", json={
+            "chatId": "abc",
+            "content": {
+                "message": "hello12354"
+            },
+            "disableTTS": True
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()["ttsAudio"]), 0)
 
 
 if __name__ == '__main__':

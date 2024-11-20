@@ -7,14 +7,13 @@ from google.oauth2.service_account import Credentials
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from ChatLLM import (
-    gcpServices,
-)
+
 from ChatLLMv2 import (
     ChatManager,
     ChatModel,
     ChatController,
     TableBase,
+    GoogleServices
 )
 from APIv2.Config import (
     GCP_AI_SA_CREDENTIAL_PATH,
@@ -55,7 +54,7 @@ dbEngine = sa.create_engine(url=CHATLLM_DB_URL, echo=True)
 dbSession = so.Session(bind=dbEngine)
 TableBase.metadata.create_all(dbEngine, checkfirst=True)
 chatController = ChatController(dbSession=dbSession, llmModel=llmModel)
-googleServices = gcpServices.GoogleServices(credentials)
+googleServices = GoogleServices.GoogleServices(credentials)
 
 
 @app.post("/chatLLM", response_model=MessageResponse)
@@ -64,6 +63,7 @@ async def chatLLM(messageRequest: MessageRequest) -> MessageResponse:
     requestMessageText = messageRequest.content.message
     requestAttachmentList = messageRequest.content.media
     requestContextDict = messageRequest.context
+    requestDisableTTS = messageRequest.disableTTS
 
     contexts = list(map(
         lambda co: ChatManager.MessageContext(co, requestContextDict[co]),
@@ -83,7 +83,13 @@ async def chatLLM(messageRequest: MessageRequest) -> MessageResponse:
     chatController.chatId = requestChatId
     response = chatController.invokeLLM(message)
 
+    if not requestDisableTTS:
+        ttsAudio = googleServices.textToSpeech(response.text)
+    else:
+        ttsAudio = ""
+
     return MessageResponse(
         message=response.text,
-        chatId=chatController.chatId
+        chatId=chatController.chatId,
+        ttsAudio=ttsAudio,
     )

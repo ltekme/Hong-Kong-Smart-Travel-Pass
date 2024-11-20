@@ -128,7 +128,7 @@ class MessageAttachment_Test(TestBase):
         attachment.base64Data = new_data
         self.assertEqual(attachment.base64Data, new_data)
 
-    def test_asLcMessageDict(self):
+    def test_asLcMessageDict_output(self):
         data_url = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ=="
         attachment = MessageAttachment(data_url)
         self.assertEqual(attachment.asLcMessageDict, {
