@@ -264,7 +264,7 @@ body.hide-header #hello2 {
   /* 垂直居中对齐 */
   width: auto;
   /* 或者设置为具体宽度，确保不占满整个容器 */
-  max-width: 80%;
+  max-width: auto;
   /* 可选：限制最大宽度 */
   max-height: 80%;
 }
