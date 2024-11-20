@@ -85,14 +85,14 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
     // Fetch from server
     const sendToLLM = async (userMessageObject: ILLMRequest): Promise<ILLMResponse> => {
         console.debug(`[Home][setMessageMedia] Sending request to LLM API\n${JSON.stringify(userMessageObject, null, 4)}`)
-        const response = await fetch(`${defaultApiUrl}/chat_api`, {
+        const response = await fetch(`${defaultApiUrl}/chatLLM`, {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userMessageObject),
         });
         const jsonResponse = await response.json();
         let responseObject = {
-            audioBase64: jsonResponse.ttsAudio,
+            audioBase64: jsonResponse.ttsAudio ? jsonResponse.ttsAudio : "",
             respondMessage: jsonResponse.message
         }
         console.debug(`[Home][setMessageMedia] Got ok response\n${JSON.stringify(responseObject, null, 4)}`)
@@ -206,7 +206,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             let addressOutput;
             try {
                 const location = await getLocation();
-                const addressResponse = await fetch(`${defaultApiUrl}/api/geocode`, {
+                const addressResponse = await fetch(`${defaultApiUrl}/geocode`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -216,7 +216,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                     })
                 });
                 const result = await addressResponse.json();
-                addressOutput = result.localtion;
+                addressOutput = result.localtion !== undefined ? result.localtion : "";
                 console.debug(`[Home][useEffect(confirmAgree)][getAddressFromCoordinates] Setting Current User adddress:\n${addressOutput}`);
                 setUserLocationLegent(addressOutput);
                 setLocationError(false);
@@ -247,7 +247,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                 <p className="subtitle">How can I help you today?</p>
             </div>)}
             <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} />
-            {confirmAgree && !locationError ? <div className="address">用戶位置: {userLocationLegent}</div> : null}
+            {confirmAgree && !locationError && userLocationLegent !== "" ? <div className="address">用戶位置: {userLocationLegent}</div> : null}
         </>
     )
 }
