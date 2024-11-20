@@ -7,7 +7,9 @@ from google.oauth2.service_account import Credentials
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
+from ChatLLM import (
+    gcpServices,
+)
 from ChatLLMv2 import (
     ChatManager,
     ChatModel,
@@ -53,6 +55,7 @@ dbEngine = sa.create_engine(url=CHATLLM_DB_URL, echo=True)
 dbSession = so.Session(bind=dbEngine)
 TableBase.metadata.create_all(dbEngine, checkfirst=True)
 chatController = ChatController(dbSession=dbSession, llmModel=llmModel)
+googleServices = gcpServices.GoogleServices(credentials)
 
 
 @app.post("/chatLLM", response_model=MessageResponse)
