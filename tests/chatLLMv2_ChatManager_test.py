@@ -1,7 +1,10 @@
+import os
 import base64
 import unittest
 import sqlalchemy as sa
 import sqlalchemy.orm as so
+from PIL import Image
+from io import BytesIO
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from ChatLLMv2.ChatManager import (
     ChatMessage,
@@ -107,35 +110,86 @@ class ChatRecord_Test(TestBase):
 
 class MessageAttachment_Test(TestBase):
 
-    def test_init_valid_data_url(self):
-        data_url = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ=="
-        attachment = MessageAttachment(data_url)
-        self.assertEqual(attachment.mime_type, "text/plain")
-        self.assertEqual(attachment.base64Data, "SGVsbG8sIFdvcmxkIQ==")
-
-    def test_init_invalid_data_url(self):
-        self.assertRaises(ValueError, MessageAttachment, "invalid_data_url")
-
-    def test_base64Data_getter(self):
-        data_url = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ=="
-        attachment = MessageAttachment(data_url)
-        self.assertEqual(attachment.base64Data, "SGVsbG8sIFdvcmxkIQ==")
-
-    def test_base64Data_setter(self):
-        data_url = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ=="
-        attachment = MessageAttachment(data_url)
-        new_data = "SGVsbG8sIFRlc3Qh"
-        attachment.base64Data = new_data
-        self.assertEqual(attachment.base64Data, new_data)
-
-    def test_asLcMessageDict_output(self):
-        data_url = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ=="
-        attachment = MessageAttachment(data_url)
+    def test_init_dataUrl(self):
+        data = "SGVsbG8sIFdvcmxkIQ=="
+        dataUrl = f"data:text/plain;base64,{data}"
+        attachment = MessageAttachment(dataUrl)
+        self.assertEqual(attachment.mimeType, "text/plain")
+        self.assertEqual(attachment.base64Data, data)
         self.assertEqual(attachment.asLcMessageDict, {
             "type": "media",
-            "data": "SGVsbG8sIFdvcmxkIQ==",
+            "data": data,
             "mime_type": "text/plain",
         })
+
+    def test_base64Data_getter(self):
+        data = "SGVsbG8sIFdvcmxkIQ=="
+        dataUrl = f"data:text/plain;base64,{data}"
+        attachment = MessageAttachment(dataUrl)
+        self.assertEqual(attachment.mimeType, "text/plain")
+        self.assertEqual(attachment.base64Data, data)
+        self.assertEqual(attachment.asLcMessageDict, {
+            "type": "media",
+            "data": data,
+            "mime_type": "text/plain",
+        })
+
+    def test_base64Data_setter(self):
+        data = "SGVsbG8sIFdvcmxkIQ=="
+        dataUrl = f"data:text/plain;base64,{data}"
+        attachment = MessageAttachment(dataUrl)
+        newData = "SGVsbG8sIFRlc3Qh"
+        attachment.base64Data = newData
+        self.assertEqual(attachment.mimeType, "text/plain")
+        self.assertEqual(attachment.base64Data, newData)
+        self.assertEqual(attachment.asLcMessageDict, {
+            "type": "media",
+            "data": newData,
+            "mime_type": "text/plain",
+        })
+
+    def test_imageLoad_ico(self):
+        # this ico file is semi broken
+        with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources/cat.ico"), 'rb') as f:
+            imageDataUrl = f"data:image/x-icon;base64,{base64.b64encode(f.read()).decode('ascii')}"
+        attachment = MessageAttachment(imageDataUrl)
+
+        processedData = BytesIO()
+        im = Image.open(BytesIO(base64.b64decode(imageDataUrl.split(",")[1])))
+        im.save(processedData, "png")
+        base64ProcessedData = base64.b64encode(processedData.getvalue()).decode()
+
+        self.assertEqual(attachment.mimeType, "image/png")
+        self.assertEqual(attachment.base64Data, base64ProcessedData)
+        self.assertEqual(attachment.asLcMessageDict, {
+            "type": "media",
+            "data": base64ProcessedData,
+            "mime_type": "image/png",
+        })
+
+    def test_imageLoad_gif(self):
+        with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources/cat.gif"), 'rb') as f:
+            imageDataUrl = f"data:image/gif;base64,{base64.b64encode(f.read()).decode('ascii')}"
+        attachment = MessageAttachment(imageDataUrl)
+        self.assertEqual(attachment.mimeType, "image/gif")
+        self.assertEqual(attachment.base64Data, imageDataUrl.split(",")[1])
+        self.assertEqual(attachment.asLcMessageDict, {
+            "type": "media",
+            "data": imageDataUrl.split(",")[1],
+            "mime_type": "image/gif",
+        })
+
+    def test_invalid_image_data(self):
+        dataUrl = "data:image/png;base64,invalidbase64data"
+        self.assertRaises(ValueError, MessageAttachment, dataUrl)
+
+    def test_invalid_gif_data(self):
+        dataUrl = "data:image/gif;base64,invalidbase64data"
+        self.assertRaises(ValueError, MessageAttachment, dataUrl)
+
+    def test_invalid_data_url(self):
+        dataUrl = "invaliddataurl"
+        self.assertRaises(ValueError, MessageAttachment, dataUrl)
 
 
 class MessageContext_Test(TestBase):

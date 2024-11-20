@@ -43,9 +43,9 @@ class MessageContext(TableBase):
 class MessageAttachment(TableBase):
     __tablename__ = "message_attachments"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    mime_type: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
-    blob_name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
-    base_data_path: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
+    mimeType: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
+    blobName: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
+    baseDataPath: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
     message_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"chat_messages.id"))
     message: so.Mapped["ChatMessage"] = so.relationship(back_populates="attachments")
 
@@ -54,41 +54,56 @@ class MessageAttachment(TableBase):
 
     def __init__(self,
                  dataUrl: str,
-                 base_data_path: str = "./data/msg_attachment",
+                 baseDataPath: str = "./data/msg_attachment",
                  ) -> None:
         logger.debug(f"Starting check for {dataUrl}")
 
         if not dataUrl.startswith("data"):
-            raise ValueError("dataUrl must be javascrip data url")
-        if not os.path.exists(base_data_path):
-            os.makedirs(base_data_path)
-        self.base_data_path = base_data_path
+            raise ValueError("dataUrl must be a javascript data URL")
+        if not os.path.exists(baseDataPath):
+            os.makedirs(baseDataPath)
+        self.baseDataPath = baseDataPath
 
-        logger.debug(f"Parcing {dataUrl[:30]=} to md5 for blobname")
-        self.blob_name = hashlib.md5(dataUrl.encode()).hexdigest()
+        logger.debug(f"Parsing {dataUrl[:30]=} to md5 for blobname")
+        self.blobName = hashlib.md5(dataUrl.encode()).hexdigest()
         # data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==
-        mime_type = dataUrl.split(";")[0].split(":")[1]
+        mimeType = dataUrl.split(";")[0].split(":")[1]
         data = dataUrl.split(",")[1]
 
-        if mime_type.split("/")[0] == "image" and mime_type.split("/")[0] != "gif":
+        if mimeType.split("/")[0] == "image" and mimeType.split("/")[1] != "gif":
             logger.debug(f"Starting Image convert to png")
-            target_format = "png"
-            processed_image = BytesIO()
-            im = Image.open(BytesIO(base64.b64decode(data)))
-            im.save(processed_image, target_format)
-            data = base64.b64encode(processed_image.getvalue()).decode()
-            mime_type = f"image/{target_format}"
+            targetFormat = "png"
+            processedImage = BytesIO()
+            try:
+                im = Image.open(BytesIO(base64.b64decode(data)))
+                im.verify()  # Verify that it is, in fact, an image
+                im = Image.open(BytesIO(base64.b64decode(data)))  # Reopen the image
+                im.save(processedImage, targetFormat)
+                data = base64.b64encode(processedImage.getvalue()).decode()
+                mimeType = f"image/{targetFormat}"
+            except Exception as e:
+                logger.error(f"Invalid image data: {e}")
+                raise ValueError("Invalid image data")
 
-        self.mime_type = mime_type
+        if mimeType == "image/gif":
+            logger.debug(f"Starting Image verify for gif")
+            try:
+                im = Image.open(BytesIO(base64.b64decode(data)))
+                im.verify()  # Verify that it is, in fact, an image
+            except Exception as e:
+                logger.error(f"Invalid gif data: {e}")
+                raise ValueError("Invalid gif data")
+
+        self.mimeType = mimeType
         self.base64Data = data
 
     @property
     def base64Data(self) -> str:
-        logger.debug(f"fetching {self.blob_name} base64 data")
+        logger.debug(f"fetching {self.blobName} base64 data")
         if self._base64Data:
             logger.debug(f"found in cache returning")
             return self._base64Data
-        fullDataPath = os.path.join(self.base_data_path, self.blob_name)
+        fullDataPath = os.path.join(self.baseDataPath, self.blobName)
         logger.debug(f"getting data from {fullDataPath}")
         if not os.path.exists(fullDataPath):
             logger.warning(f"data not found at {fullDataPath} returning \"\"")
@@ -99,7 +114,7 @@ class MessageAttachment(TableBase):
     @base64Data.setter
     def base64Data(self, value: str) -> None:
         self._base64Data = value
-        fullDataPath = os.path.join(self.base_data_path, self.blob_name)
+        fullDataPath = os.path.join(self.baseDataPath, self.blobName)
         logger.debug(f"storeing data to {fullDataPath}")
         with open(fullDataPath, 'wb') as f:
             f.write(self._base64Data.encode("ascii"))
@@ -109,7 +124,7 @@ class MessageAttachment(TableBase):
         return {
             "type": "media",
             "data": self.base64Data,
-            "mime_type": self.mime_type,
+            "mime_type": self.mimeType,
         }
 
 
