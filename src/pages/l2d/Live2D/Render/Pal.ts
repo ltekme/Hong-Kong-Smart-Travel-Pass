@@ -32,6 +32,6 @@ export class Pal {
   }
 
   public static printMessage(message: string): void {
-    console.log(message);
+    console.debug(`${message}`);
   }
 }

@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState } from "react";
-
-import userImage from "./image/image.jpg";
-import aiImage from "./image/gemini.svg";
 import ReactMarkdown from 'react-markdown';
+import { IMessage } from "../pages/home";
+
+export interface IChatBox {
+    message: IMessage,
+    keyIdx: string,
+    profilePictureUrl: string,
+    chatListRef: React.MutableRefObject<any>
+}
+export interface IUserChatList {
+    messageList: IMessage[],
+    profilePictureUrl: string,
+}
 
 export const Chatbox = ({
     message,
     keyIdx,
     profilePictureUrl,
-}) => {
+    chatListRef
+}: IChatBox) => {
     const [delayDisplayText, setDelayDisplayText] = useState("");
-
-    const delayBetweenChar = 20;
-
+    const userImage = require("./image/image.jpg");
+    const aiImage = require("./image/gemini.svg").default;
     useEffect(() => {
         const setText = async () => {
             // helloTitle.style.display = 'none'
@@ -21,18 +30,26 @@ export const Chatbox = ({
                 for (const char of message.text) {
                     displayTexts += char;
                     setDelayDisplayText(displayTexts);
-                    await new Promise((resolve) => setTimeout(resolve, delayBetweenChar));
+                    await new Promise((resolve) => setTimeout(resolve, 20));
                 }
             }
         };
         setText();
     }, [message.text]);
 
+    useEffect(() => {
+        chatListRef.current.scrollTo({
+            top: chatListRef.current.scrollHeight,
+            left: 0,
+            behavior: "smooth",
+        });
+    }, [delayDisplayText]);
+
     return (
         // If message.role is loading -> display the loading class (spin avatar image)
         <div key={keyIdx} className={`message incoming${message?.role === "loading" && message?.text === undefined ? " loading" : ""}`}>
             <div className="message-content">
-                <img src={message?.role === "ai" || message?.role === "loading" ? aiImage : profilePictureUrl || userImage} alt="AI" className="avatar" />
+                <img src={message.role === "ai" || message.role === "loading" ? aiImage : profilePictureUrl !== "" ? profilePictureUrl : userImage} alt={message.role} className="avatar" />
                 <div style={{ display: "inline-block", overflow: "auto" }}>
                     {message.media && message.media.map((content, idx) => {
                         if (content.startsWith("data:image")) {
@@ -42,12 +59,17 @@ export const Chatbox = ({
                         }
                         if (content.startsWith("data:video")) {
                             return (<div key={`${keyIdx}-${idx}`}>
-                                <video key={keyIdx + "-" + idx} controls style={{ maxWidth: '80%', maxHeight: '200px' }} ><source src={content} type="video/mp4" /></video>
+                                <video key={keyIdx + "-" + idx} controls style={{ maxWidth: '80%', maxHeight: '200px' }} src={content} />
                             </div>)
                         }
-                        return null;
+                        if (content.startsWith("data:audio")) {
+                            return (<div key={`${keyIdx}-Media${idx}`}>
+                                <audio key={keyIdx + "-" + idx} controls src={content} />
+                            </div>)
+                        }
+                        return null
                     })}
-                    {(message.text !== undefined && !message.placeHolder) && <ReactMarkdown className="usertext">{
+                    {(message.text !== undefined && !message.placeHolder) && <ReactMarkdown className={`${message.role}-chat-message usertext`}>{
                         message.role === "user" || message.error ? message.text : delayDisplayText
                     }</ReactMarkdown>}
                 </div>
@@ -60,18 +82,28 @@ export const Chatbox = ({
 export const UserChatList = ({
     messageList,
     profilePictureUrl,
-}) => {
+}: IUserChatList) => {
 
     const chatListRef = useRef(null);
 
     useEffect(() => {
-        chatListRef.current.scrollTo(0, document.body.scrollHeight);
+        chatListRef.current.scrollTo({
+            top: chatListRef.current.scrollHeight,
+            left: 0,
+            behavior: "smooth",
+        });
     }, [messageList]);
 
     return (
         <div id="c2">
             <div className="chat-list" ref={chatListRef}>
-                {messageList.map((item, idx) => <Chatbox message={item} key={idx} profilePictureUrl={profilePictureUrl} />)}
+                {messageList.map((item, idx) => <Chatbox
+                    key={`Chat${idx}`}
+                    message={item}
+                    keyIdx={`Chat${idx}`}
+                    profilePictureUrl={profilePictureUrl}
+                    chatListRef={chatListRef}
+                />)}
             </div>
         </div>
     );

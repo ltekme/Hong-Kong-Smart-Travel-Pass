@@ -12,7 +12,7 @@ const MySwal = withReactContent(Swal)
 
 
 export const LegalDataCollectionNotice = ({
-  setConfirmAgree , defaultLang = "zh"
+  setConfirmAgree, defaultLang = "zh"
 }) => {
 
 
@@ -25,7 +25,7 @@ export const LegalDataCollectionNotice = ({
       zh: zhAgg
     };
 
-    console.log("Reading File " + contentLangMap[mdContentLang]);
+    console.debug("[LegalDataCollectionNotice] Reading File " + contentLangMap[mdContentLang]);
     fetch(contentLangMap[mdContentLang])
       .then(data => data.text())
       .then(text => {
@@ -91,7 +91,7 @@ export const LegalDataCollectionNotice = ({
         setConfirmAgree(true);
       }
     };
-    
+
     const timerId = setTimeout(show, 0);
     return () => clearTimeout(timerId);
 

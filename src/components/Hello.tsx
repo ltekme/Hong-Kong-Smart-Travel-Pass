@@ -2,14 +2,26 @@ import { useState, useEffect } from "react";
 import "./css/style.css";
 import "./css/font-awesome.min.css";
 import { facebookAppId, defaultApiUrl } from "../Config";
-
 import Swal from "sweetalert2";
 
+export interface IFacebookProfile {
+    id: string;
+    name: string;
+    gender: string;
+    accessToken: string;
+    profilePicture?: string;
+    sessionExpire?: number;
+    sessionId?: string;
+}
+
+export interface IHello {
+    confirmAgree: boolean;
+    setFacebookProfile: (profile: IFacebookProfile) => void;
+}
 export const Hello = ({
     confirmAgree,
     setFacebookProfile,
-    apiUrl,
-}) => { // outside for set here
+}: IHello) => { // outside for set here
     const [showLogin, setShowLogin] = useState(true);
     const [showImage, setShowImage] = useState(window.innerWidth >= 400);
 
@@ -28,24 +40,23 @@ export const Hello = ({
     }, []);
 
     useEffect(() => {
-        if (!confirmAgree) {
-            (function (d, s, id) {
-                var js, fjs = d.getElementsByTagName(s)[0];
-                if (d.getElementById(id)) { return; }
-                js = d.createElement(s); js.id = id;
-                js.src = "https://connect.facebook.net/en_US/sdk.js";
-                fjs.parentNode.insertBefore(js, fjs);
-            }(document, 'script', 'facebook-jssdk'));
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) { return; }
+            js = d.createElement(s) as HTMLScriptElement;
+            js.id = id;
+            js.src = "https://connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
 
 
-            window.fbAsyncInit = function () {
-                window.FB.init({
-                    appId: facebookAppId,
-                    xfbml: true,
-                    version: 'v21.0' // the-graph-api-version-for-your-app
-                });
-            };
-        }
+        window.fbAsyncInit = function () {
+            window.FB.init({
+                appId: facebookAppId,
+                xfbml: true,
+                version: 'v21.0' // the-graph-api-version-for-your-app
+            });
+        };
         setFacebookInited(true);
     }, []);
 
@@ -57,7 +68,7 @@ export const Hello = ({
         }
 
         try {
-            const processProfileData = async (profileDetails, loginResponse) => {
+            const processProfileData = async (profileDetails: any, loginResponse: any) => {
                 try {
                     const data = profileDetails.picture.data.url;  // https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=523024447160668&height=50&width=50&ext=1733251735&hash=AbZ3mHor3ZeZmBCb4eFd3qC2
                     const profileBase64 = await convertToBase64(data);
@@ -118,13 +129,13 @@ export const Hello = ({
         }
     };
 
-    const convertToBase64 = async (url) => {
+    const convertToBase64 = async (url: string): Promise<string> => {
         const response = await fetch(url);
         const blob = await response.blob();
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                resolve(reader.result);
+                resolve(reader.result as string);
             };
             reader.onerror = reject;
             reader.readAsDataURL(blob);

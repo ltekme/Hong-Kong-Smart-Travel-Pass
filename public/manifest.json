@@ -1,20 +1,20 @@
 {
   "short_name": "香港智遊通",
-  "name": "香港智遊通",
+  "name": "香港智遊通 AI Bot",
   "icons": [
     {
-      "src": "favicon.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
     },
     {
-      "src": "favicon.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#626060",
-  "background_color": "#d5d5d5"
+  "theme_color": "#d5d5d5",
+  "background_color": "#444"
 }
