@@ -10,7 +10,15 @@ logger = logging.getLogger(__name__)
 
 
 class PureLLMModel(BaseModel):
+    """Model class for pure language model interactions."""
+
     def invoke(self, chatRecord: ChatRecord) -> ChatMessage:
+        """
+        Invoke the language model with a chat record and get the response message.
+
+        :param chatRecord: The chat record to process.
+        :return: The response message from the model.
+        """
         logger.debug(f"Invoking llm")
         prompt = ChatPromptTemplate(messages=[
             SystemMessage(str(chatRecord.systemMessage)),

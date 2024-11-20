@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class TableBase(so.DeclarativeBase):
+    """Base class for SQLAlchemy table definitions."""
     pass
 
 
 class MessageContext(TableBase):
+    """Represents the context of a message in the chat."""
     __tablename__ = "message_context"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
@@ -27,20 +29,28 @@ class MessageContext(TableBase):
     message_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"chat_messages.id"))
     message: so.Mapped["ChatMessage"] = so.relationship(back_populates="contexts")
 
-    # End of SqlAlchemyMapping
-    def __init__(self,
-                 name: str,
-                 value: str,
-                 ) -> None:
+    def __init__(self, name: str, value: str) -> None:
+        """
+        Initialize a MessageContext instance.
+
+        :param name: The name of the context.
+        :param value: The value of the context.
+        """
         self.name = name
         self.value = value
 
     @property
     def asText(self) -> str:
+        """
+        Convert the context to a text representation.
+
+        :return: A string representation of the context.
+        """
         return f"{self.name}: {self.value};"
 
 
 class MessageAttachment(TableBase):
+    """Represents an attachment in a chat message."""
     __tablename__ = "message_attachments"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     mimeType: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
@@ -49,13 +59,15 @@ class MessageAttachment(TableBase):
     message_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"chat_messages.id"))
     message: so.Mapped["ChatMessage"] = so.relationship(back_populates="attachments")
 
-    # End of SqlAlchemyMapping
     _base64Data: str = ""
 
-    def __init__(self,
-                 dataUrl: str,
-                 baseDataPath: str = "./data/msg_attachment",
-                 ) -> None:
+    def __init__(self, dataUrl: str, baseDataPath: str = "./data/messageAttachment") -> None:
+        """
+        Initialize a MessageAttachment instance.
+
+        :param dataUrl: The javascript data URL of the attachment.
+        :param baseDataPath: The base path to store the attachment data.
+        """
         logger.debug(f"Starting check for {dataUrl}")
 
         if not dataUrl.startswith("data"):
@@ -66,7 +78,6 @@ class MessageAttachment(TableBase):
 
         logger.debug(f"Parsing {dataUrl[:30]=} to md5 for blobname")
         self.blobName = hashlib.md5(dataUrl.encode()).hexdigest()
-        # data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==
         mimeType = dataUrl.split(";")[0].split(":")[1]
         data = dataUrl.split(",")[1]
 
@@ -76,8 +87,7 @@ class MessageAttachment(TableBase):
             processedImage = BytesIO()
             try:
                 im = Image.open(BytesIO(base64.b64decode(data)))
-                im.verify()  # Verify that it is, in fact, an image
-                im = Image.open(BytesIO(base64.b64decode(data)))  # Reopen the image
+                im.verify()
                 im.save(processedImage, targetFormat)
                 data = base64.b64encode(processedImage.getvalue()).decode()
                 mimeType = f"image/{targetFormat}"
@@ -89,7 +99,7 @@ class MessageAttachment(TableBase):
             logger.debug(f"Starting Image verify for gif")
             try:
                 im = Image.open(BytesIO(base64.b64decode(data)))
-                im.verify()  # Verify that it is, in fact, an image
+                im.verify()
             except Exception as e:
                 logger.error(f"Invalid gif data: {e}")
                 raise ValueError("Invalid gif data")
@@ -99,6 +109,11 @@ class MessageAttachment(TableBase):
 
     @property
     def base64Data(self) -> str:
+        """
+        Get the base64 encoded data of the attachment.
+
+        :return: The base64 encoded data.
+        """
         logger.debug(f"fetching {self.blobName} base64 data")
         if self._base64Data:
             logger.debug(f"found in cache returning")
@@ -113,6 +128,11 @@ class MessageAttachment(TableBase):
 
     @base64Data.setter
     def base64Data(self, value: str) -> None:
+        """
+        Set the base64 encoded data of the attachment.
+
+        :param value: The base64 encoded data.
+        """
         self._base64Data = value
         fullDataPath = os.path.join(self.baseDataPath, self.blobName)
         logger.debug(f"storeing data to {fullDataPath}")
@@ -121,6 +141,11 @@ class MessageAttachment(TableBase):
 
     @property
     def asLcMessageDict(self) -> dict[str, str]:
+        """
+        Convert the attachment to a dictionary representation.
+
+        :return: A dictionary representation of the attachment.
+        """
         return {
             "type": "media",
             "data": self.base64Data,
@@ -129,6 +154,7 @@ class MessageAttachment(TableBase):
 
 
 class ChatMessage(TableBase):
+    """Represents a chat message."""
     __tablename__ = "chat_messages"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     role: so.Mapped[t.Literal["user", "ai", "system"]] = so.mapped_column(sa.String, nullable=False)
@@ -142,14 +168,17 @@ class ChatMessage(TableBase):
         sa.CheckConstraint("role IN ('user', 'ai', 'system')", name="check_role"),
     )
 
-    # End of SqlAlchemyMapping
+    def __init__(self, role: t.Literal["user", "ai", "system"],
+                 text: str, attachments: t.List[MessageAttachment] = [],
+                 contexts: t.List[MessageContext] = []) -> None:
+        """
+        Initialize a ChatMessage instance.
 
-    def __init__(self,
-                 role: t.Literal["user", "ai", "system"],
-                 text: str,
-                 attachments: t.List[MessageAttachment] = [],
-                 contexts: t.List[MessageContext] = [],
-                 ) -> None:
+        :param role: The role of the message sender.
+        :param text: The text content of the message.
+        :param attachments: A list of attachments in the message.
+        :param contexts: A list of contexts for the message.
+        """
         self.role = role
         self.text = text
         self.attachments = attachments
@@ -157,6 +186,11 @@ class ChatMessage(TableBase):
 
     @property
     def lcMessageMapping(self) -> dict[str, t.Type[AIMessage | SystemMessage | HumanMessage]]:
+        """
+        Get the mapping of roles to message types.
+
+        :return: A dictionary mapping roles to message types.
+        """
         return {
             "ai": AIMessage,
             "system": SystemMessage,
@@ -165,6 +199,11 @@ class ChatMessage(TableBase):
 
     @property
     def asLcMessageList(self) -> list[dict[str, str]]:
+        """
+        Convert the message to a list of dictionary representations.
+
+        :return: A list of dictionary representations of the message.
+        """
         contextText = f"\n\nMessageContext << EOF\n{'\n'.join(list(map(lambda c: c.asText, self.contexts)))}\nEOF"
         return [{
             "type": "text",
@@ -173,10 +212,16 @@ class ChatMessage(TableBase):
 
     @property
     def asLcMessageObject(self) -> t.Union[AIMessage, SystemMessage, HumanMessage]:
+        """
+        Convert the message to a LangChain message object.
+
+        :return: A LangChain message object.
+        """
         return self.lcMessageMapping[self.role](content=self.asLcMessageList)  # type: ignore
 
 
 class ChatRecord(TableBase):
+    """Represents a chat record."""
     __tablename__ = "chats"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(uuid4()), nullable=False, unique=True)
@@ -184,16 +229,27 @@ class ChatRecord(TableBase):
     systemMessage: so.Mapped[str] = so.mapped_column(sa.String, default="", unique=False,)
     __allow_unmapped__ = True
 
-    # End of SqlAlchemyMapping
-    dbSession: so.Session
-
     def __init__(self, chatId: str = str(uuid4()), messages: list[ChatMessage] = [], systemMessage: str = ""):
+        """
+        Initialize a ChatRecord instance.
+
+        :param chatId: The unique identifier for the chat.
+        :param messages: A list of messages in the chat.
+        :param systemMessage: The system message for the chat.
+        """
         self.chatId = chatId
         self.messages = messages
         self.systemMessage = systemMessage
 
     @classmethod
     def init(cls, dbSession: so.Session, chatId: str = str(uuid4())) -> "ChatRecord":
+        """
+        Initialize a ChatRecord instance from the database.
+
+        :param dbSession: The database session.
+        :param chatId: The unique identifier for the chat.
+        :return: An instance of ChatRecord.
+        """
         logger.info(f"Initializing {__name__} from chatId")
         instance = cls(chatId)
         existingChat = dbSession.query(cls).filter(cls.chatId == chatId).first()
@@ -202,6 +258,12 @@ class ChatRecord(TableBase):
         return instance
 
     def add_message(self, message: ChatMessage):
+        """
+        Add a message to the chat.
+
+        :param message: The message to add.
+        :raises ValueError: If the message role is invalid or consecutive messages have the same role.
+        """
         logger.debug(f"Adding message to chat {self.chatId}, {message.role=}:{message.text[:10]=}")
         if message.role not in ["user", "system", "ai"]:
             raise ValueError(f'message role must be one of ["user", "system", "ai"]')
@@ -216,4 +278,9 @@ class ChatRecord(TableBase):
 
     @property
     def asLcMessages(self) -> list[t.Union[AIMessage, SystemMessage, HumanMessage]]:
+        """
+        Convert the chat record to a list of LangChain message objects.
+
+        :return: A list of LangChain message objects.
+        """
         return list(map(lambda msg: msg.asLcMessageObject, self.messages))

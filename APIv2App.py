@@ -8,21 +8,21 @@ from google.oauth2.service_account import Credentials
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from ChatLLMv2 import (
+from .ChatLLMv2 import (
     ChatManager,
     ChatModel,
     ChatController,
     TableBase,
     GoogleServices
 )
-from APIv2.Config import (
+from .APIv2.Config import (
     GCP_AI_SA_CREDENTIAL_PATH,
     CHATLLM_DB_URL,
     CHATLLM_ATTACHMENT_URL,
 )
-from APIv2.DataModel import (
-    MessageRequest,
-    MessageResponse,
+from .APIv2.DataModel import (
+    chatLLMDataModel,
+    geocodeDataModel,
 )
 
 load_dotenv('.env')
@@ -57,8 +57,11 @@ chatController = ChatController(dbSession=dbSession, llmModel=llmModel)
 googleServices = GoogleServices.GoogleServices(credentials)
 
 
-@app.post("/chatLLM", response_model=MessageResponse)
-async def chatLLM(messageRequest: MessageRequest) -> MessageResponse:
+@app.post("/chatLLM", response_model=chatLLMDataModel.Response)
+async def chatLLM(messageRequest: chatLLMDataModel.Request) -> chatLLMDataModel.Response:
+    """
+    Invoke the language model with a user message and get the response.
+    """
     requestChatId = messageRequest.chatId or str(uuid.uuid4())
     requestMessageText = messageRequest.content.message
     requestAttachmentList = messageRequest.content.media
@@ -88,8 +91,19 @@ async def chatLLM(messageRequest: MessageRequest) -> MessageResponse:
     else:
         ttsAudio = ""
 
-    return MessageResponse(
+    return chatLLMDataModel.Response(
         message=response.text,
         chatId=chatController.chatId,
         ttsAudio=ttsAudio,
+    )
+
+
+@app.post("/geocode", response_model=geocodeDataModel.Response)
+def get_geocoding(location: geocodeDataModel.Request) -> geocodeDataModel.Response:
+    """
+    Get the location information for a given geocode.
+    """
+
+    return geocodeDataModel.Response(
+        localtion="abcd"
     )

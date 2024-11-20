@@ -16,17 +16,30 @@ logger = logging.getLogger(__name__)
 
 
 class GoogleServices:
+    """Service class for interacting with Google Cloud's Text-to-Speech and Speech-to-Text APIs."""
 
     def __init__(self,
                  credentials: Credentials,
                  apiKey: str = "",
                  ) -> None:
+        """
+        Initialize a GoogleServices instance.
+
+        :param credentials: The Google Cloud credentials.
+        :param apiKey: The API key for Google Cloud services.
+        """
         self.apiKey = apiKey
         self.ttsClient = TextToSpeechClient(credentials=credentials)
         self.sttClient = SpeechClient(credentials=credentials)
 
     def textToSpeech(self, text: str, lang: t.Literal["en", "zh"] = "zh") -> str:
-        """output base64 audio representation of text"""
+        """
+        Convert text to speech and return the base64 encoded audio representation.
+
+        :param text: The text to convert to speech.
+        :param lang: The language of the text ("en" for English, "zh" for Chinese).
+        :return: The base64 encoded audio representation of the text.
+        """
         logger.debug(f"Synthesis starting for {text}")
         voiceLangMapping = {
             "zh": VoiceSelectionParams(
