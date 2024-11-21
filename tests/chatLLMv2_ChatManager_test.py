@@ -39,22 +39,34 @@ class ChatRecord_Test(TestBase):
 
     def test_add_invalid_role_message(self):
         message = ChatMessage("invalid_role", "Hello")  # type: ignore
-        self.assertRaises(ValueError, self.chatRecord.add_message, message)
+        expectedExeception = 'message role must be one of ["user", "system", "ai"]'
+        with self.assertRaises(ValueError) as ve:
+            self.chatRecord.add_message(message)
+        self.assertEqual(str(ve.exception), expectedExeception)
 
     def test_add_ai_message_first(self):
         message = ChatMessage("ai", "Hello")
-        self.assertRaises(ValueError, self.chatRecord.add_message, message)
+        expectedExeception = 'Cannot append message role=AI on the first message'
+        with self.assertRaises(ValueError) as ve:
+            self.chatRecord.add_message(message)
+        self.assertEqual(str(ve.exception), expectedExeception)
 
     def test_add_consecutive_ai_messages(self):
         self.chatRecord.add_message(ChatMessage("user", "Hello"))
         self.chatRecord.add_message(ChatMessage("ai", "Hi"))
-        invalid_msg = ChatMessage("ai", "How are you?")
-        self.assertRaises(ValueError, self.chatRecord.add_message, invalid_msg)
+        invalidMessage = ChatMessage("ai", "How are you?")
+        expectedExeception = 'Cannot have consective AI message'
+        with self.assertRaises(ValueError) as ve:
+            self.chatRecord.add_message(invalidMessage)
+        self.assertEqual(str(ve.exception), expectedExeception)
 
     def test_add_consecutive_user_messages(self):
         self.chatRecord.add_message(ChatMessage("user", "Hello"))
-        invalid_message = ChatMessage("user", "Hi")
-        self.assertRaises(ValueError, self.chatRecord.add_message, invalid_message)
+        invalidMessage = ChatMessage("user", "Hi")
+        expectedExeception = 'Cannot have consective USER message'
+        with self.assertRaises(ValueError) as ve:
+            self.chatRecord.add_message(invalidMessage)
+        self.assertEqual(str(ve.exception), expectedExeception)
 
     def test_message_append(self):
         TableBase.metadata.create_all(self.engine)
@@ -179,17 +191,26 @@ class MessageAttachment_Test(TestBase):
             "mime_type": "image/gif",
         })
 
+    def test_invalid_data_url(self):
+        dataUrl = "invaliddataurl"
+        expectedExeception = "dataUrl must be a javascript data URL"
+        with self.assertRaises(ValueError) as ve:
+            MessageAttachment(dataUrl)
+        self.assertEqual(str(ve.exception), expectedExeception)
+
     def test_invalid_image_data(self):
         dataUrl = "data:image/png;base64,invalidbase64data"
-        self.assertRaises(ValueError, MessageAttachment, dataUrl)
+        expectedExeception = "Invalid image data"
+        with self.assertRaises(ValueError) as ve:
+            MessageAttachment(dataUrl)
+        self.assertEqual(str(ve.exception), expectedExeception)
 
     def test_invalid_gif_data(self):
         dataUrl = "data:image/gif;base64,invalidbase64data"
-        self.assertRaises(ValueError, MessageAttachment, dataUrl)
-
-    def test_invalid_data_url(self):
-        dataUrl = "invaliddataurl"
-        self.assertRaises(ValueError, MessageAttachment, dataUrl)
+        expectedExeception = "Invalid gif data"
+        with self.assertRaises(ValueError) as ve:
+            MessageAttachment(dataUrl)
+        self.assertEqual(str(ve.exception), expectedExeception)
 
 
 class MessageContext_Test(TestBase):

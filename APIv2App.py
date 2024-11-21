@@ -8,19 +8,19 @@ from google.oauth2.service_account import Credentials
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .ChatLLMv2 import (
+from ChatLLMv2 import (
     ChatManager,
     ChatModel,
     ChatController,
     TableBase,
     GoogleServices
 )
-from .APIv2.Config import (
+from APIv2.Config import (
     GCP_AI_SA_CREDENTIAL_PATH,
     CHATLLM_DB_URL,
     CHATLLM_ATTACHMENT_URL,
 )
-from .APIv2.DataModel import (
+from APIv2.DataModel import (
     chatLLMDataModel,
     geocodeDataModel,
 )

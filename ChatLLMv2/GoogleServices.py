@@ -1,5 +1,6 @@
 import base64
 import logging
+import googlemaps  # type: ignore
 import typing as t
 from google.cloud.texttospeech import (
     TextToSpeechClient,
@@ -64,3 +65,25 @@ class GoogleServices:
         base64AudioString = base64.b64encode(response.audio_content).decode("ascii")
         logger.debug(f'Speach to text response preview {base64AudioString[:20]=}')
         return base64AudioString
+
+    def geoLocationLookup(self, longitude: float, latitude: float, lang: str = "zh-HK") -> str:
+        """
+        Perform location lookup for given longitude and latitude value.
+
+        :param longitude: The longitude of the location to lookup.
+        :param latitude: The longitude of the location to lookup.
+        :return: The location string of the given longitude and latitude value.
+        """
+        logger.debug(f'Performing location lookup for {longitude=},{latitude=},{lang=}')
+        if not self.apiKey:
+            logger.warning(f'API Key not present, cannot perform lookup')
+            raise Exception("Cannot Perform Reverse Geocode Search without API Key")
+        maps = googlemaps.Client(key=self.apiKey)
+        try:
+            resault = maps.reverse_geocode(latlng=(latitude, longitude), language=lang)  # type: ignore
+            location = str(resault[1]['formatted_address'])  # type: ignore
+            logger.debug(f"Got location of {location}")
+            return location
+        except Exception as e:
+            logger.error(f"Cannot Perform Reverse Geocode Search: {e}")
+            raise Exception("Cannot Perform Reverse Geocode Search due to errors")
