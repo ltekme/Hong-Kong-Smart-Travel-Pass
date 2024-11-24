@@ -42,29 +42,33 @@ class GoogleServices:
         :return: The base64 encoded audio representation of the text.
         """
         logger.debug(f"Synthesis starting for {text}")
-        voiceLangMapping = {
-            "zh": VoiceSelectionParams(
-                language_code="yue-HK",
-                name="yue-HK-Standard-A",
-            ),
-            "en": VoiceSelectionParams(
-                language_code="en-US",
-                name="en-US-Journey-F",
+        try:
+            voiceLangMapping = {
+                "zh": VoiceSelectionParams(
+                    language_code="yue-HK",
+                    name="yue-HK-Standard-A",
+                ),
+                "en": VoiceSelectionParams(
+                    language_code="en-US",
+                    name="en-US-Journey-F",
+                )
+            }
+            synthesisText = SynthesisInput(text=text)
+            audioConfig = AudioConfig(
+                audio_encoding=AudioEncoding.LINEAR16,
+                speaking_rate=1,
             )
-        }
-        synthesisText = SynthesisInput(text=text)
-        audioConfig = AudioConfig(
-            audio_encoding=AudioEncoding.LINEAR16,
-            speaking_rate=1,
-        )
-        response = self.ttsClient.synthesize_speech({  # type: ignore
-            "input": synthesisText,
-            "voice": voiceLangMapping[lang],
-            "audio_config": audioConfig,
-        })
-        base64AudioString = base64.b64encode(response.audio_content).decode("ascii")
-        logger.debug(f'Speach to text response preview {base64AudioString[:20]=}')
-        return base64AudioString
+            response = self.ttsClient.synthesize_speech({  # type: ignore
+                "input": synthesisText,
+                "voice": voiceLangMapping[lang],
+                "audio_config": audioConfig,
+            })
+            base64AudioString = base64.b64encode(response.audio_content).decode("ascii")
+            logger.debug(f'Speach to text response preview {base64AudioString[:20]=}')
+            return base64AudioString
+        except Exception as e:
+            logger.error(f'Cannot synthesise text {e}, returning empty string.')
+            return ""
 
     def geoLocationLookup(self, longitude: float, latitude: float, lang: str = "zh-HK") -> str:
         """
@@ -77,9 +81,10 @@ class GoogleServices:
         logger.debug(f'Performing location lookup for {longitude=},{latitude=},{lang=}')
         if not self.apiKey:
             logger.warning(f'API Key not present, cannot perform lookup')
-            raise Exception("Cannot Perform Reverse Geocode Search without API Key")
-        maps = googlemaps.Client(key=self.apiKey)
+            raise Exception("Config Error: Cannot Perform Reverse Geocode Search without API Key")
         try:
+            # This works, it not our fault that this works but not show up on editors
+            maps = googlemaps.Client(key=self.apiKey)
             resault = maps.reverse_geocode(latlng=(latitude, longitude), language=lang)  # type: ignore
             location = str(resault[1]['formatted_address'])  # type: ignore
             logger.debug(f"Got location of {location}")

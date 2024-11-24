@@ -1,3 +1,4 @@
+# this is examed from unitest as this will be depracted
 import os
 import time
 import uuid
@@ -5,6 +6,12 @@ import json
 import base64
 import typing as t
 from dotenv import load_dotenv
+
+from APIv2 import app as appv2
+from APIv2.dependence import dbEngine
+from ChatLLMv2 import TableBase
+from fastapi.middleware.wsgi import WSGIMiddleware
+
 from flask import Flask, request, Response
 from http import HTTPStatus, HTTPMethod
 from langchain_google_vertexai import ChatVertexAI
@@ -14,7 +21,12 @@ from ChatLLM import ChatManager, MessageContentMedia, LLMChainModel, LLMModelBas
 # from ChatLLM import LLMTools
 from ChatLLM.UserProfile import UserProfile
 
+
 load_dotenv('.env')
+
+
+TableBase.metadata.create_all(dbEngine, checkfirst=True)
+
 
 credentialsFiles = list(filter(lambda f: f.startswith(
     'gcp_cred') and f.endswith('.json'), os.listdir('.')))
@@ -26,7 +38,6 @@ googleService = GoogleServices(
 )
 
 app = Flask(__name__)
-
 # llm_model = LLMChainModel(
 # audio input only work on base model
 llm_model = LLMModelBase(
@@ -198,6 +209,4 @@ def get_geocoding():
     return response
 
 
-if __name__ == '__main__':
-    # app.run(host="0.0.0.0", port=5000)
-    app.run(debug=True)
+appv2.mount("/v1", WSGIMiddleware(app))

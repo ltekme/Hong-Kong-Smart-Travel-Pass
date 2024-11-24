@@ -5,9 +5,7 @@ from .ChatModel import *
 from .ChatManager import *
 from .ChatModel import *
 
-
 logger = logging.getLogger(__name__)
-
 
 class ChatController:
     """Controller class for managing chats."""
@@ -29,7 +27,14 @@ class ChatController:
         self.dbSession = dbSession
         self._chatId = chatId
         self.llmModel = llmModel
-        self._chat = ChatRecord.init(chatId=self._chatId, dbSession=self.dbSession)
+        self.chatInited = False  # to prevent hitting db when this just got inited
+
+    def _initialize_chat(self):
+        """Initialize the chat record if not already initialized."""
+        if not self.chatInited:
+            logger.info(f"Initializing chat record for chatId: {self._chatId}")
+            self._chat = ChatRecord.init(chatId=self._chatId, dbSession=self.dbSession)
+            self.chatInited = True
 
     @property
     def chatId(self) -> str:
@@ -38,6 +43,7 @@ class ChatController:
 
         :return: The chat ID.
         """
+        self._initialize_chat()
         return self._chatId
 
     @chatId.setter
@@ -48,7 +54,8 @@ class ChatController:
         :param value: The new chat ID.
         """
         self._chatId = value
-        self._chat = ChatRecord.init(chatId=value, dbSession=self.dbSession)
+        self.chatInited = False
+        self._initialize_chat()
 
     @property
     def currentChatRecords(self) -> ChatRecord:
@@ -57,6 +64,7 @@ class ChatController:
 
         :return: The current chat record.
         """
+        self._initialize_chat()
         return self._chat
 
     def invokeLLM(self, message: ChatMessage) -> ChatMessage:
@@ -66,6 +74,7 @@ class ChatController:
         :param message: The new user message.
         :return: The AI response message.
         """
+        self._initialize_chat()
         if not message.text:
             return ChatMessage('system', "Please provide a message.")
         self._chat.add_message(message)

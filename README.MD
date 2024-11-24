@@ -1,7 +1,7 @@
 ## Note
 
 ```sh
-fastapi dev ./APIv2App.py
+fastapi dev
 ```
 
 ## ENV to set
