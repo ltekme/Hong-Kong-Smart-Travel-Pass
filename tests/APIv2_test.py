@@ -11,7 +11,7 @@ from APIv2.dependence import (
     getGoogleService,
 )
 from ChatLLMv2.ChatManager import TableBase
-from ChatLLMv2.GoogleServices import GoogleServices
+from APIv2.modules.GoogleServices import GoogleServices
 
 
 envValues = dotenv_values('.env')

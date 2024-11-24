@@ -2,7 +2,7 @@ import os
 import unittest
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
-from ChatLLMv2.GoogleServices import GoogleServices
+from APIv2.modules.GoogleServices import GoogleServices
 
 
 load_dotenv('.env')

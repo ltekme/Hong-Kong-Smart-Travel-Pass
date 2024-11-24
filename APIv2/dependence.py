@@ -7,11 +7,10 @@ from google.oauth2.service_account import Credentials
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 
-from ChatLLMv2.GoogleServices import GoogleServices
+from APIv2.modules.GoogleServices import GoogleServices
 from ChatLLMv2 import (
     ChatModel,
     ChatController,
-    TableBase,
 )
 
 from .config import settings
@@ -30,10 +29,6 @@ llm = ChatVertexAI(
 )
 llmModel = ChatModel.PureLLMModel(llm=llm)
 dbEngine = sa.create_engine(url=settings.dbUrl, echo=True, connect_args={'check_same_thread': False})
-
-
-def initializeDatabase():
-    TableBase.metadata.create_all(dbEngine)
 
 
 def getSession():

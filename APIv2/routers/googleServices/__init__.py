@@ -30,3 +30,6 @@ def get_geocoding(
         raise HTTPException(status_code=400, detail="Error performing geolocation lookup")
     logger.debug(f"Got location of {response}")
     return geocodeDataModel.Response(location=response)
+
+# @router.post("/stt")
+# This is in v1, I am not bothered to move it

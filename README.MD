@@ -29,19 +29,3 @@ this is the env template, the 2 at the top need to be populated
 - set env
 
     create a .env file in the same dir as this README.md file and set all paramaters in [#ENV to set](#ENV-to-set)
-
-- upgrade the db
-
-    after setting envs, the DB need to be upgraded for anything v2 or after to function properly
-    
-    ```sh
-    alembic upgrade head
-    ```
-
-    run this command to upgrade the db
-
-    ```sh
-    alembic revision --autogenerate -m "revision"
-    ```
-
-    run this command to create a db revision

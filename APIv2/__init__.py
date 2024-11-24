@@ -1,3 +1,7 @@
+from alembic.config import (
+    Config,
+    command
+)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -6,17 +10,18 @@ from .routers import (
     chat,
     googleServices,
 )
-
-# from .dependence import (
-#     initializeDatabase,
-# )
+from .dependence import dbEngine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # moved to alembic for migration
-    # initializeDatabase()
+    cfg = Config("./alembic.ini")
+    with dbEngine.begin() as connection:
+        cfg.attributes['connection'] = connection
+        command.upgrade(cfg, "head")
     yield
+    print('bye')
 
 
 app = FastAPI(root_path="/api/v2", lifespan=lifespan)
