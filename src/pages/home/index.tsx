@@ -212,11 +212,12 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        'location': `${location.latitude},${location.longitude}`
+                        latitude: location.latitude,
+                        longitude: location.longitude,
                     })
                 });
                 const result = await addressResponse.json();
-                addressOutput = result.localtion !== undefined ? result.localtion : "";
+                addressOutput = result.location !== undefined ? result.location : "";
                 console.debug(`[Home][useEffect(confirmAgree)][getAddressFromCoordinates] Setting Current User adddress:\n${addressOutput}`);
                 setUserLocationLegent(addressOutput);
                 setLocationError(false);
