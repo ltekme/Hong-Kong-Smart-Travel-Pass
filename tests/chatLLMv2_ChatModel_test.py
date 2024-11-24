@@ -8,7 +8,7 @@ from ChatLLMv2.ChatModel import (
     BaseModel,
     PureLLMModel,
 )
-from ChatLLMv2.ChatManager import (
+from ChatLLMv2.DataHandler import (
     ChatMessage,
     ChatRecord,
 )

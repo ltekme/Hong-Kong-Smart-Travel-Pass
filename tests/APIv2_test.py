@@ -10,7 +10,7 @@ from APIv2.dependence import (
     getSession,
     getGoogleService,
 )
-from ChatLLMv2.ChatManager import TableBase
+from ChatLLMv2.DataHandler import TableBase
 from APIv2.modules.GoogleServices import GoogleServices
 
 
@@ -101,7 +101,7 @@ class APIv2App_Test(unittest.TestCase):
             )
         app.dependency_overrides[getGoogleService] = getGoogleServiceOveride
         client = TestClient(app)
-        response = client.post("/geocode", json={
+        response = client.post("/googleServices/geocode", json={
             "latitude": 114.253441,
             "longitude": 22.305710,
         })
@@ -120,7 +120,7 @@ class APIv2App_Test(unittest.TestCase):
             return googleServices
         app.dependency_overrides[getGoogleService] = getGoogleServiceOveride
         client = TestClient(app)
-        response = client.post("/geocode", json={
+        response = client.post("/googleServices/geocode", json={
             "latitude": -368,
             "longitude": 132,
         })
@@ -139,7 +139,7 @@ class APIv2App_Test(unittest.TestCase):
             return googleServices
         app.dependency_overrides[getGoogleService] = getGoogleServiceOveride
         client = TestClient(app)
-        response = client.post("/geocode", json={
+        response = client.post("/googleServices/geocode", json={
             "longitude": 114.253441,
             "latitude": 22.305710,
         })

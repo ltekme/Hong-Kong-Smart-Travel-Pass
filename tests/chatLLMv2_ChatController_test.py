@@ -7,7 +7,7 @@ from ChatLLMv2.ChatController import (
 from ChatLLMv2.ChatModel import (
     BaseModel,
 )
-from ChatLLMv2.ChatManager import (
+from ChatLLMv2.DataHandler import (
     ChatMessage,
     ChatRecord,
     TableBase,

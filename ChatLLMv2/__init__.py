@@ -5,7 +5,7 @@ from .ChatModel import (
     BaseModel,
     PureLLMModel,
 )
-from .ChatManager import (
+from .DataHandler import (
     ChatMessage,
     ChatRecord,
     MessageContext,

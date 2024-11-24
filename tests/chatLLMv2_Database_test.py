@@ -1,7 +1,7 @@
 import unittest
 import sqlalchemy as sa
 import sqlalchemy.orm as so
-from ChatLLMv2.ChatManager import (
+from ChatLLMv2.DataHandler import (
     ChatMessage,
     ChatRecord,
     TableBase,

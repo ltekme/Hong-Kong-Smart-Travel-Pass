@@ -6,7 +6,7 @@ import sqlalchemy.orm as so
 from PIL import Image
 from io import BytesIO
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from ChatLLMv2.ChatManager import (
+from ChatLLMv2.DataHandler import (
     ChatMessage,
     ChatRecord,
     MessageContext,

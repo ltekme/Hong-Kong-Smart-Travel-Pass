@@ -2,7 +2,7 @@ import uuid
 import logging
 from fastapi import APIRouter, HTTPException
 
-from ChatLLMv2 import ChatManager
+from ChatLLMv2 import DataHandler
 from .models import chatLLMDataModel
 from ...config import settings
 from ...dependence import (
@@ -30,19 +30,19 @@ async def chatLLM(
     requestDisableTTS = messageRequest.disableTTS
 
     contexts = list(map(
-        lambda co: ChatManager.MessageContext(co, requestContextDict[co]),
+        lambda co: DataHandler.MessageContext(co, requestContextDict[co]),
         requestContextDict.keys()
     )) if requestContextDict is not None else []
 
     try:
         attachments = list(map(
-            lambda url: ChatManager.MessageAttachment(url, settings.attachmentDataPath),
+            lambda url: DataHandler.MessageAttachment(url, settings.attachmentDataPath),
             requestAttachmentList
         )) if requestAttachmentList is not None else []
     except:
         raise HTTPException(status_code=400, detail="Invalid Image Provided")
 
-    message = ChatManager.ChatMessage("user", requestMessageText, attachments, contexts)
+    message = DataHandler.ChatMessage("user", requestMessageText, attachments, contexts)
 
     chatController.chatId = requestChatId
     response = chatController.invokeLLM(message)

@@ -3,7 +3,7 @@ from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 
-from ..ChatManager import ChatRecord, ChatMessage
+from ..DataHandler import ChatRecord, ChatMessage
 from . import BaseModel
 
 logger = logging.getLogger(__name__)

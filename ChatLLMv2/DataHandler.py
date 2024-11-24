@@ -237,7 +237,6 @@ class ChatRecord(TableBase):
     chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(uuid4()), nullable=False, unique=True, index=True)
     messages: so.Mapped[t.List["ChatMessage"]] = so.relationship(back_populates="chat")
     systemMessage: so.Mapped[str] = so.mapped_column(sa.String, default="", unique=False,)
-    __allow_unmapped__ = True
 
     def __init__(self, chatId: str = str(uuid4()), messages: list[ChatMessage] = [], systemMessage: str = ""):
         """

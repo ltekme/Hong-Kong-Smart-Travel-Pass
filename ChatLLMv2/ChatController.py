@@ -2,7 +2,7 @@ import logging
 from uuid import uuid4
 import sqlalchemy.orm as so
 from .ChatModel import *
-from .ChatManager import *
+from .DataHandler import *
 from .ChatModel import *
 
 logger = logging.getLogger(__name__)

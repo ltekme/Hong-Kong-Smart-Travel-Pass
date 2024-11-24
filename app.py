@@ -210,4 +210,4 @@ def get_geocoding():
     return response
 
 
-appv2.mount("/v1", WSGIMiddleware(app))
+appv2.mount("/api/v1", WSGIMiddleware(app))
