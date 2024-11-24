@@ -144,7 +144,7 @@ class APIv2App_Test(unittest.TestCase):
             "latitude": 22.305710,
         })
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["localtion"], "香港照鏡環景嶺路3號")
+        self.assertEqual(response.json()["location"], "香港照鏡環景嶺路3號")
 
 
 if __name__ == '__main__':

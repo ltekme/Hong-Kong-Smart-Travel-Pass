@@ -29,4 +29,4 @@ def get_geocoding(
             raise HTTPException(status_code=500, detail="Cannot perform geolocation lookup")
         raise HTTPException(status_code=400, detail="Error performing geolocation lookup")
     logger.debug(f"Got location of {response}")
-    return geocodeDataModel.Response(localtion=response)
+    return geocodeDataModel.Response(location=response)

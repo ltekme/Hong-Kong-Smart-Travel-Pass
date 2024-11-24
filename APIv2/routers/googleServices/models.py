@@ -12,6 +12,6 @@ class geocodeDataModel:
         )
 
     class Response(BaseModel):
-        localtion: str = Field(
+        location: str = Field(
             description="location lookup of the given longitude, latitude",
         )
