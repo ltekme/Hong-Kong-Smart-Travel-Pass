@@ -86,9 +86,19 @@ class MessageAttachment(TableBase):
             targetFormat = "png"
             processedImage = BytesIO()
             try:
+
                 im = Image.open(BytesIO(base64.b64decode(data)))
+                logger.debug(f"Starting Image verify")
                 im.verify()
+                # https://stackoverflow.com/questions/75644033/pillow-gives-attributeerror-nonetype-object-has-no-attribute-seek-when-tryi
+                # https://docs.djangoproject.com/en/4.2/ref/forms/fields/#django.forms.ImageField
+                # image need to be reopened becaused PIL.Image.open() close the underlying file, no idea why this slipped through unitests
+                # Unitest is fine and the image is outputed correctly
+                # TODO: fix unitest
+                logger.debug(f"Exporting Image to png")
+                im = Image.open(BytesIO(base64.b64decode(data)))
                 im.save(processedImage, targetFormat)
+                logger.debug(f"Extracting png base64 data")
                 data = base64.b64encode(processedImage.getvalue()).decode()
                 mimeType = f"image/{targetFormat}"
             except Exception as e:
@@ -224,7 +234,7 @@ class ChatRecord(TableBase):
     """Represents a chat record."""
     __tablename__ = "chats"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(uuid4()), nullable=False, unique=True)
+    chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(uuid4()), nullable=False, unique=True, index=True)
     messages: so.Mapped[t.List["ChatMessage"]] = so.relationship(back_populates="chat")
     systemMessage: so.Mapped[str] = so.mapped_column(sa.String, default="", unique=False,)
     __allow_unmapped__ = True

@@ -10,11 +10,11 @@ from ...dependence import (
     googleServicesDepend,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/chatLLM")
 logger = logging.getLogger(__name__)
 
 
-@router.post("/chatLLM", response_model=chatLLMDataModel.Response)
+@router.post("", response_model=chatLLMDataModel.Response)
 async def chatLLM(
     googleServices: googleServicesDepend,
     chatController: chatControllerDepend,

@@ -6,7 +6,7 @@ from ...dependence import (
     googleServicesDepend,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/googleServices")
 logger = logging.getLogger(__name__)
 
 

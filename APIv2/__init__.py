@@ -7,14 +7,15 @@ from .routers import (
     googleServices,
 )
 
-from .dependence import (
-    initializeDatabase,
-)
+# from .dependence import (
+#     initializeDatabase,
+# )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    initializeDatabase()
+    # moved to alembic for migration
+    # initializeDatabase()
     yield
 
 

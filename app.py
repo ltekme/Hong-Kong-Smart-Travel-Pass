@@ -4,6 +4,7 @@ import time
 import uuid
 import json
 import base64
+import logging
 import typing as t
 from dotenv import load_dotenv
 
@@ -24,8 +25,8 @@ from ChatLLM.UserProfile import UserProfile
 
 load_dotenv('.env')
 
-
-TableBase.metadata.create_all(dbEngine, checkfirst=True)
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
 
 
 credentialsFiles = list(filter(lambda f: f.startswith(
