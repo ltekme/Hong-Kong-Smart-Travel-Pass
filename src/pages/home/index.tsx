@@ -91,6 +91,9 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             body: JSON.stringify(userMessageObject),
         });
         const jsonResponse = await response.json();
+        if (response.status !== 200) {
+            throw new Error(jsonResponse.detail)
+        }
         let responseObject = {
             audioBase64: jsonResponse.ttsAudio ? jsonResponse.ttsAudio : "",
             respondMessage: jsonResponse.message
@@ -167,6 +170,11 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             })
             .catch(e => {
                 console.error(`[Home][sendMessage] Got error from [sendToLLM]\n${e}`);
+                Swal.fire({
+                    title: "Something went wrong",
+                    text: e.toString(),
+                    icon: 'error',
+                })
                 setMessageList(prevMessage => {
                     const newMessageList = [...prevMessage];
                     newMessageList.pop();
@@ -206,7 +214,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             let addressOutput;
             try {
                 const location = await getLocation();
-                const addressResponse = await fetch(`${defaultApiUrl}/geocode`, {
+                const addressResponse = await fetch(`${defaultApiUrl}/googleServices/geocode`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -216,6 +224,9 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                         longitude: location.longitude,
                     })
                 });
+                if (addressResponse.status !== 200) {
+                    throw new Error("Failed to fetch address from coordinates");
+                }
                 const result = await addressResponse.json();
                 addressOutput = result.location !== undefined ? result.location : "";
                 console.debug(`[Home][useEffect(confirmAgree)][getAddressFromCoordinates] Setting Current User adddress:\n${addressOutput}`);
@@ -225,7 +236,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                 console.error(`[Home][useEffect(confirmAgree)][getAddressFromCoordinates] Error getting user location\n${error}`);
                 Swal.fire({
                     title: "Cannot get user location",
-                    text: "Please make sure you have allowed location access",
+                    text: error.toString(),
                     icon: 'error',
                 });
                 setLocationError(true);
