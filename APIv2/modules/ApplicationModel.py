@@ -29,7 +29,7 @@ class UserProfile(TableBase):
     username: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
     facebookId: so.Mapped[int] = so.mapped_column(sa.String, nullable=False, index=True, unique=True)
     chatRecordIds: so.Mapped[t.List["UserProifileChatRecords"]] = so.relationship(back_populates="profile")
-    sessions: so.Mapped[t.List["UserProfileSessions"]] = so.relationship(back_populates="profile")
+    sessions: so.Mapped[t.List["UserProfileSession"]] = so.relationship(back_populates="profile")
 
     def __init__(self, username: str, facebookId: int):
         """
@@ -92,7 +92,7 @@ class UserProifileChatRecords(TableBase):
     chatId: so.Mapped[str] = so.mapped_column(sa.ForeignKey(f"chats.chatId"), nullable=True)
 
 
-class UserProfileSessions(TableBase):
+class UserProfileSession(TableBase):
     """Used to store temporary access to user profiles"""
     __tablename__ = "user_proifile_sessions"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
@@ -114,7 +114,7 @@ class UserProfileSessions(TableBase):
         self.expire = expire
 
     @classmethod
-    def create(cls, profile: UserProfile, expire: datetime.datetime, dbSession: so.Session) -> "UserProfileSessions":
+    def create(cls, profile: UserProfile, expire: datetime.datetime, dbSession: so.Session) -> "UserProfileSession":
         """
         Creates a new UserProfileSessions instance.
 
