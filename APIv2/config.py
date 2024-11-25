@@ -9,5 +9,7 @@ class Settings(BaseSettings):
     dbUrl: str = os.environ.get("CHATLLM_DB_URL", 'sqlite:///:memory:')
     attachmentDataPath: str = os.environ.get("CHATLLM_ATTACHMENT_URL", "./data/messageAttachment")
 
+    sessionExpireInSeconds: int = 7200
+
 
 settings = Settings()
