@@ -1,8 +1,6 @@
 import os
 import base64
 import unittest
-import sqlalchemy as sa
-import sqlalchemy.orm as so
 from PIL import Image
 from io import BytesIO
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
@@ -11,61 +9,56 @@ from ChatLLMv2.DataHandler import (
     ChatRecord,
     MessageContext,
     MessageAttachment,
-    TableBase
+    TableBase,
 )
-
-
-class TestBase(unittest.TestCase):
-    def setUp(self) -> None:
-        self.engine = sa.create_engine("sqlite:///:memory:", echo=True)
-        self.session = so.Session(bind=self.engine)
+from TestBase import TestBase as TestBase
 
 
 class ChatRecord_Test(TestBase):
 
-    def setUp(self) -> None:
-        self.engine = sa.create_engine("sqlite:///:memory:", echo=True)
-        self.session = so.Session(bind=self.engine)
-        self.chatRecord = ChatRecord(chatId="testChatId")
-
     def test_add_valid_user_message(self):
-        self.chatRecord.add_message(ChatMessage("user", "Hello"))
-        self.chatRecord.add_message(ChatMessage("ai", "Hello"))
-        self.chatRecord.add_message(ChatMessage("user", "Hello Again"))
-        self.chatRecord.add_message(ChatMessage("ai", "Hello To You"))
-        self.assertEqual(len(self.chatRecord.messages), 4)
-        self.assertEqual(self.chatRecord.messages[0].role, "user")
-        self.assertEqual(self.chatRecord.messages[2].role, "user")
+        chatRecord = ChatRecord("testChatId")
+        chatRecord.add_message(ChatMessage("user", "Hello"))
+        chatRecord.add_message(ChatMessage("ai", "Hello"))
+        chatRecord.add_message(ChatMessage("user", "Hello Again"))
+        chatRecord.add_message(ChatMessage("ai", "Hello To You"))
+        self.assertEqual(len(chatRecord.messages), 4)
+        self.assertEqual(chatRecord.messages[0].role, "user")
+        self.assertEqual(chatRecord.messages[2].role, "user")
 
     def test_add_invalid_role_message(self):
+        chatRecord = ChatRecord("testChatId")
         message = ChatMessage("invalid_role", "Hello")  # type: ignore
         expectedExeception = 'message role must be one of ["user", "system", "ai"]'
         with self.assertRaises(ValueError) as ve:
-            self.chatRecord.add_message(message)
+            chatRecord.add_message(message)
         self.assertEqual(str(ve.exception), expectedExeception)
 
     def test_add_ai_message_first(self):
+        chatRecord = ChatRecord("testChatId")
         message = ChatMessage("ai", "Hello")
         expectedExeception = 'Cannot append message role=AI on the first message'
         with self.assertRaises(ValueError) as ve:
-            self.chatRecord.add_message(message)
+            chatRecord.add_message(message)
         self.assertEqual(str(ve.exception), expectedExeception)
 
     def test_add_consecutive_ai_messages(self):
-        self.chatRecord.add_message(ChatMessage("user", "Hello"))
-        self.chatRecord.add_message(ChatMessage("ai", "Hi"))
+        chatRecord = ChatRecord("testChatId")
+        chatRecord.add_message(ChatMessage("user", "Hello"))
+        chatRecord.add_message(ChatMessage("ai", "Hi"))
         invalidMessage = ChatMessage("ai", "How are you?")
         expectedExeception = 'Cannot have consective AI message'
         with self.assertRaises(ValueError) as ve:
-            self.chatRecord.add_message(invalidMessage)
+            chatRecord.add_message(invalidMessage)
         self.assertEqual(str(ve.exception), expectedExeception)
 
     def test_add_consecutive_user_messages(self):
-        self.chatRecord.add_message(ChatMessage("user", "Hello"))
+        chatRecord = ChatRecord("testChatId")
+        chatRecord.add_message(ChatMessage("user", "Hello"))
         invalidMessage = ChatMessage("user", "Hi")
         expectedExeception = 'Cannot have consective USER message'
         with self.assertRaises(ValueError) as ve:
-            self.chatRecord.add_message(invalidMessage)
+            chatRecord.add_message(invalidMessage)
         self.assertEqual(str(ve.exception), expectedExeception)
 
     def test_message_append(self):

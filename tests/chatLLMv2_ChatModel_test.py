@@ -1,7 +1,5 @@
 import os
 import unittest
-import sqlalchemy as sa
-import sqlalchemy.orm as so
 from langchain_google_vertexai import ChatVertexAI
 from google.oauth2.service_account import Credentials
 from ChatLLMv2.ChatModel import (
@@ -12,12 +10,7 @@ from ChatLLMv2.DataHandler import (
     ChatMessage,
     ChatRecord,
 )
-
-
-class TestBase(unittest.TestCase):
-    def setUp(self) -> None:
-        self.engine = sa.create_engine("sqlite:///:memory:", echo=True)
-        self.session = so.Session(bind=self.engine)
+from TestBase import TestBase
 
 
 class BaseModel_Test(TestBase):

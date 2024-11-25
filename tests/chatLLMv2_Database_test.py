@@ -1,17 +1,10 @@
 import unittest
-import sqlalchemy as sa
-import sqlalchemy.orm as so
 from ChatLLMv2.DataHandler import (
     ChatMessage,
     ChatRecord,
     TableBase,
 )
-
-
-class TestBase(unittest.TestCase):
-    def setUp(self) -> None:
-        self.engine = sa.create_engine("sqlite:///:memory:", echo=True)
-        self.session = so.Session(bind=self.engine)
+from TestBase import TestBase
 
 
 class DatabaseModel_Test(TestBase):
