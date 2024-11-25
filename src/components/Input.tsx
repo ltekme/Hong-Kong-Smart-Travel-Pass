@@ -1,4 +1,5 @@
 import { useState, useRef, ReactElement } from "react";
+import { defaultApiUrl, sttApiUrl } from "../Config";
 import Swal from 'sweetalert2'
 import withReactContent from 'sweetalert2-react-content'
 
@@ -100,7 +101,7 @@ export const InputControls = ({
 
                     let response;
                     try {
-                        response = await fetch('http://localhost:5000/stt', {
+                        response = await fetch(sttApiUrl, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'

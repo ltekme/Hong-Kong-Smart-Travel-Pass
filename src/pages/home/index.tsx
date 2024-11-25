@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { UserChatList } from '../../components/ChatMessages';
 import { InputControls } from '../../components/Input';
 import { Hello } from "../../components/Hello";
-import { defaultApiUrl } from "../../Config";
+import { chatLLMApiUrl, geolocationApiUrl } from "../../Config";
 import './index.css'
 import { IFacebookProfile } from "../../components/Hello";
 
@@ -85,7 +85,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
     // Fetch from server
     const sendToLLM = async (userMessageObject: ILLMRequest): Promise<ILLMResponse> => {
         console.debug(`[Home][setMessageMedia] Sending request to LLM API\n${JSON.stringify(userMessageObject, null, 4)}`)
-        const response = await fetch(`${defaultApiUrl}/chatLLM`, {
+        const response = await fetch(chatLLMApiUrl, {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userMessageObject),
@@ -214,7 +214,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             let addressOutput;
             try {
                 const location = await getLocation();
-                const addressResponse = await fetch(`${defaultApiUrl}/googleServices/geocode`, {
+                const addressResponse = await fetch(geolocationApiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
