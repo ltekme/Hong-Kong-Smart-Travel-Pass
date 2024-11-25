@@ -54,7 +54,7 @@ class GoogleServices:
             encoding=speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
             sample_rate_hertz=48000,
             language_code='yue-Hant-HK',
-            alternative_language_codes=['en-US', 'yue-Hant-HK, '],  # 'cmn-Hans-CN'
+            alternative_language_codes=['en-US', 'yue-Hant-HK'],  # 'cmn-Hans-CN'
             use_enhanced=True,
         )
         response = self.sstCredentials.recognize(

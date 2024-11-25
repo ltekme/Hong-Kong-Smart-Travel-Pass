@@ -9,11 +9,9 @@ import typing as t
 from dotenv import load_dotenv
 
 from APIv2 import app as appv2
-from APIv2.dependence import dbEngine
-from ChatLLMv2 import TableBase
 from fastapi.middleware.wsgi import WSGIMiddleware
 
-from flask import Flask, request, Response
+from flask import Flask, request, Response, Blueprint
 from http import HTTPStatus, HTTPMethod
 from langchain_google_vertexai import ChatVertexAI
 from google.oauth2.service_account import Credentials
@@ -38,7 +36,7 @@ googleService = GoogleServices(
     maps_api_key=os.getenv('GOOGLE_API_KEY')
 )
 
-app = Flask(__name__)
+app = Blueprint('apiv1', __name__)
 # llm_model = LLMChainModel(
 # audio input only work on base model
 llm_model = LLMModelBase(
@@ -210,4 +208,6 @@ def get_geocoding():
     return response
 
 
-appv2.mount("/api/v1", WSGIMiddleware(app))
+appv1 = Flask(__name__)
+appv1.register_blueprint(app, url_prefix='/api/v1')
+appv2.mount("/api/v1", WSGIMiddleware(appv1))
