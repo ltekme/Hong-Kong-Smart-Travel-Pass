@@ -8,12 +8,12 @@ import uuid
 import logging
 import hashlib
 import datetime
-import facebook  # type: ignore
 import typing as t
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 
 from ChatLLMv2 import TableBase
+from . import FacebookClient
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,9 @@ class UserProfile(TableBase):
     __tablename__ = "user_profile"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
-    facebookId: so.Mapped[int] = so.mapped_column(sa.String, nullable=False, index=True, unique=True)
+    facebookId: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, index=True, unique=True)
+    personalizationSummory: so.Mapped[int] = so.mapped_column(sa.String, nullable=True)
+    personalizationSummoryLastUpdate: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime, nullable=False)
     chatRecordIds: so.Mapped[t.List["UserProifileChatRecords"]] = so.relationship(back_populates="profile")
     sessions: so.Mapped[t.List["UserProfileSession"]] = so.relationship(back_populates="profile")
 
@@ -53,11 +55,10 @@ class UserProfile(TableBase):
         logger.debug(f"Initializing user instance from facebook access key")
         try:
             logger.debug(f"performing lookup for facebook user")
-            graphApi = facebook.GraphAPI(access_token=accessToken, version="2.12")
-            facebookProfile = graphApi.get_object(id="me", fields="id,name")  # type: ignore
+            facebookProfile = FacebookClient.getUsernameAndId(accessToken=accessToken)
             instance = cls(
-                username=facebookProfile["name"],  # type: ignore
-                facebookId=facebookProfile["id"],  # type: ignore
+                username=facebookProfile.username,
+                facebookId=facebookProfile.id
             )
         except Exception as e:
             logger.error(f"Error performing user identification, {e}")

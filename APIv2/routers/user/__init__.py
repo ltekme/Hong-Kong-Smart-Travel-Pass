@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from .models import AuthDataModel
 from ...modules.ApplicationModel import (
     UserProfile,
-    UserProfileSessions,
+    UserProfileSession,
     FacebookUserIdentifyExeception,
 )
 from ...dependence import dbSessionDepend
@@ -47,7 +47,7 @@ def auth(request: AuthDataModel.Request, dbSession: dbSessionDepend) -> AuthData
 
     try:
         logger.debug(f"creating session for {accessToken[:10]=}")
-        session = UserProfileSessions.create(
+        session = UserProfileSession.create(
             profile=userProfile,
             expire=sessionExpireDatetime,
             dbSession=dbSession
