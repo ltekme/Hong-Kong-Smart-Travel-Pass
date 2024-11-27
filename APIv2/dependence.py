@@ -28,7 +28,7 @@ llm = ChatVertexAI(
     region="us-central1",
 )
 llmModel = ChatModel.PureLLMModel(llm=llm)
-dbEngine = sa.create_engine(url=settings.dbUrl, echo=True, connect_args={'check_same_thread': False})
+dbEngine = sa.create_engine(url=settings.dbUrl, connect_args={'check_same_thread': False})
 
 
 def getSession():

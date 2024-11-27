@@ -3,12 +3,12 @@ import os
 import time
 import uuid
 import json
-import base64
 import logging
+import base64
 import typing as t
 from dotenv import load_dotenv
 
-from APIv2 import app as appv2
+from APIv2 import app
 from fastapi.middleware.wsgi import WSGIMiddleware
 
 from flask import Flask, request, Response, Blueprint
@@ -23,9 +23,6 @@ from ChatLLM.UserProfile import UserProfile
 
 load_dotenv('.env')
 
-logging.basicConfig()
-logging.getLogger().setLevel(logging.DEBUG)
-
 
 credentialsFiles = list(filter(lambda f: f.startswith(
     'gcp_cred') and f.endswith('.json'), os.listdir('.')))
@@ -36,7 +33,7 @@ googleService = GoogleServices(
     maps_api_key=os.getenv('GOOGLE_API_KEY')
 )
 
-app = Blueprint('apiv1', __name__)
+flaskbp = Blueprint('apiv1', __name__)
 # llm_model = LLMChainModel(
 # audio input only work on base model
 llm_model = LLMModelBase(
@@ -80,7 +77,7 @@ class JsonResponse(Response):
         self.data = value
 
 
-@app.route('/get_session', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
+@flaskbp.route('/get_session', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_session():
     response = JsonResponse()
 
@@ -128,7 +125,7 @@ def get_session():
     return response
 
 
-@app.route('/stt', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
+@flaskbp.route('/stt', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_sst():
     response = JsonResponse()
 
@@ -145,7 +142,7 @@ def get_sst():
     return response
 
 
-@app.route('/chatLLM', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
+@flaskbp.route('/chatLLM', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_information():
     response = JsonResponse()
 
@@ -187,7 +184,7 @@ def get_information():
     return response
 
 
-@app.route('/geocode', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
+@flaskbp.route('/geocode', methods=[HTTPMethod.POST, HTTPMethod.OPTIONS])
 def get_geocoding():
     response = JsonResponse()
 
@@ -209,5 +206,5 @@ def get_geocoding():
 
 
 appv1 = Flask(__name__)
-appv1.register_blueprint(app, url_prefix='/api/v1')
-appv2.mount("/api/v1", WSGIMiddleware(appv1))
+appv1.register_blueprint(flaskbp, url_prefix='/api/v1')
+app.mount("/api/v1", WSGIMiddleware(appv1))

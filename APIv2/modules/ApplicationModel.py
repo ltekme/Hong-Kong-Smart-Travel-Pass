@@ -28,8 +28,8 @@ class UserProfile(TableBase):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
     facebookId: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, index=True, unique=True)
-    personalizationSummory: so.Mapped[int] = so.mapped_column(sa.String, nullable=True)
-    personalizationSummoryLastUpdate: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime, nullable=False)
+    personalizationSummory: so.Mapped[str] = so.mapped_column(sa.String, nullable=True)
+    personalizationSummoryLastUpdate: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime, nullable=True)
     chatRecordIds: so.Mapped[t.List["UserProifileChatRecords"]] = so.relationship(back_populates="profile")
     sessions: so.Mapped[t.List["UserProfileSession"]] = so.relationship(back_populates="profile")
 
