@@ -1,25 +1,14 @@
 import os
 import logging
 from dotenv import load_dotenv
-from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
+from sqlalchemy import (
+    pool,
+    engine_from_config
+)
 from alembic import context
-
 from ChatLLMv2 import DataHandler
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
-
 logger = logging.getLogger(__name__)
-
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
 
 # The TRY is just to import the tables from APIv2
 # This is required so when TableBase.__subclasses__() in ChatLLMv2 is called
@@ -27,14 +16,12 @@ if config.config_file_name is not None:
 # Eventually a better way to do this is needed in the future for expandability
 # The 2 component (APIv2, ChatLLMv2) should be seperate but whatever
 # This is to allow the APIv2 to be completely not exist yet still work
+target_metadata = DataHandler.TableBase.metadata
 try:
     from APIv2.modules import ApplicationModel
-    ApplicationModel.TableBase.metadata
+    target_metadata = ApplicationModel.TableBase.metadata
 except:
     logger.warning(f"Module ApplicationModel not found. Skipping import.")
-
-target_metadata = DataHandler.TableBase.metadata
-target_metadata = DataHandler.TableBase.metadata
 
 logger.debug(f"List of tables: {target_metadata.tables=}")
 

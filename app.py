@@ -3,8 +3,9 @@ import os
 import time
 import uuid
 import json
-import logging
 import base64
+import logging
+import uvicorn
 import typing as t
 from dotenv import load_dotenv
 
@@ -208,3 +209,9 @@ def get_geocoding():
 appv1 = Flask(__name__)
 appv1.register_blueprint(flaskbp, url_prefix='/api/v1')
 app.mount("/api/v1", WSGIMiddleware(appv1))
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True, log_level="debug")

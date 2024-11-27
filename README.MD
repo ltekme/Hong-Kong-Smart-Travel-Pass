@@ -39,6 +39,20 @@ this is the env template, the 2 at the top need to be populated
 
 ## Must do
 
+- install requirements
+
+    ```sh
+    pip install -r requirements.txt
+    ```
+
+- create db
+
+    ```sh
+    python createDB.py
+    ```
+
+    run this script before starting any application
+
 - pip install
 
     ```sh
