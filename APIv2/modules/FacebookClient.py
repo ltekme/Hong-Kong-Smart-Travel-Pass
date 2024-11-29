@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FacebookUserInfo:
-    id: int
+    facebookId: int
     username: str
 
 

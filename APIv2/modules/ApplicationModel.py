@@ -58,7 +58,7 @@ class UserProfile(TableBase):
             facebookProfile = FacebookClient.getUsernameAndId(accessToken=accessToken)
             instance = cls(
                 username=facebookProfile.username,
-                facebookId=facebookProfile.id
+                facebookId=facebookProfile.facebookId
             )
         except Exception as e:
             logger.error(f"Error performing user identification, {e}")

@@ -3,6 +3,7 @@
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
     "python.analysis.typeCheckingMode": "strict",
+    "python.terminal.activateEnvironment": true,
 
     // copilot
     "github.copilot.editor.enableAutoCompletions": false,
