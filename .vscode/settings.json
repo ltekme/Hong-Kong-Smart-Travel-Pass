@@ -1,12 +1,21 @@
 {
-    "python.testing.unittestArgs": [
-        "-v",
-        "-s",
-        "./tests",
-        "-p",
-        "*_test.py"
-    ],
+    "python.testing.unittestArgs": ["-v", "-s", "./tests", "-p", "*_test.py"],
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
-    "python.analysis.typeCheckingMode": "strict"
+    "python.analysis.typeCheckingMode": "strict",
+
+    // copilot
+    "github.copilot.editor.enableAutoCompletions": false,
+
+    // formatting args
+    "autopep8.args": ["--max-line-length=200"],
+    "prettier.tabWidth": 4,
+
+    // lang format option
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.autopep8"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
 }

@@ -7,6 +7,7 @@ from .ChatModel import *
 
 logger = logging.getLogger(__name__)
 
+
 class ChatController:
     """Controller class for managing chats."""
     _chat: ChatRecord
