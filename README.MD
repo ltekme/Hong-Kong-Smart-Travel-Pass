@@ -1,7 +1,7 @@
 ## Note
 
 ```sh
-fastapi dev
+python app.py
 ```
 
 
