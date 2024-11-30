@@ -3,6 +3,20 @@ import Home from './pages/home';
 import useLive2D from "./pages/l2d/hook/useLive2D";
 import { LegalDataCollectionNotice } from './pages/LegalDataCollectionNotice/index.jsx';
 import { enableAvatar } from './Config';
+import { Profile } from './components/ProfileSummory';
+
+export const AppRouter = (path) => {
+    switch (path) {
+        case "/":
+            return <App />;
+        case "/legal":
+            return <LegalDataCollectionNotice />;
+        case "/profile":
+            return <Profile />;
+        default:
+            return <App />;
+    }
+}
 
 export const App = () => {
     const [confirmAgree, setConfirmAgree] = useState(false);

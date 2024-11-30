@@ -1,5 +1,5 @@
 import { useState, useRef, ReactElement } from "react";
-import { defaultApiUrl, sttApiUrl } from "../Config";
+import { sttApiUrl } from "../Config";
 import Swal from 'sweetalert2'
 import withReactContent from 'sweetalert2-react-content'
 
@@ -17,10 +17,8 @@ export const InputControls = ({
     clearMessages
 }: IInputControls): ReactElement => {
 
-    type RecorderState = "recording" | "stopped" | "errored";
-
+    
     const [text, setText] = useState("");
-    const [recorderState, setRecorderState] = useState<RecorderState>("stopped");
     const [isRecording, setIsRecording] = useState(false);
     const [mediaRecorder, setMediaRecorder] = useState(null);
     const sttButtonRef = useRef<HTMLSpanElement>(null)
