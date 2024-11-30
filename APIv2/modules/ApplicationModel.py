@@ -99,7 +99,7 @@ class UserProfileSession(TableBase):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"user_profile.id"))
     profile: so.Mapped["UserProfile"] = so.relationship(back_populates="sessions")
-    sessionToken: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
+    sessionToken: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, index=True)
     expire: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime, nullable=False)
 
     def __init__(self, profile: UserProfile, sessionToken: str, expire: datetime.datetime):
@@ -121,6 +121,7 @@ class UserProfileSession(TableBase):
 
         :param profile: The user profile associated with the session.
         :param expire: The expiration datetime of the session.
+        :param dbSession: The dbSession to make the query.
 
         :return: A new instance of UserProfileSessions with the provided profile and expiration.
         """
@@ -143,3 +144,37 @@ class UserProfileSession(TableBase):
         except Exception as e:
             logger.error(f"Error creating session for user {profile.facebookId=}, {e}")
             raise Exception("Error creating user session")
+
+    @classmethod
+    def get(cls, sessionToken: str, currentTime: datetime.datetime, dbSession: so.Session) -> UserProfile | None:
+        """
+        Get profile from sessionToken with expire check
+
+        :param sessionToken: The Sesion Token.
+        :param currentTime: The current Time Stamp.
+        :param dbSession: The dbSession to make the query.
+
+        :return: The user profile associated with the given session token. or None      
+        """
+        try:
+            logger.debug(f"getting profile for session=: {sessionToken[:5]=}")
+            queryResault = dbSession.query(cls).where(cls.sessionToken == sessionToken).first()
+        except Exception as e:
+            logger.error(e)
+            raise Exception("Error querying db")
+
+        if queryResault is None:
+            logger.debug(f"session Token: {sessionToken[:5]=} - not found in db")
+            return None
+
+        try:
+            if currentTime >= queryResault.expire:
+                logger.debug(f"session Token: {sessionToken[:5]=} - expired, delete in db")
+                dbSession.delete(queryResault)
+                dbSession.commit()
+                return None
+        except Exception as e:
+            logger.error(e)
+            raise Exception("Error removing expired token")
+
+        return queryResault.profile

@@ -15,3 +15,16 @@ class ProfileSummoryRequest:
         summory: str = Field(
             description="The resault summory."
         )
+
+
+class ProfileSummoryGet:
+
+    class Request(BaseModel):
+        sessionToken: str = Field(
+            description="the session token from /profile/auth",
+        )
+
+    class Response(BaseModel):
+        summory: str = Field(
+            description="The resault summory."
+        )

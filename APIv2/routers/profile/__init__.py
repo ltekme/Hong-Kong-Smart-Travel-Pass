@@ -23,7 +23,7 @@ router.include_router(summory.router)
 
 
 @router.post("/auth", response_model=AuthDataModel.Response)
-def auth(
+async def auth(
     request: AuthDataModel.Request,
     dbSession: dbSessionDepend,
 ) -> AuthDataModel.Response:

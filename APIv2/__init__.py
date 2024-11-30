@@ -43,7 +43,8 @@ app.include_router(googleServices.router)
 app.include_router(profile.router)
 
 
-@app.exception_handler(StarletteHTTPException)
+@app.exception_handler(500)
+@app.exception_handler(404)
 async def handleError(request: Request, exeception: StarletteHTTPException) -> JSONResponse:
     return JSONResponse(
         status_code=exeception.status_code,

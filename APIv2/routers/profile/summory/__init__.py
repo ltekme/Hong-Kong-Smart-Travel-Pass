@@ -5,7 +5,10 @@ from fastapi import (
 )
 import datetime
 
-from .models import ProfileSummoryRequest
+from .models import (
+    ProfileSummoryRequest,
+    ProfileSummoryGet
+)
 from ....modules import (
     FacebookClient,
     UserProfiling,
@@ -18,8 +21,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/summory")
 
 
+@router.post("/request", response_model=ProfileSummoryGet.Response)
+async def requestSummoryGet(
+    request: ProfileSummoryGet.Request,
+    dbSession: dbSessionDepend,
+) -> ProfileSummoryGet.Response:
+    """Get Current User Profile Summory"""
+    return ProfileSummoryGet.Response(
+        summory=""
+    )
+
+
 @router.post("/request", response_model=ProfileSummoryRequest.Response)
-def requestSummory(
+async def requestSummory(
     request: ProfileSummoryRequest.Request,
     dbSession: dbSessionDepend,
 ) -> ProfileSummoryRequest.Response:

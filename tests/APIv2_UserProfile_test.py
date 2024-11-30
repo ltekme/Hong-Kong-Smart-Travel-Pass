@@ -60,6 +60,68 @@ class UserProfileSessionTest(TestBase):
         self.assertEqual(retrivedUserSession.profile, userProfile)  # type: ignore
         self.assertEqual(retrivedUserSession.expire, currentTime)  # type: ignore
 
+    def test_get(self):
+        TableBase.metadata.create_all(self.engine)
+        currentTime = datetime.datetime.now()
+        expireTime = currentTime + datetime.timedelta(days=2)
+        userProfile = UserProfile(username="testuser", facebookId=123456789)
+        userSession = UserProfileSession.create(
+            profile=userProfile,
+            expire=expireTime,
+            dbSession=self.session
+        )
+
+        userProfileRetrived = UserProfileSession.get(
+            sessionToken=userSession.sessionToken,
+            currentTime=currentTime,
+            dbSession=self.session
+        )
+
+        self.assertEqual(userProfileRetrived, userProfile)
+
+    def test_get_not_exist(self):
+        TableBase.metadata.create_all(self.engine)
+        currentTime = datetime.datetime.now()
+        userProfileRetrived = UserProfileSession.get(
+            sessionToken="nope",
+            currentTime=currentTime,
+            dbSession=self.session
+        )
+        self.assertEqual(userProfileRetrived, None)
+
+    def test_expired(self):
+        TableBase.metadata.create_all(self.engine)
+        currentTime = datetime.datetime.now()
+        expireTime = currentTime + datetime.timedelta(days=2)
+        pastExpireTime = currentTime + datetime.timedelta(days=3)
+        userProfile = UserProfile(username="testuser", facebookId=123456789)
+        userSession = UserProfileSession.create(
+            profile=userProfile,
+            expire=expireTime,
+            dbSession=self.session
+        )
+
+        retrivedUserSessionCount = self.session.query(
+            UserProfileSession
+        ).where(
+            UserProfileSession.profile_id == userProfile.id
+        ).count()
+        self.assertEqual(retrivedUserSessionCount, 1)
+
+        userProfileRetrived = UserProfileSession.get(
+            sessionToken=userSession.sessionToken,
+            currentTime=pastExpireTime,
+            dbSession=self.session
+        )
+        self.assertEqual(userProfileRetrived, None)
+
+        retrivedUserSessionCount = self.session.query(
+            UserProfileSession
+        ).where(
+            UserProfileSession.profile_id == userProfile.id
+        ).count()
+        self.assertEqual(retrivedUserSessionCount, 0)
+
 
 if __name__ == '__main__':
     unittest.main()
