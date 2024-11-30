@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from .routers import (
     chat,
     googleServices,
-    user,
+    profile,
 )
 from .dependence import dbEngine
 
@@ -35,4 +35,4 @@ app.add_middleware(
 )
 app.include_router(chat.router)
 app.include_router(googleServices.router)
-app.include_router(user.router)
+app.include_router(profile.router)
