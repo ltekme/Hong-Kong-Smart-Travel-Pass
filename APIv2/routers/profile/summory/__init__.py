@@ -7,7 +7,7 @@ import datetime
 
 from .models import (
     ProfileSummoryRequest,
-    ProfileSummoryGet
+    ProfileSummoryGet,
 )
 from ....modules import (
     FacebookClient,
@@ -21,14 +21,38 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/summory")
 
 
-@router.post("/request", response_model=ProfileSummoryGet.Response)
+@router.get("/", response_model=ProfileSummoryGet.Response)
 async def requestSummoryGet(
     request: ProfileSummoryGet.Request,
     dbSession: dbSessionDepend,
 ) -> ProfileSummoryGet.Response:
     """Get Current User Profile Summory"""
+    sessionToken = request.sessionToken
+    currentDatetime = datetime.datetime.now()
+
+    try:
+        logger.debug(f"performing user lookup for {sessionToken[:10]=}")
+        userSesion = ApplicationModel.UserProfileSession.get(
+            sessionToken=sessionToken,
+            currentTime=currentDatetime,
+            dbSession=dbSession,
+        )
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(
+            status_code=400,
+            detail="Error getting user"
+        )
+
+    if userSesion is None:
+        logger.debug(f"{sessionToken[:10]=} was not found")
+        raise HTTPException(
+            status_code=404,
+            detail="No User Found"
+        )
+
     return ProfileSummoryGet.Response(
-        summory=""
+        summory=userSesion.personalizationSummory
     )
 
 
