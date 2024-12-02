@@ -4,6 +4,7 @@ import datetime
 from fastapi import (
     APIRouter,
     HTTPException,
+    Response,
 )
 
 from . import summory
@@ -14,7 +15,10 @@ from ...modules.ApplicationModel import (
     FacebookUserIdentifyExeception,
 )
 from ...dependence import dbSessionDepend
-from ...config import settings
+from ...config import (
+    settings,
+    ClientCookiesKeys,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +29,7 @@ router.include_router(summory.router)
 @router.post("/auth", response_model=AuthDataModel.Response)
 async def auth(
     request: AuthDataModel.Request,
+    response: Response,
     dbSession: dbSessionDepend,
 ) -> AuthDataModel.Response:
     """ Get sessionToken for a user from facebook access token"""
@@ -68,6 +73,11 @@ async def auth(
         )
 
     logger.debug(f"created session for {accessToken[:10]=}, {session.sessionToken[:10]=}")
+    response.set_cookie(
+        key=ClientCookiesKeys.SESSION_TOKEN,
+        value=session.sessionToken,
+        expires=session.expire
+    )
     return AuthDataModel.Response(
         sessionToken=session.sessionToken,
         expireEpoch=int(time.mktime(session.expire.timetuple()))

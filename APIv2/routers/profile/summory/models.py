@@ -1,3 +1,4 @@
+import datetime
 from pydantic import BaseModel, Field
 
 
@@ -19,12 +20,10 @@ class ProfileSummoryRequest:
 
 class ProfileSummoryGet:
 
-    class Request(BaseModel):
-        sessionToken: str = Field(
-            description="the session token from /profile/auth",
-        )
-
     class Response(BaseModel):
         summory: str = Field(
             description="The resault summory."
+        )
+        lastUpdate: datetime.datetime = Field(
+            description="The resault summory last updated."
         )

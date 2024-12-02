@@ -1,4 +1,5 @@
 import os
+import typing as t
 from pydantic_settings import BaseSettings
 
 
@@ -10,6 +11,10 @@ class Settings(BaseSettings):
     attachmentDataPath: str = os.environ.get("CHATLLM_ATTACHMENT_URL", "./data/messageAttachment")
 
     sessionExpireInSeconds: int = 7200
+
+
+class ClientCookiesKeys:
+    SESSION_TOKEN: t.Final[str] = "sessionToken"
 
 
 settings = Settings()

@@ -2,6 +2,7 @@ import logging
 from fastapi import (
     APIRouter,
     HTTPException,
+    Request
 )
 import datetime
 
@@ -15,24 +16,30 @@ from ....modules import (
     ApplicationModel,
 )
 from ....dependence import dbSessionDepend
-
+from ....config import ClientCookiesKeys
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/summory")
 
 
-@router.get("/", response_model=ProfileSummoryGet.Response)
+@router.get("", response_model=ProfileSummoryGet.Response)
 async def requestSummoryGet(
-    request: ProfileSummoryGet.Request,
+    request: Request,
     dbSession: dbSessionDepend,
 ) -> ProfileSummoryGet.Response:
     """Get Current User Profile Summory"""
-    sessionToken = request.sessionToken
+    sessionToken = request.cookies.get(ClientCookiesKeys.SESSION_TOKEN)
     currentDatetime = datetime.datetime.now()
+
+    if sessionToken is None:
+        raise HTTPException(
+            status_code=400,
+            detail="No sessionToken found"
+        )
 
     try:
         logger.debug(f"performing user lookup for {sessionToken[:10]=}")
-        userSesion = ApplicationModel.UserProfileSession.get(
+        userProfile = ApplicationModel.UserProfileSession.get(
             sessionToken=sessionToken,
             currentTime=currentDatetime,
             dbSession=dbSession,
@@ -44,7 +51,7 @@ async def requestSummoryGet(
             detail="Error getting user"
         )
 
-    if userSesion is None:
+    if userProfile is None:
         logger.debug(f"{sessionToken[:10]=} was not found")
         raise HTTPException(
             status_code=404,
@@ -52,7 +59,8 @@ async def requestSummoryGet(
         )
 
     return ProfileSummoryGet.Response(
-        summory=userSesion.personalizationSummory
+        summory=userProfile.personalizationSummory,
+        lastUpdate=userProfile.personalizationSummoryLastUpdate
     )
 
 
