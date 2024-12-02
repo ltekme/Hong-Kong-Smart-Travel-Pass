@@ -211,6 +211,8 @@ appv1.register_blueprint(flaskbp, url_prefix='/api/v1')
 app.mount("/api/v1", WSGIMiddleware(appv1))
 
 if __name__ == "__main__":
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, log_level="debug")
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, reload_excludes=[
+        "./data",
+        "./chat_data",
+        "./.git"
+    ], log_level="debug", use_colors=True)

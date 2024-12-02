@@ -1,13 +1,11 @@
-import logging
 from fastapi import HTTPException, APIRouter
 
 from .models import geocodeDataModel
-from ...dependence import (
-    googleServicesDepend,
-)
+from ...dependence import googleServicesDepend
+from ...config import logger
+
 
 router = APIRouter(prefix="/googleServices")
-logger = logging.getLogger(__name__)
 
 
 @router.post("/geocode", response_model=geocodeDataModel.Response)

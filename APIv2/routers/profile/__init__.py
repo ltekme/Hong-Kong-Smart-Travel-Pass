@@ -1,12 +1,10 @@
 import time
-import logging
 import datetime
 from fastapi import (
     APIRouter,
     HTTPException,
     Response,
 )
-
 from . import summory
 from ..profile.models import AuthDataModel
 from ...modules.ApplicationModel import (
@@ -14,14 +12,16 @@ from ...modules.ApplicationModel import (
     UserProfileSession,
     FacebookUserIdentifyExeception,
 )
-from ...dependence import dbSessionDepend
+from ...dependence import (
+    dbSessionDepend,
+)
 from ...config import (
+    logger,
     settings,
     ClientCookiesKeys,
 )
 
 
-logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profile")
 router.include_router(summory.router)
 
@@ -75,8 +75,7 @@ async def auth(
     logger.debug(f"created session for {accessToken[:10]=}, {session.sessionToken[:10]=}")
     response.set_cookie(
         key=ClientCookiesKeys.SESSION_TOKEN,
-        value=session.sessionToken,
-        expires=session.expire
+        value=session.sessionToken
     )
     return AuthDataModel.Response(
         sessionToken=session.sessionToken,

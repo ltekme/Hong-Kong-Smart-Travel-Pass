@@ -1,5 +1,4 @@
 import base64
-import logging
 import googlemaps  # type: ignore
 import typing as t
 from google.cloud.texttospeech import (
@@ -12,8 +11,7 @@ from google.cloud.texttospeech import (
 from google.cloud.speech import SpeechClient
 from google.oauth2.service_account import Credentials
 
-
-logger = logging.getLogger(__name__)
+from ..config import logger
 
 
 class GoogleServices:

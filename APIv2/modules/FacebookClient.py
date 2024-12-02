@@ -1,12 +1,10 @@
 import pprint
 import base64
-import logging
 import requests
 import facebook  # type: ignore
 from dataclasses import dataclass
 
-
-logger = logging.getLogger(__name__)
+from ..config import logger
 
 
 @dataclass

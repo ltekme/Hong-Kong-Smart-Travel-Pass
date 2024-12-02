@@ -13,7 +13,10 @@ from ChatLLMv2 import (
     ChatController,
 )
 
-from .config import settings
+from .config import (
+    settings,
+    logger,
+)
 
 credentials = Credentials.from_service_account_file(settings.gcpServiceAccountPath)  # type: ignore
 llm = ChatVertexAI(
@@ -28,7 +31,7 @@ llm = ChatVertexAI(
     region="us-central1",
 )
 llmModel = ChatModel.PureLLMModel(llm=llm)
-dbEngine = sa.create_engine(url=settings.dbUrl, connect_args={'check_same_thread': False})
+dbEngine = sa.create_engine(url=settings.dbUrl, connect_args={'check_same_thread': False}, logging_name=logger.name)
 
 
 def getSession():

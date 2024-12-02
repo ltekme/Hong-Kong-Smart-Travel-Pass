@@ -1,13 +1,10 @@
-import logging
 from ..dependence import llm
+from ..config import logger
+from langchain_core.messages import HumanMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     MessagesPlaceholder,
 )
-from langchain_core.messages import HumanMessage
-
-
-logger = logging.getLogger(__name__)
 
 
 def generateUserProfileSummory(profileDetails: str) -> str:

@@ -1,17 +1,18 @@
 import uuid
-import logging
 from fastapi import APIRouter, HTTPException
 
 from ChatLLMv2 import DataHandler
 from .models import chatLLMDataModel
-from ...config import settings
+from ...config import (
+    settings,
+    logger,
+)
 from ...dependence import (
     chatControllerDepend,
     googleServicesDepend,
 )
 
 router = APIRouter(prefix="/chatLLM")
-logger = logging.getLogger(__name__)
 
 
 @router.post("", response_model=chatLLMDataModel.Response)
@@ -28,6 +29,8 @@ async def chatLLM(
     requestAttachmentList = messageRequest.content.media
     requestContextDict = messageRequest.context
     requestDisableTTS = messageRequest.disableTTS
+
+    logger.debug(f"starting chatLLM request {messageRequest=}")
 
     contexts = list(map(
         lambda co: DataHandler.MessageContext(co, requestContextDict[co]),

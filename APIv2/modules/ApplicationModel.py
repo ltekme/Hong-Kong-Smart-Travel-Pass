@@ -5,7 +5,6 @@
 # All mappings here is seperate from ChatLLMv2 as ChatLLMv2 is a seperate core component that can work on it own.
 # PS: There is virtually zero typing on facebook Graph API, might as well write raw requests
 import uuid
-import logging
 import hashlib
 import datetime
 import typing as t
@@ -14,8 +13,7 @@ import sqlalchemy.orm as so
 
 from ChatLLMv2 import TableBase
 from . import FacebookClient
-
-logger = logging.getLogger(__name__)
+from ..config import logger
 
 
 class FacebookUserIdentifyExeception(Exception):

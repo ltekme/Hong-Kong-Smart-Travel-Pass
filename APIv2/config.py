@@ -1,4 +1,5 @@
 import os
+import logging
 import typing as t
 from pydantic_settings import BaseSettings
 
@@ -17,4 +18,7 @@ class ClientCookiesKeys:
     SESSION_TOKEN: t.Final[str] = "sessionToken"
 
 
+# uvicorn only stdout uvicorn.asgi, uvicorn.access, uvicorn.error
+# see site-packages/uvicorn/config.py: 383-393
+logger = logging.getLogger("uvicorn.asgi")
 settings = Settings()

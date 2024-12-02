@@ -1,4 +1,3 @@
-import logging
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -16,9 +15,11 @@ from ....modules import (
     ApplicationModel,
 )
 from ....dependence import dbSessionDepend
-from ....config import ClientCookiesKeys
+from ....config import (
+    logger,
+    ClientCookiesKeys,
+)
 
-logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/summory")
 
 

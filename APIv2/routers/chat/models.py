@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 class chatLLMDataModel:
 
     class Request(BaseModel):
-        class MessageContext(BaseModel):
+        class MessageContent(BaseModel):
             message: str = Field(
                 description="The message that get sent to LLM"
             )
@@ -17,7 +17,7 @@ class chatLLMDataModel:
         chatId: str = Field(
             description="The chat ID, should be uuid string",
         )
-        content: MessageContext = Field(
+        content: MessageContent = Field(
             description="content to be sent to LLM",
         )
         context: t.Optional[dict[str, str]] = Field(

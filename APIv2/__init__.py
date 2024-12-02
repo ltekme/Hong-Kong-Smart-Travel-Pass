@@ -1,3 +1,4 @@
+import typing as t
 from alembic.config import (
     Config,
     command
@@ -17,6 +18,7 @@ from .routers import (
     profile,
 )
 from .dependence import dbEngine
+from .config import logger
 
 
 @asynccontextmanager
@@ -24,6 +26,7 @@ async def lifespan(app: FastAPI):
     # moved to alembic for migration
     cfg = Config("./alembic.ini")
     with dbEngine.begin() as connection:
+        logger.debug("upgrading db")
         cfg.attributes['connection'] = connection
         command.upgrade(cfg, "head")
     yield
@@ -45,11 +48,15 @@ app.include_router(profile.router)
 
 @app.exception_handler(500)
 @app.exception_handler(404)
-async def handleError(request: Request, exeception: StarletteHTTPException) -> JSONResponse:
+async def handleError(request: Request, exeception: t.Any) -> JSONResponse:
+    if isinstance(exeception, StarletteHTTPException):
+        statusCode = exeception.status_code
+    else:
+        statusCode = 418
     return JSONResponse(
-        status_code=exeception.status_code,
+        status_code=statusCode,
         headers={
-            "X-Error": "Nope" if exeception.status_code == 404 else "I'm a teapot",
+            "X-Error": "Nope" if statusCode == 404 else "I'm a teapot",
         },
         content={"detail": "Hello World! :-]"},
     )
