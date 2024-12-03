@@ -2,9 +2,9 @@ import logging
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-
 from ..DataHandler import ChatRecord, ChatMessage
 from . import BaseModel
+
 
 logger = logging.getLogger(__name__)
 

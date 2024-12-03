@@ -30,7 +30,7 @@ llm = ChatVertexAI(
     project=credentials.project_id,  # type: ignore
     region="us-central1",
 )
-llmModel = ChatModel.PureLLMModel(llm=llm)
+llmModel = ChatModel.GraphModel(llm=llm)
 dbEngine = sa.create_engine(url=settings.dbUrl, connect_args={'check_same_thread': False}, logging_name=logger.name)
 
 
