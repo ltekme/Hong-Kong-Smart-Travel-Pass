@@ -228,31 +228,15 @@ class ChatMessage_Test(TestBase):
         self.dataUrl2 = f"data:text/plain;base64,{self.b64String2}"
         self.dataUrl3 = f"data:text/plain;base64,{self.b64String3}"
         self.dataUrl4 = f"data:text/plain;base64,{self.b64String4}"
-        self.context1 = MessageContext("testParam1", "testValue1")
-        self.context2 = MessageContext("testParam2", "testValue2")
-        self.context3 = MessageContext("testParam3", "testValue3")
-        self.context4 = MessageContext("testParam4", "testValue4")
         self.attachment1 = MessageAttachment(self.dataUrl1)
         self.attachment2 = MessageAttachment(self.dataUrl2)
-        self.attachment3 = MessageAttachment(self.dataUrl3)
-        self.attachment4 = MessageAttachment(self.dataUrl4)
-        self.chatMessage1_sys = ChatMessage("system", "hello", [], [])
-        self.chatMessage1_user = ChatMessage("user", "hello", [], [])
-        self.chatMessage1_ai = ChatMessage("ai", "hello", [], [])
-        self.chatMessage2 = ChatMessage("user", "hello", [], [
-            self.context1,
-            self.context2,
-        ])
+        self.chatMessage1_sys = ChatMessage("system", "hello", [])
+        self.chatMessage1_user = ChatMessage("user", "hello", [])
+        self.chatMessage1_ai = ChatMessage("ai", "hello", [])
+        self.chatMessage2 = ChatMessage("user", "hello", [])
         self.chatMessage3 = ChatMessage("user", "hello", [
             self.attachment1,
             self.attachment2,
-        ], [])
-        self.chatMessage4 = ChatMessage("user", "hello", [
-            self.attachment3,
-            self.attachment4
-        ], [
-            self.context3,
-            self.context4
         ])
 
     def test_asLcMessageList_output(self):
@@ -262,7 +246,7 @@ class ChatMessage_Test(TestBase):
         }])
         self.assertListEqual(self.chatMessage2.asLcMessageList, [{
             "type": "text",
-            "text": "hello\n\nMessageContext << EOF\ntestParam1: testValue1;\ntestParam2: testValue2;\nEOF",
+            "text": "hello",
         }])
         self.assertListEqual(self.chatMessage3.asLcMessageList, [{
             "type": "text",
@@ -275,18 +259,6 @@ class ChatMessage_Test(TestBase):
             "type": "media",
             "data": self.b64String2,
             "mime_type": self.dataUrl2.split(";")[0].split(":")[1],
-        }])
-        self.assertListEqual(self.chatMessage4.asLcMessageList, [{
-            "type": "text",
-            "text": "hello\n\nMessageContext << EOF\ntestParam3: testValue3;\ntestParam4: testValue4;\nEOF",
-        }, {
-            "type": "media",
-            "data": self.b64String3,
-            "mime_type": self.dataUrl3.split(";")[0].split(":")[1],
-        }, {
-            "type": "media",
-            "data": self.b64String4,
-            "mime_type": self.dataUrl4.split(";")[0].split(":")[1],
         }])
 
     def test_asLcMessageObject_output(self):
@@ -304,7 +276,7 @@ class ChatMessage_Test(TestBase):
         }]))
         self.assertEqual(self.chatMessage2.asLcMessageObject, HumanMessage([{
             "type": "text",
-            "text": "hello\n\nMessageContext << EOF\ntestParam1: testValue1;\ntestParam2: testValue2;\nEOF",
+            "text": "hello",
         }]))
         self.assertEqual(self.chatMessage3.asLcMessageObject, HumanMessage([{
             "type": "text",
@@ -317,18 +289,6 @@ class ChatMessage_Test(TestBase):
             "type": "media",
             "data": self.b64String2,
             "mime_type": self.dataUrl2.split(";")[0].split(":")[1],
-        }]))
-        self.assertEqual(self.chatMessage4.asLcMessageObject, HumanMessage([{
-            "type": "text",
-            "text": "hello\n\nMessageContext << EOF\ntestParam3: testValue3;\ntestParam4: testValue4;\nEOF",
-        }, {
-            "type": "media",
-            "data": self.b64String3,
-            "mime_type": self.dataUrl3.split(";")[0].split(":")[1],
-        }, {
-            "type": "media",
-            "data": self.b64String4,
-            "mime_type": self.dataUrl4.split(";")[0].split(":")[1],
         }]))
 
 

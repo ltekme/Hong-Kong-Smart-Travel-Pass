@@ -20,33 +20,15 @@ class TableBase(so.DeclarativeBase):
     pass
 
 
-class MessageContext(TableBase):
-    """Represents the context of a message in the chat."""
-    __tablename__ = "message_context"
-    id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
-    value: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
-    message_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"chat_messages.id"))
-    message: so.Mapped["ChatMessage"] = so.relationship(back_populates="contexts")
+class MessageContext:
 
-    def __init__(self, name: str, value: str) -> None:
-        """
-        Initialize a MessageContext instance.
-
-        :param name: The name of the context.
-        :param value: The value of the context.
-        """
-        self.name = name
+    def __init__(self, key: str, value: str):
+        self.key = key
         self.value = value
 
     @property
     def asText(self) -> str:
-        """
-        Convert the context to a text representation.
-
-        :return: A string representation of the context.
-        """
-        return f"{self.name}: {self.value};"
+        return f"{self.key}: {self.value};"
 
 
 class MessageAttachment(TableBase):
@@ -170,7 +152,6 @@ class ChatMessage(TableBase):
     role: so.Mapped[t.Literal["user", "ai", "system"]] = so.mapped_column(sa.String, nullable=False)
     text: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
     dateTime: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime(timezone=True), default=sl.func.now())
-    contexts: so.Mapped[t.List["MessageContext"]] = so.relationship(back_populates="message")
     attachments: so.Mapped[t.List["MessageAttachment"]] = so.relationship(back_populates="message")
     chat_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"chats.id"))
     chat: so.Mapped["ChatRecord"] = so.relationship(back_populates="messages")
@@ -180,19 +161,17 @@ class ChatMessage(TableBase):
 
     def __init__(self, role: t.Literal["user", "ai", "system"],
                  text: str, attachments: t.List[MessageAttachment] = [],
-                 contexts: t.List[MessageContext] = []) -> None:
+                 ) -> None:
         """
         Initialize a ChatMessage instance.
 
         :param role: The role of the message sender.
         :param text: The text content of the message.
         :param attachments: A list of attachments in the message.
-        :param contexts: A list of contexts for the message.
         """
         self.role = role
         self.text = text
         self.attachments = attachments
-        self.contexts = contexts
 
     @property
     def lcMessageMapping(self) -> dict[str, t.Type[AIMessage | SystemMessage | HumanMessage]]:
@@ -214,10 +193,9 @@ class ChatMessage(TableBase):
 
         :return: A list of dictionary representations of the message.
         """
-        contextText = f"\n\nMessageContext << EOF\n{'\n'.join(list(map(lambda c: c.asText, self.contexts)))}\nEOF"
         return [{
             "type": "text",
-            "text": self.text + (contextText if len(self.contexts) > 0 else ""),
+            "text": self.text,
         }] + list(map(lambda x: x.asLcMessageDict, self.attachments))
 
     @property

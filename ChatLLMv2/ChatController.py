@@ -68,16 +68,20 @@ class ChatController:
         self._initialize_chat()
         return self._chat
 
-    def invokeLLM(self, message: ChatMessage) -> ChatMessage:
+    def invokeLLM(self, message: ChatMessage, context: list[MessageContext] = []) -> ChatMessage:
         """
         Invoke the language model with a user message and get the AI response.
 
         :param message: The new user message.
+        :param contexts: A list of contexts for the message.
         :return: The AI response message.
         """
         self._initialize_chat()
         if not message.text:
             return ChatMessage('system', "Please provide a message.")
+        if context:
+            contextList = list(map(lambda c: c.asText, context))
+            self._chat.add_message(ChatMessage("system", f"""Current Up to date context:\n{"\n".join(contextList)}"""))
         self._chat.add_message(message)
         aiMessage = self.llmModel.invoke(self._chat)
         self._chat.add_message(aiMessage)

@@ -3,7 +3,10 @@ from langchain_core.tools import BaseTool
 from langchain_core.language_models.chat_models import BaseChatModel
 
 
-from ..DataHandler import ChatRecord, ChatMessage
+from ..DataHandler import (
+    ChatRecord,
+    ChatMessage,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -33,7 +33,10 @@ async def chatLLM(
     logger.debug(f"starting chatLLM request {messageRequest=}")
 
     contexts = list(map(
-        lambda co: DataHandler.MessageContext(co, requestContextDict[co]),
+        lambda co: DataHandler.MessageContext(
+            key=co,
+            value=requestContextDict[co]
+        ),
         requestContextDict.keys()
     )) if requestContextDict is not None else []
 
@@ -45,10 +48,10 @@ async def chatLLM(
     except:
         raise HTTPException(status_code=400, detail="Invalid Image Provided")
 
-    message = DataHandler.ChatMessage("user", requestMessageText, attachments, contexts)
+    message = DataHandler.ChatMessage("user", requestMessageText, attachments)
 
     chatController.chatId = requestChatId
-    response = chatController.invokeLLM(message)
+    response = chatController.invokeLLM(message, contexts)
 
     if not requestDisableTTS:
         try:
