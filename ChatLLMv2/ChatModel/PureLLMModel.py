@@ -1,5 +1,4 @@
 import logging
-from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from ..DataHandler import ChatRecord, ChatMessage
@@ -21,7 +20,6 @@ class PureLLMModel(BaseModel):
         """
         logger.debug(f"Invoking llm")
         prompt = ChatPromptTemplate(messages=[
-            SystemMessage(str(chatRecord.systemMessage)),
             MessagesPlaceholder('chat_history'),
         ])
         prompt_value = prompt.invoke({"chat_history": chatRecord.asLcMessages})  # type: ignore

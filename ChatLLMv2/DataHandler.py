@@ -214,19 +214,16 @@ class ChatRecord(TableBase):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(uuid4()), nullable=False, unique=True, index=True)
     messages: so.Mapped[t.List["ChatMessage"]] = so.relationship(back_populates="chat")
-    systemMessage: so.Mapped[str] = so.mapped_column(sa.String, default="", unique=False,)
-
-    def __init__(self, chatId: str = str(uuid4()), messages: list[ChatMessage] = [], systemMessage: str = ""):
+    
+    def __init__(self, chatId: str = str(uuid4()), messages: list[ChatMessage] = []):
         """
         Initialize a ChatRecord instance.
 
         :param chatId: The unique identifier for the chat.
         :param messages: A list of messages in the chat.
-        :param systemMessage: The system message for the chat.
         """
         self.chatId = chatId
         self.messages = messages
-        self.systemMessage = systemMessage
 
     @classmethod
     def init(cls, dbSession: so.Session, chatId: str = str(uuid4())) -> "ChatRecord":

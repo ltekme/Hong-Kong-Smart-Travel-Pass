@@ -20,7 +20,7 @@ class LLMTools:
         self.google_cse_id = google_cse_id
 
     @property
-    def all(self) -> list:
+    def all(self) -> list[BaseTool]:
         return self.getall()
 
     def getall(self):

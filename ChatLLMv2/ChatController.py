@@ -81,7 +81,7 @@ class ChatController:
             return ChatMessage('system', "Please provide a message.")
         if context:
             contextList = list(map(lambda c: c.asText, context))
-            self._chat.add_message(ChatMessage("system", f"""Current Up to date context:\n{"\n".join(contextList)}"""))
+            self._chat.add_message(ChatMessage("system", f"""real-time context and information:\n{"\n".join(contextList)}"""))
         self._chat.add_message(message)
         aiMessage = self.llmModel.invoke(self._chat)
         self._chat.add_message(aiMessage)
