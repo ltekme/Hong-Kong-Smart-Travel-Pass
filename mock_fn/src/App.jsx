@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { initFacebookSdk } from "./components/Facebook";
 import { imageMapping } from "./components/images";
 import { ChatLog } from "./components/ChatLog";
 import { FacebookLogin } from "./components/Facebook";
@@ -20,12 +21,13 @@ export const App = () => {
     // Initialize App
     useEffect(() => {
         setChatId(crypto.randomUUID());
+        initFacebookSdk();
     }, []);
 
     const handleImageUpload = async (event) => {
         try {
             const files = Array.from(event.target.files);
-            const promises = files.map(file => {
+            const promises = files.map((file) => {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = (e) => resolve(e.target.result);
@@ -33,18 +35,21 @@ export const App = () => {
                     reader.readAsDataURL(file);
                 });
             });
-            const dataUrls = await Promise.all(promises)
+            const dataUrls = await Promise.all(promises);
             setImageDataUrls([...imageDataUrls, ...dataUrls]);
             fileInputRef.current.value = "";
         } catch (error) {
             console.error("Error reading files: ", error);
-        };
+        }
     };
-
 
     const sendToAPI = async () => {
         setIsLoading(true);
-        const humanMessage = { role: "user", content: message, images: imageDataUrls };
+        const humanMessage = {
+            role: "user",
+            content: message,
+            images: imageDataUrls,
+        };
 
         // handle location context
         let context = {};
@@ -85,11 +90,15 @@ export const App = () => {
                 }),
             });
             const respinseData = response.json();
-            const aiMessage = { role: "AI", content: respinseData.message, images: [] };
+            const aiMessage = {
+                role: "AI",
+                content: respinseData.message,
+                images: [],
+            };
             setMessages([...messages, humanMessage, aiMessage]);
         } catch (error) {
             console.error("Error sending message: ", error);
-        };
+        }
         setIsLoading(false);
     };
 
@@ -107,7 +116,9 @@ export const App = () => {
         e.preventDefault();
         // Paste normal text
         if (e.clipboardData.items[0].type === "text/plain") {
-            const text = await new Promise(resolve => e.clipboardData.items[0].getAsString(resolve));
+            const text = await new Promise((resolve) =>
+                e.clipboardData.items[0].getAsString(resolve)
+            );
             setMessage(message + text);
             return;
         }
@@ -120,7 +131,10 @@ export const App = () => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     console.log("pasting image");
-                    setImageDataUrls(prevUrls => [...prevUrls, e.target.result]);
+                    setImageDataUrls((prevUrls) => [
+                        ...prevUrls,
+                        e.target.result,
+                    ]);
                 };
                 reader.readAsDataURL(blob);
             }
@@ -130,49 +144,81 @@ export const App = () => {
     return (
         <>
             <h1>Mock AI API Tester</h1>
-            <img style={{ height: "200px" }} src={imageMapping[randomIndex]} alt="CATS" />
+            <img
+                style={{ height: "200px" }}
+                src={imageMapping[randomIndex]}
+                alt="CATS"
+            />
             <hr />
             <h2>Settings</h2>
             API Url: {apiUrl}
             <br />
-            Chat ID: <input onChange={e => setChatId(e.target.value)} value={chatId} />
+            Chat ID:{" "}
+            <input onChange={(e) => setChatId(e.target.value)} value={chatId} />
             <br />
-            Send Location: <input type="checkbox" name="send location" checked={sendLocation} onChange={e => setSendLocation(e.target.checked)} />
+            Send Location:{" "}
+            <input
+                type="checkbox"
+                name="send location"
+                checked={sendLocation}
+                onChange={(e) => setSendLocation(e.target.checked)}
+            />
             <br />
-            Use Overide: <input type="checkbox" name="overide" checked={overideContent} onChange={handleSetOverideContent} />
+            Use Overide:{" "}
+            <input
+                type="checkbox"
+                name="overide"
+                checked={overideContent}
+                onChange={handleSetOverideContent}
+            />
             <hr />
-
             <FacebookLogin />
-
             <hr />
-
             <h2>Inputs</h2>
-            {imageDataUrls.length > 0 &&
+            {imageDataUrls.length > 0 && (
                 <>
                     Images Selected:<br></br>
                     {imageDataUrls.map((url, index) => (
-                        <img key={index} src={url} alt={`Preview ${index}`} style={{ maxWidth: "30px", marginLeft: "3px" }} />
+                        <img
+                            key={index}
+                            src={url}
+                            alt={`Preview ${index}`}
+                            style={{ maxWidth: "30px", marginLeft: "3px" }}
+                        />
                     ))}
                     <br />
-                </>}
+                </>
+            )}
             Images:
-            <input type="button" value="Clear" onClick={() => setImageDataUrls([])} />
-            <input type="file" multiple onChange={handleImageUpload} ref={fileInputRef} style={{ display: "none" }} />
-            <input type="button" value="Select Image" onClick={() => fileInputRef.current.click()} />
+            <input
+                type="button"
+                value="Clear"
+                onClick={() => setImageDataUrls([])}
+            />
+            <input
+                type="file"
+                multiple
+                onChange={handleImageUpload}
+                ref={fileInputRef}
+                style={{ display: "none" }}
+            />
+            <input
+                type="button"
+                value="Select Image"
+                onClick={() => fileInputRef.current.click()}
+            />
             <br />
-
-            Message: <textarea
+            Message:{" "}
+            <textarea
                 onPaste={handleMesasgeAreaPaste}
                 style={{ verticalAlign: "top" }}
-                onChange={e => setMessage(e.target.value)}
-                value={message} />
+                onChange={(e) => setMessage(e.target.value)}
+                value={message}
+            />
             <br />
-
             <button onClick={sendToAPI}>Send</button>
             {isLoading && <p>Loading...</p>}
-
             <ChatLog messages={messages} />
-
         </>
     );
 };

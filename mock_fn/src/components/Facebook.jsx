@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 
 import { facebookAppId } from "../Config";
 
-export const initFacebookSdk = async () => {
-    await window.FB.init({
+export const initFacebookSdk = () => {
+    window.FB.init({
         appId: facebookAppId,
         status: true,
         xfbml: true,
-        version: 'v2.7' // or v2.7, v2.6, v2.5, v2.4, v2.3
+        version: "v2.7", // or v2.7, v2.6, v2.5, v2.4, v2.3
     });
 };
 
@@ -15,11 +15,11 @@ export const getFacebookAccessToken = async () => {
     // try get current session
     const loginStatus = await new Promise((resolve, reject) => {
         window.FB.getLoginStatus((response) => {
-            if (response.status === 'not_authorized') {
+            if (response.status === "not_authorized") {
                 reject("User cancelled login or did not fully authorize.");
                 return;
             }
-            if (response.status !== 'connected') {
+            if (response.status !== "connected") {
                 resolve(null);
                 return;
             }
@@ -27,11 +27,18 @@ export const getFacebookAccessToken = async () => {
             let currrentEpoch = Math.floor(new Date().getTime() / 1000);
             let expireEpoch = response.authResponse.data_access_expiration_time;
             if (expireEpoch <= currrentEpoch) {
-                console.debug("Access token expired, need to re-auth")
+                console.debug("Access token expired, need to re-auth");
                 resolve(null);
-                return
+                return;
             }
-            console.debug("Current session:", response.status, "\nAuth Token expire epoch:", expireEpoch, "\nCurrent Epoch:", currrentEpoch);
+            console.debug(
+                "Current session:",
+                response.status,
+                "\nAuth Token expire epoch:",
+                expireEpoch,
+                "\nCurrent Epoch:",
+                currrentEpoch
+            );
             resolve(response.authResponse);
             return;
         });
@@ -57,17 +64,21 @@ export const getFacebookAccessToken = async () => {
 
 export const getFacebookProfile = async (accessToken) => {
     return new Promise(async (resolve, reject) => {
-        window.FB.api('/me', {
-            access_token: accessToken,
-            fields: 'id,name,picture'
-        }, (response) => {
-            if (!response || response.error) {
-                reject(response.error.message);
+        window.FB.api(
+            "/me",
+            {
+                access_token: accessToken,
+                fields: "id,name,picture",
+            },
+            (response) => {
+                if (!response || response.error) {
+                    reject(response.error.message);
+                    return;
+                }
+                resolve(response);
                 return;
             }
-            resolve(response);
-            return;
-        });
+        );
     });
 };
 
@@ -77,12 +88,10 @@ export const logoutFacebook = async () => {
             resolve(response);
             return;
         });
-    })
-}
+    });
+};
 
-export const FacebookLogin = ({
-    setUsernameCallback = () => { },
-}) => {
+export const FacebookLogin = ({ setUsernameCallback = () => {} }) => {
     // const [profile, setProfile] = useState(null);
     const [connected, setConnected] = useState(false);
     const [accessToken, setAccessToken] = useState(null);
@@ -92,13 +101,11 @@ export const FacebookLogin = ({
     const [userIcon, setUserIcon] = useState(null);
 
     useEffect(() => {
-        initFacebookSdk();
-    }, []);
-
-    useEffect(() => {
         const grepInfo = async () => {
             const profile = await getFacebookProfile(accessToken);
-            console.log(`User profile connected. \nCurrent profile: ${profile.id}(${profile.name})`);
+            console.log(
+                `User profile connected. \nCurrent profile: ${profile.id}(${profile.name})`
+            );
             setUsername(profile.name);
             setUsernameCallback(profile.name);
             setUserId(profile.id);
@@ -109,7 +116,7 @@ export const FacebookLogin = ({
         if (accessToken !== null) {
             grepInfo();
         }
-    }, [accessToken]);
+    }, [accessToken, setUsernameCallback]);
 
     const handleFacebookLogin = async () => {
         try {
@@ -129,31 +136,44 @@ export const FacebookLogin = ({
         setUsername(null);
         setUserId(null);
         setUserIcon(null);
-    }
+    };
 
-    const handleGetProfile = async () => {
-    }
+    const handleGetProfile = async () => {};
 
     return (
         <div>
             <h2>Facebook Connect</h2>
             {error && <div style={{ color: "red" }}>{error.toString()}</div>}
-            {
-                !connected ? <button onClick={handleFacebookLogin}>Login with Facebook</button>
-                    : <div>
-                        <img src={userIcon} alt="User Icon" style={{ maxWidth: "50px" }} />{username}
-                        <br />
-                        User ID: {userId}
-                        <br />
-                        <button onClick={handleLogout}>Logout</button>
-                        <button onClick={async () => {
+            {!connected ? (
+                <button onClick={handleFacebookLogin}>
+                    Login with Facebook
+                </button>
+            ) : (
+                <div>
+                    <img
+                        src={userIcon}
+                        alt="User Icon"
+                        style={{ maxWidth: "50px" }}
+                    />
+                    {username}
+                    <br />
+                    User ID: {userId}
+                    <br />
+                    <button onClick={handleLogout}>Logout</button>
+                    <button
+                        onClick={async () => {
                             let accessToken = await getFacebookAccessToken();
                             navigator.clipboard.writeText(accessToken);
-                        }}>copy access token</button>
-                        {/* <button onClick={handleGetSession}>Get Session</button> */}
-                        <button onClick={handleGetProfile}>Create Profile(Server side)</button>
-                    </div>
-            }
+                        }}
+                    >
+                        copy access token
+                    </button>
+                    {/* <button onClick={handleGetSession}>Get Session</button> */}
+                    <button onClick={handleGetProfile}>
+                        Create Profile(Server side)
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
