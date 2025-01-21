@@ -19,18 +19,6 @@ class TableBase(so.DeclarativeBase):
     """Base class for SQLAlchemy table definitions."""
     pass
 
-
-class MessageContext:
-
-    def __init__(self, key: str, value: str):
-        self.key = key
-        self.value = value
-
-    @property
-    def asText(self) -> str:
-        return f"{self.key}: {self.value};"
-
-
 class MessageAttachment(TableBase):
     """Represents an attachment in a chat message."""
     __tablename__ = "message_attachments"

@@ -37,7 +37,7 @@ async def chatLLM(
     requestChatId = messageRequest.chatId or str(uuid.uuid4())
     requestMessageText = messageRequest.content.message
     requestAttachmentList = messageRequest.content.media
-    requestContextDict = messageRequest.context
+    requestContextDict = messageRequest.context or {}
     requestDisableTTS = messageRequest.disableTTS
 
     logger.debug(f"starting chatLLM request {messageRequest=}")
@@ -80,14 +80,6 @@ async def chatLLM(
                 detail="Error associating profile with chatId provided"
             )
 
-    contexts = list(map(
-        lambda co: DataHandler.MessageContext(
-            key=co,
-            value=requestContextDict[co]
-        ),
-        requestContextDict.keys()
-    )) if requestContextDict is not None else []
-
     try:
         attachments = list(map(
             lambda url: DataHandler.MessageAttachment(url, settings.attachmentDataPath),
@@ -99,7 +91,7 @@ async def chatLLM(
     message = DataHandler.ChatMessage("user", requestMessageText, attachments)
 
     chatController.chatId = requestChatId
-    response = chatController.invokeLLM(message, contexts)
+    response = chatController.invokeLLM(message, requestContextDict)
 
     if not requestDisableTTS:
         try:

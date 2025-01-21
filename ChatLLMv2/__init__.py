@@ -8,7 +8,6 @@ from .ChatModel import (
 from .DataHandler import (
     ChatMessage,
     ChatRecord,
-    MessageContext,
     MessageAttachment,
     TableBase,
 )
@@ -19,7 +18,6 @@ __all__ = [
     "PureLLMModel",
     "ChatMessage",
     "ChatRecord",
-    "MessageContext",
     "MessageAttachment",
     "TableBase",
 ]
