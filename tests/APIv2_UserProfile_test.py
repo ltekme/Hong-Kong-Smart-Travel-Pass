@@ -26,7 +26,7 @@ class UserProfileTest(TestBase):
 class UserProfileSessionTest(TestBase):
 
     def test_init(self):
-        currentTime = datetime.datetime.now()
+        currentTime = datetime.datetime.now(datetime.UTC)
         userProfile = UserProfile(username="testuser", facebookId=123456789)
         userSession = UserProfileSession(
             profile=userProfile,
@@ -39,7 +39,7 @@ class UserProfileSessionTest(TestBase):
 
     def test_create(self):
         TableBase.metadata.create_all(self.engine)
-        currentTime = datetime.datetime.now()
+        currentTime = datetime.datetime.now(datetime.UTC)
         userProfile = UserProfile(username="testuser", facebookId=123456789)
         userSession = UserProfileSession.create(
             userProfile=userProfile,
@@ -62,7 +62,7 @@ class UserProfileSessionTest(TestBase):
 
     def test_get(self):
         TableBase.metadata.create_all(self.engine)
-        currentTime = datetime.datetime.now()
+        currentTime = datetime.datetime.now(datetime.UTC)
         expireTime = currentTime + datetime.timedelta(days=2)
         userProfile = UserProfile(username="testuser", facebookId=123456789)
         userSession = UserProfileSession.create(
@@ -81,7 +81,7 @@ class UserProfileSessionTest(TestBase):
 
     def test_get_not_exist(self):
         TableBase.metadata.create_all(self.engine)
-        currentTime = datetime.datetime.now()
+        currentTime = datetime.datetime.now(datetime.UTC)
         userProfileRetrived = UserProfileSession.get(
             sessionToken="nope",
             currentTime=currentTime,
@@ -91,7 +91,7 @@ class UserProfileSessionTest(TestBase):
 
     def test_expired(self):
         TableBase.metadata.create_all(self.engine)
-        currentTime = datetime.datetime.now()
+        currentTime = datetime.datetime.now(datetime.UTC)
         expireTime = currentTime + datetime.timedelta(days=2)
         pastExpireTime = currentTime + datetime.timedelta(days=3)
         userProfile = UserProfile(username="testuser", facebookId=123456789)

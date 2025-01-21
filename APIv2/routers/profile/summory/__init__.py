@@ -28,7 +28,7 @@ async def requestSummoryGet(
     x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> ProfileSummoryGet.Response:
     """Get Current User Profile Summory"""
-    currentDatetime = datetime.datetime.now()
+    currentDatetime = datetime.datetime.now(datetime.UTC)
 
     if x_SessionToken is None:
         raise HTTPException(
@@ -103,7 +103,7 @@ async def requestSummory(
             dbSession=dbSession
         )
         userProfile.personalizationSummory = userProfileSummory
-        userProfile.personalizationSummoryLastUpdate = datetime.datetime.now()
+        userProfile.personalizationSummoryLastUpdate = datetime.datetime.now(datetime.UTC)
         dbSession.commit()
     except Exception as e:
         logger.error(e)

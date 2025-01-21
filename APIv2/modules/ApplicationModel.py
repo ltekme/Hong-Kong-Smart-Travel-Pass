@@ -5,6 +5,7 @@
 # All mappings here is seperate from ChatLLMv2 as ChatLLMv2 is a seperate core component that can work on it own.
 # PS: There is virtually zero typing on facebook Graph API, might as well write raw requests
 import uuid
+import pytz
 import hashlib
 import datetime
 import typing as t
@@ -84,14 +85,14 @@ class UserProfile(TableBase):
         except Exception as e:
             logger.error(f"Error creating user, {e}")
             raise Exception("Error creating user profile")
-    
-    def updatePersonalizationSummory(self, newSummory: str, dbSession: so.Session)-> None:
+
+    def updatePersonalizationSummory(self, newSummory: str, dbSession: so.Session) -> None:
         """
         Update profile personalization summory
 
         :param newSummory: The new profile summory
         :param dbSession: The dbSession to make the query.
-        
+
         :return: None.
         """
         try:
@@ -102,6 +103,7 @@ class UserProfile(TableBase):
         except Exception as e:
             logger.error(e)
             raise Exception(f"Error updating personalizationa summory for user {self.facebookId=}")
+
 
 class UserProifileChatRecords(TableBase):
     """Represents a semi key-value pair of user profile and chat records."""
@@ -248,19 +250,20 @@ class UserProfileSession(TableBase):
         :return: The user profile associated with the given session token. or None      
         """
         try:
-            logger.debug(f"getting profile for session=: {sessionToken[:5]=}")
+            logger.debug(f"getting profile for {sessionToken[:10]=}")
             queryResault = dbSession.query(cls).where(cls.sessionToken == sessionToken).first()
         except Exception as e:
             logger.error(e)
             raise Exception("Error querying db")
 
         if queryResault is None:
-            logger.debug(f"session Token: {sessionToken[:5]=} - not found in db")
+            logger.debug(f"session Token: {sessionToken[:10]=} - not found in db")
             return None
 
         try:
-            if currentTime >= queryResault.expire:
-                logger.debug(f"session Token: {sessionToken[:5]=} - expired, delete in db")
+            logger.debug(f"session Token: {sessionToken[:10]=} - checking expirery")
+            if currentTime >= pytz.UTC.localize(queryResault.expire):
+                logger.debug(f"session Token: {sessionToken[:10]=} - expired, delete in db")
                 dbSession.delete(queryResault)
                 dbSession.commit()
                 return None

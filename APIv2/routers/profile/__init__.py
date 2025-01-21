@@ -42,7 +42,7 @@ async def auth(
 
     try:
         logger.debug(f"Preping session for {x_FacebookAccessToken[:10]=}")
-        currentDatetime = datetime.datetime.now()
+        currentDatetime = datetime.datetime.now(datetime.UTC)
         timeDelta = datetime.timedelta(seconds=settings.sessionExpireInSeconds)
         sessionExpireDatetime = currentDatetime + timeDelta
 

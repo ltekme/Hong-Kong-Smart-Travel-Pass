@@ -43,7 +43,7 @@ async def chatLLM(
     logger.debug(f"starting chatLLM request {messageRequest=}")
 
     if x_SessionToken is not None:
-        logger.debug(f"{x_SessionToken=} provided for {requestChatId=}, checking session")
+        logger.debug(f"{x_SessionToken[:10]=} provided for {requestChatId=}, checking session")
         userProfile = ApplicationModel.UserProfileSession.get(
             sessionToken=x_SessionToken,
             currentTime=datetime.datetime.now(datetime.UTC),
