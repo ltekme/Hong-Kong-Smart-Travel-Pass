@@ -5,7 +5,7 @@ import { InputControls } from '../../components/Input';
 import { Hello } from "../../components/Hello";
 import { chatLLMApiUrl, geolocationApiUrl } from "../../Config";
 import './index.css'
-import { IFacebookProfile } from "../../components/Hello";
+import { IFacebookProfile } from "../../components/Interface";
 import { userMenuActivationCommand } from "../../Config";
 
 import Swal from "sweetalert2";
@@ -135,7 +135,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
         });
     }
 
-    const sendMessage = (messageText: string): void => {
+    const sendMessage = async (messageText: string): Promise<void> => {
         setMessageList(prevMessage => {
             const newMessageList = [...prevMessage];
             if (newMessageList.at(-1)?.placeHolder) {
@@ -150,25 +150,26 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             return newMessageList;
         });
 
-        let userMenuActivatedState = userMenuActivated
+        let userMenuActivatedState = userMenuActivated;
         if (messageText === userMenuActivationCommand) {
             if (userMenuActivatedState) {
                 setUserMenuActivated(false);
                 userMenuActivatedState = false;
                 setUserMenuKeys([]);
-                return
+                return;
             } else {
                 setUserMenuActivated(true);
                 userMenuActivatedState = true;
+                const response = await userMenu({
+                    input: "",
+                    menuKeys: userMenuKeys,
+                    setMenuKeys: setUserMenuKeys
+                });
                 setMessageList(prevMessage => {
                     const newMessageList = [...prevMessage];
                     newMessageList.push({
                         role: "ai",
-                        text: userMenu({
-                            input: "",
-                            menuKeys: userMenuKeys,
-                            setMenuKeys: setUserMenuKeys
-                        }),
+                        text: response,
                         error: true,
                     });
                     return newMessageList;
@@ -178,17 +179,19 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
         }
 
         if (userMenuActivatedState) {
+            const response = await userMenu({
+                input: messageText,
+                menuKeys: userMenuKeys,
+                setMenuKeys: setUserMenuKeys,
+                chatId: chatId,
+                setChatId: setChatId,
+                facebookProfile: facebookProfile,
+            });
             setMessageList(prevMessage => {
                 const newMessageList = [...prevMessage];
                 newMessageList.push({
                     role: "ai",
-                    text: userMenu({
-                        input: messageText,
-                        menuKeys: userMenuKeys,
-                        setMenuKeys: setUserMenuKeys,
-                        chatId: chatId,
-                        setChatId: setChatId,
-                    }),
+                    text: response,
                     error: true,
                 });
                 return newMessageList;

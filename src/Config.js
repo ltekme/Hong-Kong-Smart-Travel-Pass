@@ -6,6 +6,7 @@ export const chatLLMApiUrl = `${defaultApiUrl}/v2/chatLLM`;
 export const geolocationApiUrl = `${defaultApiUrl}/v2/googleServices/geocode`;
 export const sttApiUrl = `${defaultApiUrl}/v1/stt`;
 export const userPofileAuthApiUrl = `${defaultApiUrl}/v2/profile/auth`;
+export const userPofilePersonalizationApiUrl = `${defaultApiUrl}/v2/profile/summory`;
 export const requestProfileSummoryApiUrl = `${defaultApiUrl}/v2/user/requestProfileSummory`;
 
 export const userMenuActivationCommand = `/menu`

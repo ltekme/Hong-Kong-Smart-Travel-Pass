@@ -1,18 +1,10 @@
 import { useState, useEffect } from "react";
 import "./css/style.css";
 import "./css/font-awesome.min.css";
-import { facebookAppId, defaultApiUrl, userPofileAuthApiUrl } from "../Config";
+import { facebookAppId, userPofileAuthApiUrl } from "../Config";
 import Swal from "sweetalert2";
+import { IFacebookProfile } from "./Interface";
 
-export interface IFacebookProfile {
-  id: string;
-  name: string;
-  gender: string;
-  accessToken: string;
-  profilePicture?: string;
-  sessionExpire?: number;
-  sessionId?: string;
-}
 
 export interface IHello {
   confirmAgree: boolean;
