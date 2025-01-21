@@ -1,9 +1,10 @@
+import datetime
+import typing as t
 from fastapi import (
     APIRouter,
     HTTPException,
-    Request
+    Header,
 )
-import datetime
 
 from .models import (
     ProfileSummoryRequest,
@@ -15,33 +16,30 @@ from ....modules import (
     ApplicationModel,
 )
 from ....dependence import dbSessionDepend
-from ....config import (
-    logger,
-    ClientCookiesKeys,
-)
+from ....config import logger
+
 
 router = APIRouter(prefix="/summory")
 
 
 @router.get("", response_model=ProfileSummoryGet.Response)
 async def requestSummoryGet(
-    request: Request,
     dbSession: dbSessionDepend,
+    x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> ProfileSummoryGet.Response:
     """Get Current User Profile Summory"""
-    sessionToken = request.cookies.get(ClientCookiesKeys.SESSION_TOKEN)
     currentDatetime = datetime.datetime.now()
 
-    if sessionToken is None:
+    if x_SessionToken is None:
         raise HTTPException(
             status_code=400,
             detail="No sessionToken found"
         )
 
     try:
-        logger.debug(f"performing user lookup for {sessionToken[:10]=}")
+        logger.debug(f"performing user lookup for {x_SessionToken[:10]=}")
         userProfile = ApplicationModel.UserProfileSession.get(
-            sessionToken=sessionToken,
+            sessionToken=x_SessionToken,
             currentTime=currentDatetime,
             dbSession=dbSession,
         )
@@ -53,7 +51,7 @@ async def requestSummoryGet(
         )
 
     if userProfile is None:
-        logger.debug(f"{sessionToken[:10]=} was not found")
+        logger.debug(f"Userprofile with {x_SessionToken[:10]=} was not found")
         raise HTTPException(
             status_code=404,
             detail="No User Found"
@@ -67,15 +65,20 @@ async def requestSummoryGet(
 
 @router.post("/request", response_model=ProfileSummoryRequest.Response)
 async def requestSummory(
-    request: ProfileSummoryRequest.Request,
     dbSession: dbSessionDepend,
+    x_FacebookAccessToken: t.Annotated[str | None, Header()] = None,
 ) -> ProfileSummoryRequest.Response:
     """Request user profile summory"""
-    accessToken = request.accessToken
+
+    if x_FacebookAccessToken is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Facebook Access Token not provided"
+        )
 
     try:
-        logger.debug(f"performing user details lookup for {accessToken[:10]=}")
-        userProfileDetails = FacebookClient.getUserProfileDetails(accessToken=accessToken)
+        logger.debug(f"performing user details lookup for {x_FacebookAccessToken[:10]=}")
+        userProfileDetails = FacebookClient.getUserProfileDetails(accessToken=x_FacebookAccessToken)
     except Exception as e:
         logger.error(e)
         raise HTTPException(
@@ -84,7 +87,7 @@ async def requestSummory(
         )
 
     try:
-        logger.debug(f"generating user lookup for {accessToken[:10]=}")
+        logger.debug(f"generating user lookup for {x_FacebookAccessToken[:10]=}")
         userProfileSummory = UserProfiling.generateUserProfileSummory(userProfileDetails)
     except Exception as e:
         logger.error(e)
@@ -94,8 +97,9 @@ async def requestSummory(
         )
 
     try:
+        logger.debug(f"Updating personalization summory for {x_FacebookAccessToken[:10]=}")
         userProfile = ApplicationModel.UserProfile.fromFacebookAccessToken(
-            accessToken=accessToken,
+            accessToken=x_FacebookAccessToken,
             dbSession=dbSession
         )
         userProfile.personalizationSummory = userProfileSummory

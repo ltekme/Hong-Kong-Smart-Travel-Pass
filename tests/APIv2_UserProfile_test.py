@@ -42,7 +42,7 @@ class UserProfileSessionTest(TestBase):
         currentTime = datetime.datetime.now()
         userProfile = UserProfile(username="testuser", facebookId=123456789)
         userSession = UserProfileSession.create(
-            profile=userProfile,
+            userProfile=userProfile,
             expire=currentTime,
             dbSession=self.session
         )
@@ -66,7 +66,7 @@ class UserProfileSessionTest(TestBase):
         expireTime = currentTime + datetime.timedelta(days=2)
         userProfile = UserProfile(username="testuser", facebookId=123456789)
         userSession = UserProfileSession.create(
-            profile=userProfile,
+            userProfile=userProfile,
             expire=expireTime,
             dbSession=self.session
         )
@@ -96,7 +96,7 @@ class UserProfileSessionTest(TestBase):
         pastExpireTime = currentTime + datetime.timedelta(days=3)
         userProfile = UserProfile(username="testuser", facebookId=123456789)
         userSession = UserProfileSession.create(
-            profile=userProfile,
+            userProfile=userProfile,
             expire=expireTime,
             dbSession=self.session
         )

@@ -54,9 +54,9 @@ def generateUserProfileSummory(profileDetails: str) -> str:
             "Feel free to make up any details that are not present by making educated guesses based on the profile detials."
             ""
             "Output format information guidence:"
-            "<< EOF"
-            "persons is a male/femail, born on {{Date of brith}}. His Facebook profile reveals a few key interests:"
-            "* **{{Interest 1}}:**: {{Elaborate on how getting interest 1 is concluded}}"
+            ""
+            "This persons is a male/femail, born on {{Date of brith}}. His Facebook profile reveals a few key interests:"
+            "* **{{Interest 1}}:**: {{Elaborate on how getting  interest 1 is concluded}}"
             "...{{ More interests and elaborations if any}}"
             ""
             "Educated Guesses/Inferences:"
@@ -66,7 +66,7 @@ def generateUserProfileSummory(profileDetails: str) -> str:
             "Possible Made-up Details (for illustrative purposes):"
             "* {{Elobration of additional details that could be inferred from the profile.}}"
             "...{{ More inferences if any}}"
-            "EOF"
+            ""
         )), MessagesPlaceholder("profile")])
 
     logger.debug(f"Invkoing LLM for summory")

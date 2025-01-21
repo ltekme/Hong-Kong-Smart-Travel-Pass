@@ -9,6 +9,8 @@ python app.py
 
     after setting envs, the DB need to be upgraded for anything v2 or after to function properly
     
+    !!! important !!! make sure a copy of the DB exists before altering ORM Models and have alembic generate a revision
+
     ```sh
     alembic upgrade head
     ```

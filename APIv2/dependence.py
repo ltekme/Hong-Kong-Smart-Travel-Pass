@@ -9,9 +9,13 @@ import sqlalchemy.orm as so
 
 from APIv2.modules.GoogleServices import GoogleServices
 from ChatLLMv2 import (
-    ChatModel,
+    # ChatModel,
     ChatController,
 )
+
+# v1
+import ChatLLM.Models as ChatLLMv1Models
+# import ChatLLM.Tools as ChatLLMv1Tools
 
 from .config import (
     settings,
@@ -30,7 +34,16 @@ llm = ChatVertexAI(
     project=credentials.project_id,  # type: ignore
     region="us-central1",
 )
-llmModel = ChatModel.GraphModel(llm=llm)
+# llmModel = ChatModel.GraphModel(llm=llm)
+
+######### v1
+# llmTools = ChatLLMv1Tools.LLMTools(credentials=credentials, verbose=True)
+llmModel = ChatLLMv1Models.Chains.LLMChainModel(
+    llm=llm,
+    # tools=llmTools.all
+)
+#########
+
 dbEngine = sa.create_engine(url=settings.dbUrl, connect_args={'check_same_thread': False}, logging_name=logger.name)
 
 
@@ -40,7 +53,7 @@ def getSession():
 
 
 def getChatController(dbSession: so.Session = Depends(getSession)):
-    yield ChatController(dbSession=dbSession, llmModel=llmModel)
+    yield ChatController(dbSession=dbSession, llmModel=llmModel)  # type: ignore
 
 
 def getGoogleService():

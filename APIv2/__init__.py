@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from .routers import (
-    chat,
+    chatLLM,
     googleServices,
     profile,
 )
@@ -41,7 +41,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(chat.router)
+app.include_router(chatLLM.router)
 app.include_router(googleServices.router)
 app.include_router(profile.router)
 
