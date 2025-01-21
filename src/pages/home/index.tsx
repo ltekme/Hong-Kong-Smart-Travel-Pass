@@ -90,9 +90,18 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
     // Fetch from server
     const sendToLLM = async (userMessageObject: ILLMRequest): Promise<ILLMResponse> => {
         console.debug(`[Home][setMessageMedia] Sending request to LLM API\n${JSON.stringify(userMessageObject, null, 4)}`)
+        let headers: {
+            'Content-Type': string,
+            'x-SessionToken'?: string,
+        } = {
+            'Content-Type': 'application/json',
+        }
+        if (facebookProfile.sessionId) {
+            headers["x-SessionToken"] = facebookProfile.sessionId
+        }
         const response = await fetch(chatLLMApiUrl, {
             method: "POST",
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(userMessageObject),
         });
         const jsonResponse = await response.json();
@@ -176,7 +185,9 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                     text: userMenu({
                         input: messageText,
                         menuKeys: userMenuKeys,
-                        setMenuKeys: setUserMenuKeys
+                        setMenuKeys: setUserMenuKeys,
+                        chatId: chatId,
+                        setChatId: setChatId,
                     }),
                     error: true,
                 });
