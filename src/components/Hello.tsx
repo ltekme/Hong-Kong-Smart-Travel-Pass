@@ -84,13 +84,11 @@ export const Hello = ({ confirmAgree, setFacebookProfile }: IHello) => {
           );
 
           const sessionData = await fetch(userPofileAuthApiUrl, {
-            method: "POST",
+            method: "GET",
             headers: {
               "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              accessToken: loginResponse.authResponse.accessToken,
-            }),
+              "x-FacebookAccessToken": loginResponse.authResponse.accessToken
+            }
           });
           if (!sessionData.ok) {
             throw `Error cannot process profile\n ${JSON.stringify(
@@ -106,8 +104,8 @@ export const Hello = ({ confirmAgree, setFacebookProfile }: IHello) => {
             id: profileDetails.id,
             name: profileDetails.name,
             gender: profileDetails.gender,
-            sessionId: jsonSessionData.sessionId,
-            sessionExpire: jsonSessionData.expire,
+            sessionId: jsonSessionData.sessionToken,
+            sessionExpire: jsonSessionData.expireEpoch,
           });
         } catch (e) {
           console.error(`Error processing user profile\n${e}`);
@@ -166,9 +164,8 @@ export const Hello = ({ confirmAgree, setFacebookProfile }: IHello) => {
           <div className="container">
             <div className="workinghny-form-grid">
               <div
-                className={`main-hotair ${
-                  showImage ? "main-hotair-with-img" : ""
-                }`}
+                className={`main-hotair ${showImage ? "main-hotair-with-img" : ""
+                  }`}
               >
                 <div
                   onClick={(e) => setShowLogin(false)}
@@ -180,9 +177,8 @@ export const Hello = ({ confirmAgree, setFacebookProfile }: IHello) => {
                   ></span>
                 </div>
                 <div
-                  className={`content-wthree ${
-                    !showImage ? "content-wthree-without-img" : ""
-                  }`}
+                  className={`content-wthree ${!showImage ? "content-wthree-without-img" : ""
+                    }`}
                 >
                   <h2>To Connect With Your Social Media</h2>
                   <div className="social-icons w3layouts">

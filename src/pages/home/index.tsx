@@ -6,8 +6,10 @@ import { Hello } from "../../components/Hello";
 import { chatLLMApiUrl, geolocationApiUrl } from "../../Config";
 import './index.css'
 import { IFacebookProfile } from "../../components/Hello";
+import { userMenuActivationCommand } from "../../Config";
 
 import Swal from "sweetalert2";
+import { userMenu } from "../../components/Menu";
 
 export interface IHome {
     confirmAgree: boolean,
@@ -45,6 +47,9 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
     const [displayHello, setDisplayHello] = useState(true);
     const [userLocationLegent, setUserLocationLegent] = useState("");
     const [locationError, setLocationError] = useState(false);
+
+    const [userMenuActivated, setUserMenuActivated] = useState(false);
+    const [userMenuKeys, setUserMenuKeys] = useState<string[]>([]);
 
     const [facebookProfile, setFacebookProfile] = useState<IFacebookProfile>({
         id: "",
@@ -135,6 +140,51 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             });
             return newMessageList;
         });
+
+        let userMenuActivatedState = userMenuActivated
+        if (messageText === userMenuActivationCommand) {
+            if (userMenuActivatedState) {
+                setUserMenuActivated(false);
+                userMenuActivatedState = false;
+                setUserMenuKeys([]);
+                return
+            } else {
+                setUserMenuActivated(true);
+                userMenuActivatedState = true;
+                setMessageList(prevMessage => {
+                    const newMessageList = [...prevMessage];
+                    newMessageList.push({
+                        role: "ai",
+                        text: userMenu({
+                            input: "",
+                            menuKeys: userMenuKeys,
+                            setMenuKeys: setUserMenuKeys
+                        }),
+                        error: true,
+                    });
+                    return newMessageList;
+                });
+                return;
+            }
+        }
+
+        if (userMenuActivatedState) {
+            setMessageList(prevMessage => {
+                const newMessageList = [...prevMessage];
+                newMessageList.push({
+                    role: "ai",
+                    text: userMenu({
+                        input: messageText,
+                        menuKeys: userMenuKeys,
+                        setMenuKeys: setUserMenuKeys
+                    }),
+                    error: true,
+                });
+                return newMessageList;
+            });
+            return;
+        }
+
         // TODO: context
         setMessageList(prevMessage => {
             const newMessageList = [...prevMessage];
