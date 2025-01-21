@@ -31,8 +31,8 @@ class UserProfile(TableBase):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
     facebookId: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, index=True, unique=True)
-    personalizationSummory: so.Mapped[str] = so.mapped_column(sa.String, nullable=True)
-    personalizationSummoryLastUpdate: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime, nullable=True)
+    personalizationSummory: so.Mapped[str | None] = so.mapped_column(sa.String, nullable=True)
+    personalizationSummoryLastUpdate: so.Mapped[datetime.datetime | None] = so.mapped_column(sa.DateTime, nullable=True)
     chatRecordIds: so.Mapped[t.List["UserProifileChatRecords"]] = so.relationship(back_populates="profile")
     sessions: so.Mapped[t.List["UserProfileSession"]] = so.relationship(back_populates="profile")
 
@@ -98,7 +98,7 @@ class UserProfile(TableBase):
         try:
             logger.debug(f"Updating User profile personalizationa summory for user {self.facebookId=}")
             self.personalizationSummory = newSummory
-            self.personalizationSummoryLastUpdate = datetime.datetime.now(datetime.UTC)
+            self.personalizationSummoryLastUpdate = datetime.datetime.now()
             dbSession.commit()
         except Exception as e:
             logger.error(e)
@@ -263,7 +263,7 @@ class UserProfileSession(TableBase):
         try:
             logger.debug(f"session Token: {sessionToken[:10]=} - checking expirery")
             if currentTime >= pytz.UTC.localize(queryResault.expire):
-                logger.debug(f"session Token: {sessionToken[:10]=} - expired, delete in db")
+                logger  .debug(f"session Token: {sessionToken[:10]=} - expired, delete in db")
                 dbSession.delete(queryResault)
                 dbSession.commit()
                 return None

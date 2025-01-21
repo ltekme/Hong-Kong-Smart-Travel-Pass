@@ -16,9 +16,9 @@ class ProfileSummoryRequest:
 class ProfileSummoryGet:
 
     class Response(BaseModel):
-        summory: str = Field(
+        summory: str | None = Field(
             description="The resault summory."
         )
-        lastUpdate: datetime.datetime = Field(
+        lastUpdate: datetime.datetime | None = Field(
             description="The resault summory last updated."
         )

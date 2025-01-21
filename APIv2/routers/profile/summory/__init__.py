@@ -63,7 +63,7 @@ async def requestSummoryGet(
     )
 
 
-@router.post("/request", response_model=ProfileSummoryRequest.Response)
+@router.post("", response_model=ProfileSummoryRequest.Response)
 async def requestSummory(
     dbSession: dbSessionDepend,
     x_FacebookAccessToken: t.Annotated[str | None, Header()] = None,
