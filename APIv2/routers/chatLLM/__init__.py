@@ -42,6 +42,14 @@ async def chatLLM(
 
     logger.debug(f"starting chatLLM request {messageRequest=}")
 
+    logger.debug(f"Getting {requestChatId=} associated profile")
+    existingProfile = ApplicationModel.UserProifileChatRecords.getUserProfileFromChatId(
+        chatId=requestChatId,
+        dbSession=dbSession,
+    )
+    logger.debug(f"Checking if {requestChatId=} exists on data handler")
+    existingChat = dbSession.query(DataHandler.ChatRecord).where(DataHandler.ChatRecord.chatId == requestChatId).first()
+
     if x_SessionToken is not None:
         logger.debug(f"{x_SessionToken[:10]=} provided for {requestChatId=}, checking session")
         userProfile = ApplicationModel.UserProfileSession.get(
@@ -56,17 +64,20 @@ async def chatLLM(
                 detail="Session Expired"
             )
         logger.debug(f"{userProfile.facebookId=} provided for {requestChatId=}, checking chat match")
-        existingProfile = ApplicationModel.UserProifileChatRecords.getUserProfileFromChatId(
-            chatId=requestChatId,
-            dbSession=dbSession,
-        )
         if existingProfile is not None and existingProfile != userProfile:
             logger.debug(f"{userProfile.facebookId=} provided for {requestChatId=}, record mismatch")
             raise HTTPException(
                 status_code=400,
                 detail="Chat is already associated with a profile"
             )
+        logger.debug(f"{userProfile.facebookId=} provided for {requestChatId=}, checking is chat public")
+        if existingChat is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="Chat is public locked"
+            )
         try:
+            logger.debug(f"Associating {requestChatId=} with {userProfile.facebookId=}")
             ApplicationModel.UserProifileChatRecords.addRecord(
                 chatId=requestChatId,
                 userProfile=userProfile,
@@ -79,6 +90,11 @@ async def chatLLM(
                 status_code=500,
                 detail="Error associating profile with chatId provided"
             )
+    elif existingProfile is not None:
+        raise HTTPException(
+            status_code=403,
+            detail="Chat is user locked"
+        )
 
     try:
         attachments = list(map(

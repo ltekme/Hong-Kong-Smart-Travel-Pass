@@ -136,7 +136,7 @@ class UserProifileChatRecords(TableBase):
         :return: A new instance of UserProfile or None.
         """
         try:
-            logger.debug(f"Getting Userprofile of {chatId=}")
+            logger.debug(f"Getting User profile of {chatId=}")
             profileRecord = dbSession.query(cls).where(cls.chatId == chatId).first()
             if profileRecord is not None:
                 logger.debug(f"Found UserProfile {profileRecord=} for {chatId=}")
