@@ -25,8 +25,7 @@ export const ViewLogicalMaxTop = 2.0;
 
 export const ResourcesPath = "../Resources/";
 
-// export const BackImageName = "back_class_normal.png";
-export const BackImageName = "transparent.png";
+export const BackImageName = "back_class_normal.png";
 
 export const GearImageName = "icon_gear.png";
 

@@ -108,7 +108,7 @@ export class View {
     live2DManager.setViewMatrix(this._viewMatrix);
 
     live2DManager.onUpdate();
-    
+
   }
 
   public initializeSprite(): void {
@@ -139,7 +139,8 @@ export class View {
     };
 
     textureManager.createTextureFromPngFile(
-      resourcesPath + imageName,
+      // resourcesPath + imageName,
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAJYCAYAAACadoJwAAAgAElEQVR4XsS9WZClaXIldO6",
       false,
       initBackGroundTexture
     );
@@ -254,7 +255,7 @@ export class View {
     }
     return this._deviceToScreen.transformY(deviceY);
   }
-  
+
   public translateModel(x: number, y: number): void {
     if (this._viewMatrix === null) {
       return;

@@ -22,7 +22,7 @@ export const Chatbox = ({
     const [delayDisplayText, setDelayDisplayText] = useState("");
     const userImage = require("./image/image.jpg");
     const aiImage = require("./image/gemini.svg").default;
-    useEffect(() => {        
+    useEffect(() => {
         chatListRef.current.scrollTo({
             top: chatListRef.current.scrollHeight,
             left: 0,
@@ -55,7 +55,7 @@ export const Chatbox = ({
                         return null
                     })}
                     {(message.text !== undefined && !message.placeHolder) && <ReactMarkdown className={`${message.role}-chat-message usertext`}>{
-                        message.role === "user" || message.error ? message.text : delayDisplayText
+                        message.text
                     }</ReactMarkdown>}
                 </div>
                 <div className="time">{message?.role !== "loading" ? message.time : ""}</div>

@@ -212,7 +212,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                 media: lastUserMessageMedia
             }
         })
-            .then(responList => {   // e
+            .then(responseObj => {   // e
                 setMessageList(prevMessage => {
                     const newMessageList = [...prevMessage];
                     newMessageList.pop();
@@ -222,14 +222,14 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                     ...prevMessage,
                     {
                         role: "ai",
-                        text: responList.respondMessage,  // e
+                        text: responseObj.respondMessage,  // e
                         error: false,
                         // context.location = `${location.latitude},${location.longitude}`,
                         time: String(Date().toLocaleString()).split(" ")[4].slice(0, -3),
                     }
                 ]);
-                if (responList.audioBase64 !== "") {
-                    l2dSpeak(`data:audio/wav;base64,${responList.audioBase64}`);
+                if (responseObj.audioBase64 !== "") {
+                    l2dSpeak(`data:audio/wav;base64,${responseObj.audioBase64}`);
                 }
             })
             .catch(e => {

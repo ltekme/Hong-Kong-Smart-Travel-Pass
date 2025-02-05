@@ -11,8 +11,10 @@ from dotenv import load_dotenv
 
 from APIv2 import app
 from fastapi.middleware.wsgi import WSGIMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from flask import Flask, request, Response, Blueprint
+from flask import send_from_directory
 from http import HTTPStatus, HTTPMethod
 from langchain_google_vertexai import ChatVertexAI
 from google.oauth2.service_account import Credentials
@@ -52,6 +54,13 @@ llm_model = LLMModelBase(
     # tools=LLMTools(credentials, verbose=True).all,
 )
 chatLLM = ChatManager(llm_model)
+
+currentFilePath = os.path.dirname(os.path.realpath(__file__))
+frontedFilePath = os.path.join(currentFilePath, "l2dFrontend")
+fronendBuildPath = os.path.join(frontedFilePath, "build")
+
+
+appv1 = Flask(__name__)
 
 
 class JsonResponse(Response):
@@ -206,9 +215,9 @@ def get_geocoding():
     return response
 
 
-appv1 = Flask(__name__)
 appv1.register_blueprint(flaskbp, url_prefix='/api/v1')
 app.mount("/api/v1", WSGIMiddleware(appv1))
+app.mount("/",  StaticFiles(directory=fronendBuildPath, html=True), name="frontend")
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, reload_excludes=[
