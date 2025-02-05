@@ -12,7 +12,7 @@ from .models import (
 )
 from ....modules import (
     FacebookClient,
-    UserProfiling,
+    LlmHelper,
     ApplicationModel,
 )
 from ....dependence import dbSessionDepend
@@ -88,7 +88,7 @@ async def requestSummory(
 
     try:
         logger.debug(f"generating user lookup for {x_FacebookAccessToken[:10]=}")
-        userProfileSummory = UserProfiling.generateUserProfileSummory(userProfileDetails)
+        userProfileSummory = LlmHelper.generateUserProfileSummory(userProfileDetails)
     except Exception as e:
         logger.error(e)
         raise HTTPException(

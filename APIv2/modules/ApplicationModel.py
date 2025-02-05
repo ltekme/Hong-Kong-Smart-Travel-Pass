@@ -112,6 +112,7 @@ class UserProifileChatRecords(TableBase):
     profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"user_profile.id"), index=True)
     profile: so.Mapped["UserProfile"] = so.relationship(back_populates="chatRecordIds")
     chatId: so.Mapped[str] = so.mapped_column(sa.ForeignKey(f"chats.chatId"), index=True)
+    summory: so.Mapped[str] = so.mapped_column(sa.String, nullable=True)
 
     def __init__(self, chatId: str, userProfile: UserProfile) -> None:
         """
@@ -126,7 +127,7 @@ class UserProifileChatRecords(TableBase):
         self.profile = userProfile
 
     @classmethod
-    def getUserProfileFromChatId(cls, chatId: str, dbSession: so.Session) -> UserProfile | None:
+    def fromChatId(cls, chatId: str, dbSession: so.Session) -> "UserProifileChatRecords | None":
         """
         Get associated User Profile of a chatId
 
@@ -137,10 +138,10 @@ class UserProifileChatRecords(TableBase):
         """
         try:
             logger.debug(f"Getting User profile of {chatId=}")
-            profileRecord = dbSession.query(cls).where(cls.chatId == chatId).first()
-            if profileRecord is not None:
-                logger.debug(f"Found UserProfile {profileRecord=} for {chatId=}")
-                return profileRecord.profile
+            existingRecord = dbSession.query(cls).where(cls.chatId == chatId).first()
+            if existingRecord is not None:
+                logger.debug(f"Found UserProfile {existingRecord.profile.facebookId=} for {chatId=}")
+                return existingRecord
             logger.debug(f"Record for {chatId=} not found")
             return None
         except Exception as e:
@@ -148,7 +149,7 @@ class UserProifileChatRecords(TableBase):
             raise Exception("Error querying database")
 
     @classmethod
-    def addRecord(cls, chatId: str, userProfile: UserProfile, dbSession: so.Session) -> bool:
+    def add(cls, chatId: str, userProfile: UserProfile, dbSession: so.Session) -> "UserProifileChatRecords":
         """
         Add chat user pair record, throw exeception if chatId is aready associated with a profile
 
@@ -158,32 +159,35 @@ class UserProifileChatRecords(TableBase):
 
         :return: True if success
         """
-        # done in application
-        # try:
-        #     logger.debug(f"adding chatId and user pair for {chatId=} | {userProfile.id=}")
-        #     existingUserProfile = cls.getUserProfileFromChatId(chatId=chatId, dbSession=dbSession)
-        #     if existingUserProfile is not None:
-        #         logger.debug(f"Profile record already exists for {chatId=}")
-        #         if existingUserProfile == userProfile:
-        #             logger.debug(f"Profile record for {chatId=} matched, nothing to do")
-        #             return True
-        #         if existingUserProfile != userProfile:
-        #             raise UserProifileChatRecordsExistExeception("The chatId is already associated with a profile")
-        # except UserProifileChatRecordsExistExeception as e:
-        #     raise UserProifileChatRecordsExistExeception(e)
-        # except Exception as e:
-        #     logger.error(e)
-        #     Exception("Error checking UserProfileChatId pair")
-
         try:
-            logger.debug(f"adding chatId and user pair for {chatId=} | {userProfile.id=}")
+            logger.debug(f"adding chatId and user pair for {chatId=} | {userProfile.facebookId=}")
+            existingRecord = cls.fromChatId(chatId=chatId, dbSession=dbSession)
+            if existingRecord is not None:
+                logger.debug(f"Profile record already exists for {chatId=}")
+                if existingRecord.profile == userProfile:
+                    logger.debug(f"Profile record for {chatId=} matched, nothing to do")
+                    return existingRecord
+                if existingRecord.profile != userProfile:
+                    raise UserProifileChatRecordsExistExeception("The chatId is already associated with a profile")
+            logger.debug(f"adding chatId and user pair for {chatId=} | {userProfile.facebookId=}")
             record = cls(chatId=chatId, userProfile=userProfile)
             dbSession.add(record)
             dbSession.commit()
+            return record
         except Exception as e:
             logger.error(e)
-            Exception("Error creating UserProfileChatId pair")
-        return True
+            raise Exception("Error creating UserProfileChatId pair")
+
+    def editSummory(self, newSummory: str, dbSession: so.Session) -> None:
+        """
+        Edit summory of this chat
+
+        :param newSummory: The summory.
+
+        :param dbSession: The dbSession to make the query.
+        """
+        self.summory = newSummory
+        dbSession.commit()
 
 
 class UserProfileSession(TableBase):

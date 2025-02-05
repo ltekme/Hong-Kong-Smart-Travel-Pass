@@ -18,7 +18,10 @@ from ...dependence import (
     googleServicesDepend,
     dbSessionDepend,
 )
-from ...modules import ApplicationModel
+from ...modules import (
+    ApplicationModel,
+    LlmHelper
+)
 
 router = APIRouter(prefix="/chatLLM")
 
@@ -43,7 +46,7 @@ async def chatLLM(
     logger.debug(f"starting chatLLM request {messageRequest=}")
 
     logger.debug(f"Getting {requestChatId=} associated profile")
-    existingProfile = ApplicationModel.UserProifileChatRecords.getUserProfileFromChatId(
+    existingChatIdUserProfileRecord = ApplicationModel.UserProifileChatRecords.fromChatId(
         chatId=requestChatId,
         dbSession=dbSession,
     )
@@ -64,21 +67,21 @@ async def chatLLM(
                 detail="Session Expired"
             )
         logger.debug(f"{userProfile.facebookId=} provided for {requestChatId=}, checking chat match")
-        if existingProfile is not None and existingProfile != userProfile:
+        if existingChatIdUserProfileRecord is not None and existingChatIdUserProfileRecord.profile != userProfile:
             logger.debug(f"{userProfile.facebookId=} provided for {requestChatId=}, record mismatch")
             raise HTTPException(
                 status_code=400,
                 detail="Chat is already associated with a profile"
             )
         logger.debug(f"{userProfile.facebookId=} provided for {requestChatId=}, checking is chat public")
-        if existingChat is not None:
+        if existingChat is not None and existingChatIdUserProfileRecord is None:
             raise HTTPException(
                 status_code=400,
                 detail="Chat is public locked"
             )
         try:
             logger.debug(f"Associating {requestChatId=} with {userProfile.facebookId=}")
-            ApplicationModel.UserProifileChatRecords.addRecord(
+            existingChatIdUserProfileRecord = ApplicationModel.UserProifileChatRecords.add(
                 chatId=requestChatId,
                 userProfile=userProfile,
                 dbSession=dbSession,
@@ -90,7 +93,7 @@ async def chatLLM(
                 status_code=500,
                 detail="Error associating profile with chatId provided"
             )
-    elif existingProfile is not None:
+    elif existingChatIdUserProfileRecord is not None:
         raise HTTPException(
             status_code=403,
             detail="Chat is user locked"
@@ -117,6 +120,17 @@ async def chatLLM(
             ttsAudio = ""
     else:
         ttsAudio = ""
+
+    if x_SessionToken is not None:
+        logger.debug(f"Generating chat summory for {requestChatId=}")
+        summory = LlmHelper.createChatSummory(
+            messages=chatController.currentChatRecords.messages
+        )
+        if existingChatIdUserProfileRecord is not None:
+            existingChatIdUserProfileRecord.editSummory(
+                newSummory=summory,
+                dbSession=dbSession
+            )
 
     return chatLLMDataModel.Response(
         message=response.text,

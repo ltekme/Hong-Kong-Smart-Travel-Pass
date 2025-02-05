@@ -1,15 +1,16 @@
-from ..dependence import llm
-from ..config import logger
 from langchain_core.messages import HumanMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
     MessagesPlaceholder,
 )
+from ChatLLMv2.DataHandler import ChatMessage
+
+from ..dependence import llm
+from ..config import logger
 
 
 def generateUserProfileSummory(profileDetails: str) -> str:
-    """
-    Create a summory of a facebook profile
+    """Create a summory of a facebook profile
 
     :param profileDetails: the profile details of a given facebook user.
 
@@ -21,8 +22,7 @@ def generateUserProfileSummory(profileDetails: str) -> str:
     pictureData: list[dict[str, str]] = []
 
     def process_dict_for_summary(d: dict[str, str], parent_key: str = ""):
-        """
-        Process a dictionary to extract and remove 'full_picture' entries.
+        """Process a dictionary to extract and remove 'full_picture' entries.
 
         :param d: The dictionary to process.
         :param parent_key: The base key for nested dictionaries (used for recursion).
@@ -76,8 +76,33 @@ def generateUserProfileSummory(profileDetails: str) -> str:
             "text": "Detials:\n<< EOF\n" + profileDetails + "\nEOF Attached images:"
         }] + pictureData)]  # type: ignore
     })
-    response = llm.invoke(promptValue)
-    responseContent = response.content  # type: ignore
+    responseContent = llm.invoke(promptValue).content  # type: ignore
+    if isinstance(responseContent, list):
+        return responseContent[0]["text"]  # type: ignore
+    return responseContent
+
+
+def createChatSummory(messages: list[ChatMessage]) -> str:
+    """Create mini chat summory text for list of messages
+
+    :param messages: List of Messages
+
+    :return: The summory of the given langchain messages
+    """
+    logger.debug(f"creating prompt for chat summory")
+    prompt = ChatPromptTemplate([
+        ("system", ("The following is a conversation of 2 person.")),
+        ("user", "Summorise it to the best of you ability. Highlight key points and make it short and concise"),
+        ("system", (
+            "<conversation>"
+            f'{"\n".join(list(map(lambda x: f"  <messages role=\"{x.role}\">\n    <text>{x.text}<text>{"\n" + "\n".join(
+                list(map(lambda y: f"    <media type=\"{y.mimeType}\">{y.base64Data}</media>", x.attachments)))}</messages>", messages)))}'
+            "</conversation>"
+        ))
+    ]).invoke({})  # type: ignore
+    logger.debug(f"Invkoing LLM for summory")
+    llm.temperature = 0.1
+    responseContent = llm.invoke(prompt).content  # type: ignore
     if isinstance(responseContent, list):
         return responseContent[0]["text"]  # type: ignore
     return responseContent
