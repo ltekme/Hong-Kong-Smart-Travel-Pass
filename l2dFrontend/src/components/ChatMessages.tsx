@@ -22,28 +22,13 @@ export const Chatbox = ({
     const [delayDisplayText, setDelayDisplayText] = useState("");
     const userImage = require("./image/image.jpg");
     const aiImage = require("./image/gemini.svg").default;
-    useEffect(() => {
-        const setText = async () => {
-            // helloTitle.style.display = 'none'
-            if (typeof message.text === 'string') {
-                let displayTexts = "";
-                for (const char of message.text) {
-                    displayTexts += char;
-                    setDelayDisplayText(displayTexts);
-                    await new Promise((resolve) => setTimeout(resolve, 20));
-                }
-            }
-        };
-        setText();
-    }, [message.text]);
-
-    useEffect(() => {
+    useEffect(() => {        
         chatListRef.current.scrollTo({
             top: chatListRef.current.scrollHeight,
             left: 0,
             behavior: "smooth",
         });
-    }, [delayDisplayText]);
+    }, [message.text]);
 
     return (
         // If message.role is loading -> display the loading class (spin avatar image)
