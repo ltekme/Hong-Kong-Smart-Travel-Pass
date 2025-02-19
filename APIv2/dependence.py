@@ -8,9 +8,11 @@ import sqlalchemy as sa
 import sqlalchemy.orm as so
 
 from APIv2.modules.GoogleServices import GoogleServices
+
+from ChatLLMv2.ChatModel.Graph import GraphModel
 from ChatLLMv2 import (
-    ChatModel,
     ChatController,
+    DataHandler,
 )
 
 from .config import (
@@ -30,17 +32,19 @@ llm = ChatVertexAI(
     project=credentials.project_id,  # type: ignore
     region="us-central1",
 )
-llmModel = ChatModel.GraphModel(llm=llm)
 
-######### v1
+# Graph.setLogger(logger)
+DataHandler.setLogger(logger)
+ChatController.setLogger(logger)
+
+llmModel = GraphModel(llm=llm)
+
+# v1
 # import ChatLLM.Models as ChatLLMv1Models
 # import ChatLLM.Tools as ChatLLMv1Tools
 # llmTools = ChatLLMv1Tools.LLMTools(credentials=credentials, verbose=True)
-# llmModel = ChatLLMv1Models.Chains.LLMChainModel(
-#     llm=llm,
-    # tools=llmTools.all
-# )
-#########
+# llmModel = ChatLLMv1Models.Chains.LLMChainModel(llm=llm, tools=llmTools.all)
+# /v1
 
 dbEngine = sa.create_engine(url=settings.dbUrl, connect_args={'check_same_thread': False}, logging_name=logger.name)
 
@@ -50,8 +54,10 @@ def getSession():
         yield session
 
 
-def getChatController(dbSession: so.Session = Depends(getSession)):
-    yield ChatController(dbSession=dbSession, llmModel=llmModel)  # type: ignore
+def getChatController(
+    dbSession: so.Session = Depends(getSession)
+) -> t.Generator[ChatController.ChatController, None, None]:
+    yield ChatController.ChatController(dbSession=dbSession, llmModel=llmModel)
 
 
 def getGoogleService():

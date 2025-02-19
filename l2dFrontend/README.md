@@ -1,3 +1,13 @@
+## Setup
+
+add .env file with the var set below
+
+build 
+
+```sh
+npm run buid
+```
+
 ## ENV to setup when building
 
 - REACT_APP_FACEBOOK_APP_ID

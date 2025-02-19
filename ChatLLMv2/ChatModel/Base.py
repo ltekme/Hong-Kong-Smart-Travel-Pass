@@ -1,14 +1,24 @@
 import logging
-from langchain_core.tools import BaseTool
 from langchain_core.language_models.chat_models import BaseChatModel
-
 
 from ..DataHandler import (
     ChatRecord,
     ChatMessage,
 )
 
+from .Property import AdditionalLLMProperty
+
 logger = logging.getLogger(__name__)
+
+
+def setLogger(external_logger: logging.Logger) -> None:
+    """
+    Set the logger for the module.
+
+    :param external_logger: The external logger to use.
+    """
+    global logger
+    logger = external_logger
 
 
 class BaseModel:
@@ -16,22 +26,17 @@ class BaseModel:
 
     def __init__(self,
                  llm: BaseChatModel | None = None,
-                 tools: list[BaseTool] = [],
-                 overideChatContent: list[str] = [],
-                 overideDirectOutput: bool = False,
+                 additionalLLMProperty: AdditionalLLMProperty | None = None,
                  ) -> None:
         """
         Initialize a BaseModel instance.
 
         :param llm: The language model to use.
         :param tools: A list of tools for the model to use.
-        :param overideChatContent: A list of chat content to override.
-        :param overideDirectOutput: Whether to directly output overide content.
         """
         self.llm = llm
-        self.tools = tools
-        self.overideChatContent = overideChatContent
-        self.overideDirectOutput = overideDirectOutput
+        if additionalLLMProperty is None:
+            self.additionalLLMProperty = AdditionalLLMProperty()
 
     def invoke(self, chatRecord: ChatRecord) -> ChatMessage:
         """

@@ -2,7 +2,7 @@ import unittest
 from ChatLLMv2.ChatController import (
     ChatController
 )
-from ChatLLMv2.ChatModel import (
+from ChatLLMv2.ChatModel.Base import (
     BaseModel,
 )
 from ChatLLMv2.DataHandler import (

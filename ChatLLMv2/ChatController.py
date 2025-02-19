@@ -1,11 +1,25 @@
 import logging
 from uuid import uuid4
 import sqlalchemy.orm as so
-from .ChatModel import *
-from .DataHandler import *
-from .ChatModel import *
+
+from .DataHandler import (
+    ChatRecord,
+    ChatMessage
+)
+from .ChatModel.Base import BaseModel
+
 
 logger = logging.getLogger(__name__)
+
+
+def setLogger(external_logger: logging.Logger) -> None:
+    """
+    Set the logger for the module.
+
+    :param external_logger: The external logger to use.
+    """
+    global logger
+    logger = external_logger
 
 
 class ChatController:
@@ -30,7 +44,7 @@ class ChatController:
         self.llmModel = llmModel
         self.chatInited = False  # to prevent hitting db when this just got inited
 
-    def _initialize_chat(self):
+    def _initialize_chat(self) -> None:
         """Initialize the chat record if not already initialized."""
         if not self.chatInited:
             logger.info(f"Initializing chat record for chatId: {self._chatId}")

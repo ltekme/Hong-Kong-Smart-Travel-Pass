@@ -15,9 +15,20 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 logger = logging.getLogger(__name__)
 
 
+def setLogger(external_logger: logging.Logger) -> None:
+    """
+    Set the logger for the module.
+
+    :param external_logger: The external logger to use.
+    """
+    global logger
+    logger = external_logger
+
+
 class TableBase(so.DeclarativeBase):
     """Base class for SQLAlchemy table definitions."""
     pass
+
 
 class MessageAttachment(TableBase):
     """Represents an attachment in a chat message."""
@@ -202,7 +213,7 @@ class ChatRecord(TableBase):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(uuid4()), nullable=False, unique=True, index=True)
     messages: so.Mapped[t.List["ChatMessage"]] = so.relationship(back_populates="chat")
-    
+
     def __init__(self, chatId: str = str(uuid4()), messages: list[ChatMessage] = []):
         """
         Initialize a ChatRecord instance.
@@ -222,7 +233,7 @@ class ChatRecord(TableBase):
         :param chatId: The unique identifier for the chat.
         :return: An instance of ChatRecord.
         """
-        logger.info(f"Initializing {__name__} from chatId")
+        logger.info(f"Initializing {__name__} from {chatId=}")
         instance = cls(chatId)
         existingChat = dbSession.query(cls).filter(cls.chatId == chatId).first()
         instance = existingChat if existingChat is not None else instance

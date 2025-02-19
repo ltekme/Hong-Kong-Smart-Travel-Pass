@@ -38,6 +38,13 @@ class UserProfileSessionTest(TestBase):
         self.assertEqual(userSession.expire, currentTime)
 
     def test_create(self):
+        def sameDatetime(
+            datetime1: datetime.datetime,
+            datetime2: datetime.datetime,
+        ) -> bool:
+            formatString = "%d/%m/%Y, %H:%M:%S"
+            return datetime1.strftime(formatString) == datetime2.strftime(formatString)
+
         TableBase.metadata.create_all(self.engine)
         currentTime = datetime.datetime.now(datetime.UTC)
         userProfile = UserProfile(username="testuser", facebookId=123456789)
@@ -48,7 +55,7 @@ class UserProfileSessionTest(TestBase):
         )
         self.assertEqual(userSession.profile, userProfile)
         self.assertGreater(len(userSession.sessionToken), 5)
-        self.assertEqual(userSession.expire, currentTime)
+        self.assertTrue(sameDatetime(userSession.expire, currentTime))
 
         retrivedUserSession = self.session.query(
             UserProfileSession
@@ -58,7 +65,7 @@ class UserProfileSessionTest(TestBase):
 
         self.assertEqual(retrivedUserSession.sessionToken, userSession.sessionToken)  # type: ignore
         self.assertEqual(retrivedUserSession.profile, userProfile)  # type: ignore
-        self.assertEqual(retrivedUserSession.expire, currentTime)  # type: ignore
+        self.assertTrue(sameDatetime(retrivedUserSession.expire, currentTime))  # type: ignore
 
     def test_get(self):
         TableBase.metadata.create_all(self.engine)

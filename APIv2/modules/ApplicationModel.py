@@ -12,7 +12,8 @@ import typing as t
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 
-from ChatLLMv2 import TableBase
+from ChatLLMv2.DataHandler import TableBase
+
 from . import FacebookClient
 from ..config import logger
 

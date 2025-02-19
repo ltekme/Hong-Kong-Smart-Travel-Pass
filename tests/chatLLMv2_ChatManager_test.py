@@ -7,7 +7,6 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from ChatLLMv2.DataHandler import (
     ChatMessage,
     ChatRecord,
-    MessageContext,
     MessageAttachment,
     TableBase,
 )
@@ -204,17 +203,6 @@ class MessageAttachment_Test(TestBase):
         with self.assertRaises(ValueError) as ve:
             MessageAttachment(dataUrl)
         self.assertEqual(str(ve.exception), expectedExeception)
-
-
-class MessageContext_Test(TestBase):
-    def test_asText_outputs(self):
-        context1 = MessageContext("testParam1", "testValue1")
-        context2 = MessageContext("testParam2", "testValue2")
-        context3 = MessageContext("testParam3", "testValue3")
-
-        self.assertEqual(context1.asText, "testParam1: testValue1;")
-        self.assertEqual(context2.asText, "testParam2: testValue2;")
-        self.assertEqual(context3.asText, "testParam3: testValue3;")
 
 
 class ChatMessage_Test(TestBase):

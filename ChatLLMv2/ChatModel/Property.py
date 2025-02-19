@@ -1,0 +1,3 @@
+class AdditionalLLMProperty:
+    userProfile: str = ""
+

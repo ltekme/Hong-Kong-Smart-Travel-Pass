@@ -2,10 +2,20 @@ import logging
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from ..DataHandler import ChatRecord, ChatMessage
-from . import BaseModel
+from .Base import BaseModel
 
 
 logger = logging.getLogger(__name__)
+
+
+def setLogger(external_logger: logging.Logger) -> None:
+    """
+    Set the logger for the module.
+
+    :param external_logger: The external logger to use.
+    """
+    global logger
+    logger = external_logger
 
 
 class PureLLMModel(BaseModel):
