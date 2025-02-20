@@ -2,8 +2,8 @@ import logging
 import typing as t
 import typing_extensions as te
 
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
+from langgraph.graph import StateGraph, START, END  # type: ignore
+from langgraph.graph.message import add_messages  # type: ignore
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
@@ -33,18 +33,23 @@ class Model(BaseModel):
 
     def chatbot(self):
 
+        localLLM = self.llm
+
         def executer(state: 'Model.State'):
-            return {"messages": [self.llm.invoke(state["messages"])]}
+            return {"messages": [localLLM.invoke(state["messages"])]}  # type: ignore
 
         return executer
 
-    def __init__(self, llm: BaseChatModel):
-        super().__init__(llm)
+    def __init__(self,
+                 llm: BaseChatModel,
+                 additionalLLMProperty: AdditionalLLMProperty | None = None,
+                 ) -> None:
+        super().__init__(llm, additionalLLMProperty)
         self.graphBuilder = StateGraph(self.State)
-        self.graphBuilder.add_node("chatbot", self.chatbot())
+        self.graphBuilder.add_node("chatbot", self.chatbot())  # type: ignore
         self.graphBuilder.add_edge(START, "chatbot")
         self.graphBuilder.add_edge("chatbot", END)
-        self.graph = self.graphBuilder.compile()
+        self.graph = self.graphBuilder.compile()  # type: ignore
 
 
 class GraphModel(BaseModel):
@@ -57,7 +62,7 @@ class GraphModel(BaseModel):
         super().__init__(llm, additionalLLMProperty)
         self.llm = llm
         self.additionalLLMProperty = additionalLLMProperty
-        
+
     def invoke(self, chatRecord: ChatRecord) -> ChatMessage:
         """
         Invoke the model with a chat record and get the response message.

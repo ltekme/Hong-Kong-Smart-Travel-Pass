@@ -9,12 +9,14 @@ import sqlalchemy.orm as so
 
 from APIv2.modules.GoogleServices import GoogleServices
 
-from ChatLLMv2.ChatModel.Graph import GraphModel
+from ChatLLMv2.ChatModel import Bridge
+from ChatLLMv2.ChatModel.Property import AdditionalLLMProperty
 from ChatLLMv2 import (
     ChatController,
     DataHandler,
 )
 
+from ChatLLM.Tools import LLMTools
 from .config import (
     settings,
     logger,
@@ -36,15 +38,15 @@ llm = ChatVertexAI(
 # Graph.setLogger(logger)
 DataHandler.setLogger(logger)
 ChatController.setLogger(logger)
+Bridge.setLogger(logger)
+tools = LLMTools(
+    credentials=credentials,
+    verbose=True
+)
+llmModelProperty = AdditionalLLMProperty()
+llmModelProperty.llmTools = tools.all
+llmModel = Bridge.v1Bridge(llm=llm, additionalLLMProperty=llmModelProperty)
 
-llmModel = GraphModel(llm=llm)
-
-# v1
-# import ChatLLM.Models as ChatLLMv1Models
-# import ChatLLM.Tools as ChatLLMv1Tools
-# llmTools = ChatLLMv1Tools.LLMTools(credentials=credentials, verbose=True)
-# llmModel = ChatLLMv1Models.Chains.LLMChainModel(llm=llm, tools=llmTools.all)
-# /v1
 
 dbEngine = sa.create_engine(url=settings.dbUrl, connect_args={'check_same_thread': False}, logging_name=logger.name)
 

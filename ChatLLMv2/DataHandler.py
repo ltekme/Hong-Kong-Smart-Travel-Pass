@@ -143,6 +143,15 @@ class MessageAttachment(TableBase):
             "mime_type": self.mimeType,
         }
 
+    @property
+    def uri(self) -> str:
+        """
+        Convert the attachment to a javascript represented data uri
+
+        :return: A javascript data src representation of the attachment.
+        """
+        return f"data:{self.mimeType};base64,{self.base64Data}"
+
 
 class ChatMessage(TableBase):
     """Represents a chat message."""

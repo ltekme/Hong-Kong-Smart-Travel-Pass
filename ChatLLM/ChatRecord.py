@@ -25,10 +25,13 @@ class ChatRecord:
     def append(self, message: ChatMessage) -> None:
         if not isinstance(message, ChatMessage):
             raise ValueError("message must be of type Message")
-        if message.role not in ["ai", "human"]:
-            raise ValueError("message role must be either 'ai' or 'human'")
+        if message.role not in ["ai", "human", "system"]:
+            raise ValueError("message role must be either 'ai' or 'human' or 'system'")
         if self._chat_messages:
             last_role = self._chat_messages[-1].role
+            if last_role == 'system' and message.role == 'system':
+                self._chat_messages.append(message)
+                return
             if last_role == message.role:
                 raise ValueError("message must be of different role")
         self._chat_messages.append(message)
