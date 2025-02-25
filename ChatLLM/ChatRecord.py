@@ -15,6 +15,14 @@ class ChatRecord:
             self._chat_messages.append(system_message)
 
     @property
+    def messages(self) -> list[ChatMessage]:
+        return self._chat_messages
+
+    @messages.setter
+    def messages(self, val: list[ChatMessage]) -> None:
+        self._chat_messages = val
+
+    @property
     def as_list(self) -> list[ChatMessage]:
         return self._chat_messages
 
@@ -32,8 +40,8 @@ class ChatRecord:
             if last_role == 'system' and message.role == 'system':
                 self._chat_messages.append(message)
                 return
-            if last_role == message.role:
-                raise ValueError("message must be of different role")
+            # if last_role == message.role:
+            #     raise ValueError("message must be of different role")
         self._chat_messages.append(message)
 
     def save_to_file(self, file_path: str) -> None:

@@ -28,7 +28,7 @@ class PureLLMModel(BaseModel):
         :param chatRecord: The chat record to process.
         :return: The response message from the model.
         """
-        logger.debug(f"Invoking llm")
+        logger.info(f"Invoking llm")
         prompt = ChatPromptTemplate(messages=[
             MessagesPlaceholder('chat_history'),
         ])

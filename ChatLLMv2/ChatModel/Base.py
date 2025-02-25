@@ -6,7 +6,7 @@ from ..DataHandler import (
     ChatMessage,
 )
 
-from .Property import AdditionalLLMProperty
+from .Property import AdditionalModelProperty
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class BaseModel:
 
     def __init__(self,
                  llm: BaseChatModel | None = None,
-                 additionalLLMProperty: AdditionalLLMProperty | None = None,
+                 additionalLLMProperty: AdditionalModelProperty | None = None,
                  ) -> None:
         """
         Initialize a BaseModel instance.
@@ -36,7 +36,7 @@ class BaseModel:
         """
         self.llm = llm
         if additionalLLMProperty is None:
-            self.additionalLLMProperty = AdditionalLLMProperty()
+            self.additionalLLMProperty = AdditionalModelProperty()
 
     def invoke(self, chatRecord: ChatRecord) -> ChatMessage:
         """
@@ -45,5 +45,5 @@ class BaseModel:
         :param chatRecord: The chat record to process.
         :return: The response message from the model.
         """
-        logger.debug(f"Invoking Base Mock Model")
+        logger.info(f"Invoking Base Mock Model")
         return ChatMessage("ai", f"MockMessage: {chatRecord.messages[-1].text}")

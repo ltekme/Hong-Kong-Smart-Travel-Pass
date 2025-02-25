@@ -10,7 +10,7 @@ import sqlalchemy.orm as so
 from APIv2.modules.GoogleServices import GoogleServices
 
 from ChatLLMv2.ChatModel import Bridge
-from ChatLLMv2.ChatModel.Property import AdditionalLLMProperty
+from ChatLLMv2.ChatModel.Property import AdditionalModelProperty
 from ChatLLMv2 import (
     ChatController,
     DataHandler,
@@ -25,10 +25,10 @@ from .config import (
 credentials = Credentials.from_service_account_file(settings.gcpServiceAccountPath)  # type: ignore
 llm = ChatVertexAI(
     model="gemini-1.5-flash-002",
-    temperature=1,
+    temperature=0.5,
     max_tokens=8192,
     timeout=None,
-    top_p=0.95,
+    top_p=0.5 ,
     max_retries=2,
     credentials=credentials,
     project=credentials.project_id,  # type: ignore
@@ -43,7 +43,7 @@ tools = LLMTools(
     credentials=credentials,
     verbose=True
 )
-llmModelProperty = AdditionalLLMProperty()
+llmModelProperty = AdditionalModelProperty()
 llmModelProperty.llmTools = tools.all
 llmModel = Bridge.v1Bridge(llm=llm, additionalLLMProperty=llmModelProperty)
 

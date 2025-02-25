@@ -7,6 +7,7 @@ from .DataHandler import (
     ChatMessage
 )
 from .ChatModel.Base import BaseModel
+from .ChatModel.Property import AdditionalModelProperty
 
 
 logger = logging.getLogger(__name__)
@@ -46,10 +47,17 @@ class ChatController:
 
     def _initialize_chat(self) -> None:
         """Initialize the chat record if not already initialized."""
-        if not self.chatInited:
-            logger.info(f"Initializing chat record for chatId: {self._chatId}")
-            self._chat = ChatRecord.init(chatId=self._chatId, dbSession=self.dbSession)
-            self.chatInited = True
+        logger.info("_initialize_chat invoking")
+        logger.debug(f"Checking if current chat instance is initialized: {self.chatInited=}")
+        if self.chatInited:
+            logger.debug(f"{self.chatInited=} Initialized, skipping")
+            return
+
+        logger.info(f"Initializing chat record for chatId: {self._chatId}")
+        self._chat = ChatRecord.init(chatId=self._chatId, dbSession=self.dbSession)
+
+        logger.info(f"setting: {self._chatId=} to initialized")
+        self.chatInited = True
 
     @property
     def chatId(self) -> str:
@@ -58,7 +66,10 @@ class ChatController:
 
         :return: The chat ID.
         """
+        logger.debug("Getting Chat ID, Invoking _initialize_chat()")
         self._initialize_chat()
+
+        logger.debug(f"Returning Chat ID {self._chatId} after _initialize_chat()")
         return self._chatId
 
     @chatId.setter
@@ -68,8 +79,13 @@ class ChatController:
 
         :param value: The new chat ID.
         """
+        logger.debug(f"Setting ChatID:{value}")
         self._chatId = value
+
+        logger.debug(f"Marking ChatID:{value} initialization to False")
         self.chatInited = False
+
+        logger.debug(f"Invoking  _initialize_chat() for ChatID:{value}")
         self._initialize_chat()
 
     @property
@@ -79,10 +95,16 @@ class ChatController:
 
         :return: The current chat record.
         """
+        logger.debug(f"Getter currentChatRecords Invoked for {self._chat.id=}, invoking _initialize_chat()")
         self._initialize_chat()
+
+        logger.debug(f"Returning {self._chat.id=}")
         return self._chat
 
-    def invokeLLM(self, message: ChatMessage, context: dict[str, str] = {}) -> ChatMessage:
+    def invokeLLM(self,
+                  message: ChatMessage,
+                  additionalModelProperty: AdditionalModelProperty  # to be implimented
+                  ) -> ChatMessage:
         """
         Invoke the language model with a user message and get the AI response.
 
@@ -90,14 +112,25 @@ class ChatController:
         :param contexts: A list of contexts for the message.
         :return: The AI response message.
         """
+        logger.info(f"Invoking LLM: Message: {message.text[:10]=}, Invoking _initialize_chat()")
         self._initialize_chat()
-        if not message.text:
+
+        logger.debug(f"Checking if Message: {message.text[:10]=} is Empty with {message.text.strip()[:10]=}")
+        if not message.text.strip():
+            logger.debug(f"Message: {message.text[:10]=} is Empty {message.text.strip()=}")
             return ChatMessage('system', "Please provide a message.")
-        if context:
-            contextList = list(map(lambda c: f"{c}:{context[c]};", context.keys()))
-            self._chat.add_message(ChatMessage("system", f"""real-time context and information:\n{"\n".join(contextList)}"""))
+
+        logger.debug(f"Adding Message: {message.text[:10]=} to current referenced chat")
         self._chat.add_message(message)
+
+        logger.debug(f"Invoking LlmModel with current chat:{self._chat.id=}")
         aiMessage = self.llmModel.invoke(self._chat)
+
+        logger.debug(f"Got LlmModel Response:{aiMessage.text[:10]=}")
         self._chat.add_message(aiMessage)
+
+        logger.debug(f"Saving changes of {self._chat.id=} to DB")
         self.dbSession.commit()
+
+        logger.debug(f"Returning Response {aiMessage.text[:10]=}")
         return ChatMessage('ai', aiMessage.text)

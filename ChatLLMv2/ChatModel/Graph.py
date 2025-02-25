@@ -10,7 +10,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 
 from .Base import BaseModel
-from .Property import AdditionalLLMProperty
+from .Property import AdditionalModelProperty
 from ..DataHandler import ChatRecord, ChatMessage
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class Model(BaseModel):
 
     def __init__(self,
                  llm: BaseChatModel,
-                 additionalLLMProperty: AdditionalLLMProperty | None = None,
+                 additionalLLMProperty: AdditionalModelProperty | None = None,
                  ) -> None:
         super().__init__(llm, additionalLLMProperty)
         self.graphBuilder = StateGraph(self.State)
@@ -57,7 +57,7 @@ class GraphModel(BaseModel):
 
     def __init__(self,
                  llm: BaseChatModel,
-                 additionalLLMProperty: AdditionalLLMProperty | None = None,
+                 additionalLLMProperty: AdditionalModelProperty | None = None,
                  ) -> None:
         super().__init__(llm, additionalLLMProperty)
         self.llm = llm
