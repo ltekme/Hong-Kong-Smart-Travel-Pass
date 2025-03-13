@@ -73,18 +73,13 @@ class v1Bridge(BaseModel):
         logger.info(f"Recontricting ChatLLMv1 ChatRecord for {chatRecord.chatId=}")
         v1ChatMessages = list(map(remapV2ChatMessageeToV1ChatMessage, chatRecord.messages))
 
+        logger.debug(f"Resaulting v1 Chat Messages: {list(map(lambda x: (x.role, x.content.text), v1ChatMessages))}")
+
         logger.debug(f"Setting up ChatLLMv1 ChatRecord for {chatRecord.chatId=}")
         v1ChatRecord = V1ChatRecord()
 
-        logger.debug(f"Getting existing agent systemMessage from v1 ChatRecord")
-        agentSystemMessage = None
-
         logger.debug("Setting up information for v1 ChatRecord")
-        v1ChatRecord.messages = v1ChatMessages  
-        if agentSystemMessage is not None:
-            v1ChatRecord.system_message = agentSystemMessage.content.text
-        # for message in chatRecord.messages:
-        #     v1ChatRecord.append(remapV2ChatMessageeToV1ChatMessage(message))
+        v1ChatRecord.messages = v1ChatMessages
 
         logger.debug("Invoking ChatLLMv1 ChainModel with ChatLLMv1 ChatRecord")
         v1Response = self.chainModel.invoke(v1ChatRecord, "")

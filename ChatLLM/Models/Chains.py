@@ -50,12 +50,12 @@ Action:
   "action_input": "Final response to human"
 }}
 
-Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:```$JSON_BLOB```then Observation"""
+Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Format is Action:```$JSON_BLOB```then Observation"""
 
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool] = [],
-                 overide_chat_content: list = [],
+                 overide_chat_content: list[dict[str, str]] = [],
                  overide_direct_output: bool = False,
                  ) -> None:
         super().__init__(llm, tools, overide_chat_content, overide_direct_output)
@@ -67,7 +67,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                               system_message: str,
                               standard_response: list[str] = [],
                               ) -> t.Dict[str, t.Any]:
-        messages = [
+        messages: list[t.Any] = [
             ("system", self.system_prompt_template),
             MessagesPlaceholder('chat_history'),
             HumanMessage(
@@ -76,6 +76,16 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             ("system",
              "{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what and response with markdown in the Final Answer response json blob.) Once you got your answer")]
         prompt = ChatPromptTemplate(messages)
+
+        print(f"Invoking llm with {prompt.invoke({  # type: ignore
+            'agent_scratchpad': '',
+            'tool_names': "",
+            'tools': "",
+            "existing_system_prompt": system_message,
+            "chat_history": messages_copy.as_list_of_lcMessages,
+            "additional_context": full_context,
+            "standard_response": "\n".join(standard_response),
+        })=}")
         executor = AgentExecutor(
             agent=create_structured_chat_agent(
                 self.llm, self.tools, prompt),
@@ -130,7 +140,6 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"))
         full_context += context
 
-        result = {}
         try:
             result = self.get_response_from_llm(
                 last_user_message,
@@ -139,10 +148,8 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 system_message_content if system_message_content is not None else "",
                 standard_response,
             )
+            return ChatMessage('ai', MessageContent(result['output']))
         except InvalidArgument as e:
-            if "image" in e.message and "not valid" in e.message:
-                result["output"] = "An invalid image is provided"
-            else:
-                result["output"] = "Something went wrong"
-
-        return ChatMessage('ai', MessageContent(result['output']))
+            if not isinstance(e.message, str) or ("image" in e.message and "not valid" in e.message):
+                return ChatMessage('ai', MessageContent("An invalid image is provided"))
+            return ChatMessage('ai', MessageContent("Something went wrong"))

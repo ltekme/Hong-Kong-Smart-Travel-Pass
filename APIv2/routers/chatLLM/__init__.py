@@ -8,6 +8,7 @@ from fastapi import (
 )
 
 from ChatLLMv2 import DataHandler
+from ChatLLMv2.ChatModel.Property import AdditionalModelProperty
 from .models import chatLLMDataModel
 from ...config import (
     settings,
@@ -40,7 +41,6 @@ async def chatLLM(
     requestChatId = messageRequest.chatId or str(uuid.uuid4())
     requestMessageText = messageRequest.content.message
     requestAttachmentList = messageRequest.content.media
-    requestContextDict = messageRequest.context or {}
     requestDisableTTS = messageRequest.disableTTS
 
     logger.debug(f"starting chatLLM request {messageRequest=}")
@@ -110,7 +110,8 @@ async def chatLLM(
     message = DataHandler.ChatMessage("user", requestMessageText, attachments)
 
     chatController.chatId = requestChatId
-    response = chatController.invokeLLM(message, requestContextDict)
+    addirionalModelProperty = AdditionalModelProperty()
+    response = chatController.invokeLLM(message, addirionalModelProperty)
 
     if not requestDisableTTS:
         try:

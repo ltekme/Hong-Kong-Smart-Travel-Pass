@@ -28,7 +28,7 @@ llm = ChatVertexAI(
     temperature=0.5,
     max_tokens=8192,
     timeout=None,
-    top_p=0.5 ,
+    top_p=0.5,
     max_retries=2,
     credentials=credentials,
     project=credentials.project_id,  # type: ignore
@@ -62,10 +62,10 @@ def getChatController(
     yield ChatController.ChatController(dbSession=dbSession, llmModel=llmModel)
 
 
-def getGoogleService():
+def getGoogleService() -> t.Generator[GoogleServices, None, None]:
     yield GoogleServices(credentials=credentials, apiKey=settings.googleApiKey)
 
 
 dbSessionDepend = t.Annotated[so.Session, Depends(getSession)]
-chatControllerDepend = t.Annotated[ChatController, Depends(getChatController)]
+chatControllerDepend = t.Annotated[ChatController.ChatController, Depends(getChatController)]
 googleServicesDepend = t.Annotated[GoogleServices, Depends(getGoogleService)]

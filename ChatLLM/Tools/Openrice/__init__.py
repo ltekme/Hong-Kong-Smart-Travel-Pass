@@ -63,7 +63,9 @@ class GetOpenriceRestaurantRecommendationTool(OpenricaApiToolBase):
     description: str = """Used to get restaurant recommendation from Openrice. When no resault is found an empty list will be returned.
 Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool.
 When no input is provided, general recommendations will be provided.
-Use the `Get Openrice Filters` tool to find openrice filter first before using this tool, 
+Use the `Get Openrice Filters` tool to find openrice filter first before using this tool,
+The Query result may not be fully fit to the requirements as there may not be a restaurant that fits the requirements.
+This tool should only be called once for every requirements, as the output will be the same for the same query.
 """
     args_schema: t.Type[BaseModel] = ToolArgs
 
@@ -93,6 +95,7 @@ Use the `Get Openrice Filters` tool to find openrice filter first before using t
 
 
 class GetOpenriceFilterTool(OpenricaApiToolBase):
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
