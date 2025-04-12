@@ -32,6 +32,7 @@ export interface ILLMRequest {
         media: string[]
     },
     context?: object,
+    location: string
 }
 
 export interface ILLMResponse {
@@ -210,7 +211,8 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             content: {
                 message: messageText,
                 media: lastUserMessageMedia
-            }
+            },
+            location: userLocationLegent
         })
             .then(responseObj => {   // e
                 setMessageList(prevMessage => {

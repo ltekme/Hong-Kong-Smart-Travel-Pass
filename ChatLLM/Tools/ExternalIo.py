@@ -5,7 +5,7 @@ import inspect
 
 
 REQUEST_HEADERS = {
-    "accept": "*/*",
+    "accept": "application/json",
     "accept-language": "en,en-US;q=0.9,en-GB;q=0.8,en-HK;q=0.7,zh-HK;q=0.6,zh;q=0.5",
     "cache-control": "no-cache",
     "pragma": "no-cache",
@@ -18,7 +18,7 @@ REQUEST_HEADERS = {
     "sec-fetch-site": "same-origin",
     "x-requested-with": "XMLHttpRequest",
     "Referrer-Policy": "no-referrer-when-downgrade",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
 }
 
 
@@ -38,9 +38,17 @@ def fetch(url: str, params: dict = {}, log_print=True) -> dict | list | str:
                 f'\033[31m[{inspect.stack()[1][3]}] Failed Fetching data from: ' + url + '\x1b[0m')
         return "Failed to get data from url"
     try:
-        return json.loads(response.content.decode('utf-8'))
-    except:
-        return response.content.decode('utf-8')
+        responseContent = response.content
+        decodedContent = responseContent.decode("latin-1")
+        return json.loads(decodedContent)
+    except Exception as e:
+        with open("./errors/last.txt", 'w') as f:
+            f.write(str(responseContent))
+        with open("./errors/last-dev.txt", 'w') as f:
+            f.write(str(decodedContent))
+        print(
+                f'\033[31m[{inspect.stack()[1][3]}] Failed Decoding data from: ' + url + f", Error {e}" +'\x1b[0m')
+        return response.content.decode("utf-8")
 
 
 def create_folder_if_not_exists(folder_path: str, log_print=True):
@@ -67,7 +75,9 @@ def read_json_file(path: str,  log_print=True) -> dict | list | None:
     try:
         with open(path, "r") as f:
             return json.load(f)
-    except:
+    except Exception as e:
+        print(
+            f'\033[31m[{inspect.stack()[1][3]}] Error reading data from {path}, {e}\x1b[0m')
         return None
 
 
@@ -76,7 +86,7 @@ def write_file(data: str, path: str, log_print=True):
     if log_print:
         print(
             f'\033[31m[{inspect.stack()[1][3]}] Writing data to {path}\x1b[0m')
-    with open(path, 'w', encoding="utf-8") as f:
+    with open(path, 'w', encoding="utf-8-sig") as f:
         f.write(data)
 
 
@@ -85,7 +95,7 @@ def read_file(path: str, log_print=True):
         print(
             f'\033[31m[{inspect.stack()[1][3]}] Trying to read data from {path}\x1b[0m')
     try:
-        with open(path, 'r', encoding="utf-8") as f:
+        with open(path, 'r', encoding="utf-8-sig") as f:
             return f.read()
     except:
         return None

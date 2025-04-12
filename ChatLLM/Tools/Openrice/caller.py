@@ -32,7 +32,7 @@ class FilterBase(OpenriceBase):
 
     _raw_data = None
     _data = None
-    _FILTER_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/region/all?uiLang=zh&uiCity=hongkong"
+    _FILTER_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/region/all?uiLang=en&uiCity=hongkong"
     _METADATA_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/country/all"
 
     def __init__(self,
@@ -135,6 +135,7 @@ class FilterBase(OpenriceBase):
         if self.store_data and os.path.exists(self.raw_data_path):
             self.logger("getting raw data from file")
             self._raw_data = read_json_file(self.raw_data_path)
+            # self.logger(f"Got data from file: {self._raw_data}")
             if self._raw_data:
                 self.logger("got raw data from file, returning")
                 return self._raw_data
@@ -147,6 +148,7 @@ class FilterBase(OpenriceBase):
             if isinstance(raw_data, (dict, list)):
                 write_json_file(raw_data, self.raw_data_path)
             else:
+                self.logger(f"Error, Got {type(raw_data)=},{raw_data=}")
                 raise TypeError("Expected raw_data to be a dictionary or list")
         self.logger("got raw data from API, returning")
         return raw_data
@@ -358,7 +360,10 @@ class RestaurantSearchApi(OpenriceBase):
                 period1 = f"{entry['period1Start']} - {entry['period1End']}" if "period1Start" in entry else ""
                 period2 = f"{entry['period2Start']} - {entry['period2End']}" if "period2Start" in entry else ""
                 periods = f"{period1} {period2}".strip()
-                days[day_name].append(f"{day_name}: {periods}")
+                if day_name == "Unknown":
+                    pass
+                else:
+                    days[day_name].append(f"{day_name}: {periods}")
 
         # Convert the dictionary to a list of strings
         result = []

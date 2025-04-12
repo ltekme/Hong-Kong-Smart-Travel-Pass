@@ -24,6 +24,10 @@ class chatLLMDataModel:
             description="Context of this request, will be sent to LLM",
             default=None
         )
+        location: t.Optional[str] = Field(
+            description="Location string of this request, will be sent to LLM",
+            default="Not Avalable"
+        )
         disableTTS: t.Optional[bool] = Field(
             description="controls weather to include TTS audio data in the response",
             default=None

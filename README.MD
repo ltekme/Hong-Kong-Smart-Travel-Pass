@@ -13,6 +13,10 @@ GCP_AI_SA_CREDENTIAL_PATH='gcp_cred-ai.json'
 CHATLLM_DB_URL='sqlite:///chat_data/chatLLM.db'
 CHATLLM_ATTACHMENT_URL='./chat_data/messageAttachment'
 PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION='upb'
+OPENAI_API_URL
+OPENAI_API_KEY
+OPENAI_DPLY_NAME
+OPENAI_API_VERSION
 ```
 
 The enviroments above are just a template, set to specific values to match your usecase.

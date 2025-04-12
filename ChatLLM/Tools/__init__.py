@@ -44,10 +44,10 @@ class LLMTools:
                 credentials=self.credentials, verbose=self.verbose),
 
             # Google
-            PerformGoogleSearchTool(
-                google_cse_id=self.google_cse_id,
-                google_api_key=self.google_api_key,
-            ),
+            # PerformGoogleSearchTool(
+            #     google_cse_id=self.google_cse_id,
+            #     google_api_key=self.google_api_key,
+            # ),
             ReverseGeocodeConvertionTool(
                 google_api_key=self.google_api_key,
             ),

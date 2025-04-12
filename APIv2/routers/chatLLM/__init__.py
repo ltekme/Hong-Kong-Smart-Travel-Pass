@@ -42,6 +42,7 @@ async def chatLLM(
     requestMessageText = messageRequest.content.message
     requestAttachmentList = messageRequest.content.media
     requestDisableTTS = messageRequest.disableTTS
+    requestLocation = messageRequest.location
 
     logger.debug(f"starting chatLLM request {messageRequest=}")
 
@@ -111,6 +112,8 @@ async def chatLLM(
 
     chatController.chatId = requestChatId
     addirionalModelProperty = AdditionalModelProperty()
+    if requestLocation is not None:
+        addirionalModelProperty.location = requestLocation
     response = chatController.invokeLLM(message, addirionalModelProperty)
 
     if not requestDisableTTS:
