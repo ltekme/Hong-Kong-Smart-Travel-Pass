@@ -10,4 +10,3 @@ node_modules
 .venv
 *.db
 temp.py
-errors/*

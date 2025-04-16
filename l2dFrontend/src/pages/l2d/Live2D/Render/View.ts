@@ -126,24 +126,24 @@ export class View {
 
     imageName = Define.BackImageName;
 
-    const initBackGroundTexture = (textureInfo: TextureInfo): void => {
-      if (textureInfo.id === null) {
-        return;
-      }
-      const x: number = width * 0.5;
-      const y: number = height * 0.5;
+    // const initBackGroundTexture = (textureInfo: TextureInfo): void => {
+    //   if (textureInfo.id === null) {
+    //     return;
+    //   }
+    //   const x: number = width * 0.5;
+    //   const y: number = height * 0.5;
 
-      const fwidth = textureInfo.width * 2.0;
-      const fheight = height * 0.95;
-      this._back = new Sprite(x, y, fwidth, fheight, textureInfo.id);
-    };
+    //   const fwidth = textureInfo.width * 2.0;
+    //   const fheight = height * 0.95;
+    //   this._back = new Sprite(x, y, fwidth, fheight, textureInfo.id);
+    // };
 
-    textureManager.createTextureFromPngFile(
-      // resourcesPath + imageName,
-      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAJYCAYAAACadoJwAAAgAElEQVR4XsS9WZClaXIldO6",
-      false,
-      initBackGroundTexture
-    );
+    // textureManager.createTextureFromPngFile(
+    //   resourcesPath + imageName,
+    //   // "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAJYCAYAAACadoJwAAAgAElEQVR4XsS9WZClaXIldO6",
+    //   false,
+    //   initBackGroundTexture
+    // );
 
     imageName = Define.GearImageName;
     const initGearTexture = (textureInfo: TextureInfo): void => {

@@ -9,7 +9,7 @@ from fastapi import (
 
 from ChatLLMv2 import DataHandler
 from ChatLLMv2.ChatModel.Property import AdditionalModelProperty
-from .models import chatLLMDataModel
+from .models import chatLLMDataModel, ChatRecallModel
 from ...config import (
     settings,
     logger,
@@ -140,4 +140,21 @@ async def chatLLM(
         message=response.text,
         chatId=chatController.chatId,
         ttsAudio=ttsAudio,
+    )
+
+@router.get("/{chatId}", response_model=ChatRecallModel.Response)
+async def chatRecall(
+    chatId: str,
+    chatController: chatControllerDepend,
+) -> ChatRecallModel.Response:
+    chatController.chatId = chatId
+    messages = chatController.currentChatRecords.messages
+    responseMessageList = [ChatRecallModel.ResponseMessage(
+        role=i.role, 
+        message=i.text,
+        dateTime=str(i.dateTime)
+    ) for i in messages if i.role !="system"]
+    return ChatRecallModel.Response(
+        chatId=chatId,
+        messages=responseMessageList
     )

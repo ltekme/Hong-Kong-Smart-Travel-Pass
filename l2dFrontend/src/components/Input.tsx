@@ -26,7 +26,7 @@ export const InputControls = ({
 
     const clearCurrentState = () => {
         setText("");
-        inputRef.current.blur();
+        // inputRef.current.blur();
     }
 
     const handleSendMessage = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -119,7 +119,7 @@ export const InputControls = ({
                     setText(ext => {
                         return ext + result.message;
                     });
-                    // sendMessage(result.message);
+                    
                     console.log('settext', text);
                     // handleSendMessage(result.message);
 

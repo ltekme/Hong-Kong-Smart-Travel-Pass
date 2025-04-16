@@ -71,7 +71,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                               ) -> t.Dict[str, t.Any]:
         messages: list[t.Any] = [
             ('system', self.system_prompt_template),
-            # ('system', f'Current User Location: {self.additionalLLMProperty.location}'),
+            ('user', f'''<context>
+    <userLocation>{self.additionalLLMProperty.location}</userLocation>
+</context>'''),
             MessagesPlaceholder('chat_history'),
             ("system",
              "{agent_scratchpad}\n (reminder to respond in a JSON blob no matter what and response with markdown in the Final Answer response json blob.)")]

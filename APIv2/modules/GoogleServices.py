@@ -29,7 +29,7 @@ class GoogleServices:
         """
         self.apiKey = apiKey
         self.ttsClient = TextToSpeechClient(credentials=credentials)
-        self.sttClient = SpeechClient(credentials=credentials)
+        self.sttClient = SpeechClient(credentials=credentials) # type: ignore
 
     def textToSpeech(self, text: str, lang: t.Literal["en", "zh"] = "zh") -> str:
         """
@@ -85,7 +85,7 @@ class GoogleServices:
             maps = googlemaps.Client(key=self.apiKey)
             resault = maps.reverse_geocode(latlng=(latitude, longitude), language=lang)  # type: ignore
             location = str(resault[1]['formatted_address'])  # type: ignore
-            logger.debug(f"Got location of {location}")
+            logger.debug(f"Got location of {location} from ({longitude},{latitude})")
             return location
         except Exception as e:
             logger.error(f"Cannot Perform Reverse Geocode Search: {e}")

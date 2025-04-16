@@ -1,5 +1,7 @@
-import { userPofilePersonalizationApiUrl } from "../Config";
+import { IMessage } from "../pages/home";
+import { chatLLMApiUrl, userPofilePersonalizationApiUrl } from "../Config";
 import { IFacebookProfile } from "./Interface";
+import { getTTS, setTTS } from "./LocalStorageParamaters"
 
 interface UserMenuProps {
     input: string;
@@ -7,7 +9,13 @@ interface UserMenuProps {
     setMenuKeys: React.Dispatch<React.SetStateAction<string[]>>;
     chatId?: string;
     setChatId?: React.Dispatch<React.SetStateAction<string>>;
+    setMessageList?: React.Dispatch<React.SetStateAction<IMessage[]>>;
     facebookProfile?: IFacebookProfile;
+}
+interface RecallMessage {
+    role: "user" | "ai",
+    message: string,
+    dateTime: string
 }
 
 export const userMenu = async ({
@@ -17,17 +25,18 @@ export const userMenu = async ({
     chatId,
     setChatId,
     facebookProfile,
+    setMessageList
 }: UserMenuProps) => {
     let chatIdDisplay = chatId;
 
     const Init000 = () => {
         setMenuKeys(["Init000"])
-        return "Menu Options\n1. Chat Id\n2. Profile";
+        return "Menu Options\n1. Chat Id\n2. Profile\n3. Paramaters";
     }
 
     const Init000_1 = () => {
         setMenuKeys(["Init000", "1"]);
-        return `Current Chat ID: ${chatIdDisplay}\n1. Change\n2. Back`;
+        return `Current Chat ID: ${chatIdDisplay}\n1. Change\n2. Recall\n3. Back`;
     }
 
     const Init000_1_1 = () => {
@@ -39,10 +48,35 @@ export const userMenu = async ({
         chatIdDisplay = input;
         return Init000_1();
     }
+    const Init000_1_2 = () => {
+        setMenuKeys(["Init000", "1", "2"]);
+        return "Please type chat id to recall";
+    }
+    const Init000_1_2_ = () => {
+        const response = fetch(`${chatLLMApiUrl}/${input}`)
+        response
+            .then(x => x.json())
+            .then(data => {
+                setChatId(data.chatId);
+                let messages = data.messages.map((element: RecallMessage) => {
+                    return {
+                        role: element.role,
+                        text: element.message,
+                        time: element.dateTime,
+                    }
+                })
+                setMessageList(messages);
+            })
 
+        return Init000_1();
+    }
     const Init000_2 = () => {
         setMenuKeys(["Init000", "2"]);
         return `Current User Profile:\n1. Name\n2. Personalization Summory\n3. Back`;
+    }
+    const Init000_1_3 = () => {
+        setMenuKeys(["Init000", "1", "3"]);
+        return Init000()
     }
 
     const Init000_2_1 = () => {
@@ -89,17 +123,44 @@ export const userMenu = async ({
         setMenuKeys(["Init000", "2", "2", "3"]);
         return "Personalization Edit Place Holder\n1. Back";
     };
-
+    const Init000_3 = () => {
+        setMenuKeys(["Init000", "3"]);
+        return `Change Paramaters:\n1. TTS In Response\n2. Back`;
+    }
+    const Init000_3_1 = () => {
+        setMenuKeys(["Init000", "3", "1"]);
+        return `TTS In response: ${getTTS()}\n1. Enable\n2. Disable\n3. Back`
+    }
+    const Init000_3_1_1 = () => {
+        setMenuKeys(["Init000", "3", "1", "1"]);
+        setTTS(true)
+        console.log("Disabled TTS")
+        return Init000_3_1()
+    }
+    const Init000_3_1_2 = () => {
+        setMenuKeys(["Init000", "3", "1", "2"]);
+        setTTS(false)
+        return Init000_3_1()
+    }
+    const Init000_3_1_3 = () => {
+        setMenuKeys(["Init000", "3", "1", "3"]);
+        return Init000_3()
+    }
     if (menuKeys[0] === "Init000") {  // Main Menu 0
         if (menuKeys[1] === "1") {  // Main Menu -> Chat Id 0_1
             if (menuKeys[2] === "1") { // Main Menu -> Chat Id -> Change 0_1_1
                 return Init000_1_1_();
             }
+            if (menuKeys[2] === "2") { // Main Menu -> Chat Id -> Change 0_1_1
+                return Init000_1_2_();
+            }
             switch (true) {
                 case input === "1":
                     return Init000_1_1();
                 case input === "2":
-                    return Init000();
+                    return Init000_1_2();
+                case input === "3":
+                    return Init000_1_3();
             }
         }
         if (menuKeys[1] === "2") {  // Main Menu -> Profile 0_2
@@ -160,11 +221,40 @@ export const userMenu = async ({
                     return Init000(); // Main Menu 0
             }
         }
+        if (menuKeys[1] === "3") {  // Main Menu -> Paramater 0_3
+            if (menuKeys[2] === "1") { // Main Menu -> Paramater 0_3 -> TTS 0_3_1
+                if (menuKeys[3] === "1") { // Main Menu -> Paramater 0_3 -> TTS 0_3_1 -> Enable
+                    return Init000_3_1_1()
+                }
+                if (menuKeys[3] === "2") { // Main Menu -> Paramater 0_3 -> TTS 0_3_1 -> Disable
+                    return Init000_3_1_2()
+                }
+                if (menuKeys[3] === "3") { // Main Menu -> Paramater 0_3 -> TTS 0_3_1 -> Back
+                    return Init000_3_1_3()
+                }
+                switch (true) {
+                    case input === "1":
+                        return Init000_3_1_1();
+                    case input === "2":
+                        return Init000_3_1_2();
+                    case input === "3":
+                        return Init000_3();
+                }
+            }
+            switch (true) {
+                case input === "1":
+                    return Init000_3_1();
+                case input === "2":
+                    return Init000();
+            }
+        }
         switch (true) {
             case input === "1":
                 return Init000_1(); // Main Menu -> Chat Id 0_1
             case input === "2":
                 return Init000_2(); // Main Menu -> Profile 0_2
+            case input === "3":
+                return Init000_3(); // Main Menu -> Paramater 0_2
         }
     }
 

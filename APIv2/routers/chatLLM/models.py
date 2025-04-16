@@ -1,3 +1,4 @@
+# import datetime
 import typing as t
 from pydantic import BaseModel, Field
 
@@ -42,4 +43,23 @@ class chatLLMDataModel:
         )
         ttsAudio: str = Field(
             description="TTS Audio data in base64",
+        )
+
+class ChatRecallModel:
+
+    class ResponseMessage(BaseModel):
+        role: t.Literal["user", "ai", "system"]
+        message: str = Field(
+            description="LLM Response Message",
+        )
+        dateTime: str = Field(
+            description="The time of the message sent"
+        )
+
+    class Response(BaseModel):
+        chatId: str = Field(
+            description="The chat ID, should be uuid string",
+        )
+        messages: list["ChatRecallModel.ResponseMessage"] = Field(
+            description="List of Messages",
         )

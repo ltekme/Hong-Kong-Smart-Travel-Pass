@@ -13,11 +13,14 @@ export const App = () => {
     useEffect(() => {
         initializeModel({
             avatarCanvus: live2dCanvasRef.current
-        })
+        });
+        setConfirmAgree(true)
     });
 
     return (<>
-        <LegalDataCollectionNotice setConfirmAgree={setConfirmAgree} />
+        {/* Skip for Innoex Demo */}
+        {/* <LegalDataCollectionNotice setConfirmAgree={setConfirmAgree} /> */}
+
         <Home l2dSpeak={speak} confirmAgree={confirmAgree} />
 
         {/* Make Canvise for Live 2d Model */}

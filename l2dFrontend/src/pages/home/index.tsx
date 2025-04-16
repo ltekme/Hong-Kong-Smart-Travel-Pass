@@ -10,6 +10,7 @@ import { userMenuActivationCommand } from "../../Config";
 
 import Swal from "sweetalert2";
 import { userMenu } from "../../components/Menu";
+import { getTTS } from "../../components/LocalStorageParamaters";
 
 export interface IHome {
     confirmAgree: boolean,
@@ -31,8 +32,9 @@ export interface ILLMRequest {
         message: string,
         media: string[]
     },
+    location: string,
     context?: object,
-    location: string
+    disableTTS?: boolean,
 }
 
 export interface ILLMResponse {
@@ -100,6 +102,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
         if (facebookProfile.sessionId) {
             headers["x-SessionToken"] = facebookProfile.sessionId
         }
+        userMessageObject.disableTTS = !getTTS();
         const response = await fetch(chatLLMApiUrl, {
             method: "POST",
             headers: headers,
@@ -186,6 +189,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                 setMenuKeys: setUserMenuKeys,
                 chatId: chatId,
                 setChatId: setChatId,
+                setMessageList: setMessageList,
                 facebookProfile: facebookProfile,
             });
             setMessageList(prevMessage => {
@@ -324,7 +328,10 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                 <h1 className="title">Hello! {username}</h1>
                 <p className="subtitle">How can I help you today?</p>
             </div>)}
-            <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} />
+            {/* Skip for Innoex Demo */}
+            {/* <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} /> */}
+
+            <Hello confirmAgree={false} setFacebookProfile={setFacebookProfile} />
             {confirmAgree && !locationError && userLocationLegent !== "" ? <div className="address">用戶位置: {userLocationLegent}</div> : null}
         </>
     )
