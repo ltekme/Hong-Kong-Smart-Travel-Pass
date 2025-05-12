@@ -7,7 +7,6 @@ from .DataHandler import (
     ChatMessage
 )
 from .ChatModel.Base import BaseModel
-from .ChatModel.Property import AdditionalModelProperty
 
 
 logger = logging.getLogger(__name__)
@@ -103,7 +102,6 @@ class ChatController:
 
     def invokeLLM(self,
                   message: ChatMessage,
-                  additionalModelProperty: AdditionalModelProperty  # to be implimented
                   ) -> ChatMessage:
         """
         Invoke the language model with a user message and get the AI response.

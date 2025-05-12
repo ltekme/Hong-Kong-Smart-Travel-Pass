@@ -19,7 +19,7 @@ class GoogleServices:
 
     def __init__(self,
                  credentials: Credentials,
-                 apiKey: str = "",
+                 apiKey: str | None = "",
                  ) -> None:
         """
         Initialize a GoogleServices instance.
@@ -29,7 +29,7 @@ class GoogleServices:
         """
         self.apiKey = apiKey
         self.ttsClient = TextToSpeechClient(credentials=credentials)
-        self.sttClient = SpeechClient(credentials=credentials) # type: ignore
+        self.sttClient = SpeechClient(credentials=credentials)  # type: ignore
 
     def textToSpeech(self, text: str, lang: t.Literal["en", "zh"] = "zh") -> str:
         """

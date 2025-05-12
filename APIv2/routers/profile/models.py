@@ -10,3 +10,6 @@ class AuthDataModel:
         expireEpoch: int = Field(
             description="The expire unix time for the session token"
         )
+        username: str = Field(
+            description="The username of the user"
+        )

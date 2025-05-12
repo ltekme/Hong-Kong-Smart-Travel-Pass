@@ -1,8 +1,4 @@
 import typing as t
-from alembic.config import (
-    Config,
-    command
-)
 from fastapi import (
     FastAPI,
     Request,
@@ -10,30 +6,15 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from .routers import (
     chatLLM,
     googleServices,
     profile,
 )
-from .dependence import dbEngine
-from .config import logger
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # moved to alembic for migration
-    cfg = Config("./alembic.ini")
-    with dbEngine.begin() as connection:
-        logger.debug("upgrading db")
-        cfg.attributes['connection'] = connection
-        command.upgrade(cfg, "head")
-    yield
-    print('bye')
-
-
-app = FastAPI(root_path="/api/v2", lifespan=lifespan)
+app = FastAPI(root_path="/api/v2")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

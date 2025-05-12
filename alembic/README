@@ -1,7 +1,0 @@
-Generic single-database configuration.
-
-The .env.py is customized to not use the default ini file
-
-althougt .env.py is customized, the ini file is stil needed
-
-the env file will look for the `CHATLLM_DB_URL` from the .env file. The same as what ChatLLMv2 look for. 

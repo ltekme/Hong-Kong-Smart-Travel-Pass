@@ -159,7 +159,7 @@ class ChatMessage(TableBase):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     role: so.Mapped[t.Literal["user", "ai", "system"]] = so.mapped_column(sa.String, nullable=False)
     text: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
-    dateTime: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime(timezone=True), default=sl.func.now())
+    dateTime: so.Mapped[sa.DateTime] = so.mapped_column(sa.DateTime(), default=sl.func.now())
     attachments: so.Mapped[t.List["MessageAttachment"]] = so.relationship(back_populates="message")
     chat_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"chats.id"))
     chat: so.Mapped["ChatRecord"] = so.relationship(back_populates="messages")

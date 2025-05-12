@@ -1,5 +1,4 @@
 import uuid
-import datetime
 import typing as t
 from fastapi import (
     APIRouter,
@@ -8,7 +7,6 @@ from fastapi import (
 )
 
 from ChatLLMv2 import DataHandler
-from ChatLLMv2.ChatModel.Property import AdditionalModelProperty
 from .models import chatLLMDataModel, ChatRecallModel
 from ...config import (
     settings,
@@ -20,8 +18,7 @@ from ...dependence import (
     dbSessionDepend,
 )
 from ...modules import (
-    ApplicationModel,
-    LlmHelper
+    UserService
 )
 
 router = APIRouter(prefix="/chatLLM")
@@ -42,67 +39,51 @@ async def chatLLM(
     requestMessageText = messageRequest.content.message
     requestAttachmentList = messageRequest.content.media
     requestDisableTTS = messageRequest.disableTTS
-    requestLocation = messageRequest.location
 
     logger.debug(f"starting chatLLM request {messageRequest=}")
+    if x_SessionToken is None:
+        raise HTTPException(
+            status_code=400,
+            detail="No Session Found"
+        )
+    sessionTokenUserProfile = UserService.getUserProfileFromSessionToken(
+        sessionToken=x_SessionToken,
+        dbSession=dbSession,
+        bypassExpire=False
+    )
+    if sessionTokenUserProfile is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Session Expired or invalid"
+        )
 
     logger.debug(f"Getting {requestChatId=} associated profile")
-    existingChatIdUserProfileRecord = ApplicationModel.UserProifileChatRecords.fromChatId(
+    chatIdProfileRecord = UserService.getUserProfileChatRecordFromChatId(
         chatId=requestChatId,
         dbSession=dbSession,
     )
-    logger.debug(f"Checking if {requestChatId=} exists on data handler")
-    existingChat = dbSession.query(DataHandler.ChatRecord).where(DataHandler.ChatRecord.chatId == requestChatId).first()
-
-    if x_SessionToken is not None:
-        logger.debug(f"{x_SessionToken[:10]=} provided for {requestChatId=}, checking session")
-        userProfile = ApplicationModel.UserProfileSession.get(
-            sessionToken=x_SessionToken,
-            currentTime=datetime.datetime.now(datetime.UTC),
+    if chatIdProfileRecord is None:
+        if dbSession.query(DataHandler.ChatRecord).where(
+            DataHandler.ChatRecord.chatId == requestChatId
+        ).first() is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="Converstation No Longer Valid"
+            )
+        chatIdProfileRecord = UserService.associateChatIdWithUserProfile(
+            chatId=requestChatId,
+            userProfile=sessionTokenUserProfile,
             dbSession=dbSession,
         )
-        if userProfile is None:
-            logger.debug(f"{x_SessionToken=} expired, user not found")
-            raise HTTPException(
-                status_code=400,
-                detail="Session Expired"
-            )
-        logger.debug(f"{userProfile.facebookId=} provided for {requestChatId=}, checking chat match")
-        if existingChatIdUserProfileRecord is not None and existingChatIdUserProfileRecord.profile != userProfile:
-            logger.debug(f"{userProfile.facebookId=} provided for {requestChatId=}, record mismatch")
-            raise HTTPException(
-                status_code=400,
-                detail="Chat is already associated with a profile"
-            )
-        logger.debug(f"{userProfile.facebookId=} provided for {requestChatId=}, checking is chat public")
-        if existingChat is not None and existingChatIdUserProfileRecord is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Chat is public locked"
-            )
-        try:
-            logger.debug(f"Associating {requestChatId=} with {userProfile.facebookId=}")
-            existingChatIdUserProfileRecord = ApplicationModel.UserProifileChatRecords.add(
-                chatId=requestChatId,
-                userProfile=userProfile,
-                dbSession=dbSession,
-            )
-        except Exception as e:
-            logger.error(f"Error assoicating {requestChatId=} with {userProfile.facebookId=}")
-            logger.error(e)
-            raise HTTPException(
-                status_code=500,
-                detail="Error associating profile with chatId provided"
-            )
-    elif existingChatIdUserProfileRecord is not None:
+    if sessionTokenUserProfile != chatIdProfileRecord.profile:
         raise HTTPException(
             status_code=403,
-            detail="Chat is user locked"
+            detail="Invalid"
         )
 
     try:
         attachments = list(map(
-            lambda url: DataHandler.MessageAttachment(url, settings.attachmentDataPath),
+            lambda url: DataHandler.MessageAttachment(url, settings.applicationChatLLMMessageAttachmentPath),
             requestAttachmentList
         )) if requestAttachmentList is not None else []
     except:
@@ -111,10 +92,7 @@ async def chatLLM(
     message = DataHandler.ChatMessage("user", requestMessageText, attachments)
 
     chatController.chatId = requestChatId
-    addirionalModelProperty = AdditionalModelProperty()
-    if requestLocation is not None:
-        addirionalModelProperty.location = requestLocation
-    response = chatController.invokeLLM(message, addirionalModelProperty)
+    response = chatController.invokeLLM(message)
 
     if not requestDisableTTS:
         try:
@@ -125,22 +103,12 @@ async def chatLLM(
     else:
         ttsAudio = ""
 
-    if x_SessionToken is not None:
-        logger.debug(f"Generating chat summory for {requestChatId=}")
-        summory = LlmHelper.createChatSummory(
-            messages=chatController.currentChatRecords.messages
-        )
-        if existingChatIdUserProfileRecord is not None:
-            existingChatIdUserProfileRecord.editSummory(
-                newSummory=summory,
-                dbSession=dbSession
-            )
-
     return chatLLMDataModel.Response(
         message=response.text,
         chatId=chatController.chatId,
         ttsAudio=ttsAudio,
     )
+
 
 @router.get("/{chatId}", response_model=ChatRecallModel.Response)
 async def chatRecall(
@@ -150,10 +118,10 @@ async def chatRecall(
     chatController.chatId = chatId
     messages = chatController.currentChatRecords.messages
     responseMessageList = [ChatRecallModel.ResponseMessage(
-        role=i.role, 
+        role=i.role,
         message=i.text,
         dateTime=str(i.dateTime)
-    ) for i in messages if i.role !="system"]
+    ) for i in messages if i.role != "system"]
     return ChatRecallModel.Response(
         chatId=chatId,
         messages=responseMessageList

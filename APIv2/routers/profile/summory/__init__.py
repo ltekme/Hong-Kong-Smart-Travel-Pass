@@ -13,7 +13,7 @@ from .models import (
 from ....modules import (
     FacebookClient,
     LlmHelper,
-    ApplicationModel,
+    UserService
 )
 from ....dependence import dbSessionDepend
 from ....config import logger
@@ -28,28 +28,17 @@ async def requestSummoryGet(
     x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> ProfileSummoryGet.Response:
     """Get Current User Profile Summory"""
-    currentDatetime = datetime.datetime.now(datetime.UTC)
-
     if x_SessionToken is None:
         raise HTTPException(
             status_code=400,
             detail="No sessionToken found"
         )
-
-    try:
-        logger.debug(f"performing user lookup for {x_SessionToken[:10]=}")
-        userProfile = ApplicationModel.UserProfileSession.get(
-            sessionToken=x_SessionToken,
-            currentTime=currentDatetime,
-            dbSession=dbSession,
-        )
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(
-            status_code=400,
-            detail="Error getting user"
-        )
-
+    logger.debug(f"performing user lookup for {x_SessionToken[:10]=}")
+    userProfile = UserService.getUserProfileFromSessionToken(
+        sessionToken=x_SessionToken,
+        dbSession=dbSession,
+        bypassExpire=False
+    )
     if userProfile is None:
         logger.debug(f"Userprofile with {x_SessionToken[:10]=} was not found")
         raise HTTPException(
@@ -57,9 +46,14 @@ async def requestSummoryGet(
             detail="No User Found"
         )
 
+    summorys: list[str] = []
+    for i in userProfile.socials:
+        if i.profileSummory is not None:
+            summorys.append(i.profileSummory)
+
     return ProfileSummoryGet.Response(
-        summory=userProfile.personalizationSummory,
-        lastUpdate=userProfile.personalizationSummoryLastUpdate
+        summory="".join(summorys),
+        lastUpdate=userProfile.socials[-1].lastUpdate,
     )
 
 
@@ -96,21 +90,22 @@ async def requestSummory(
             detail="Error generating profile summory"
         )
 
-    try:
-        logger.debug(f"Updating personalization summory for {x_FacebookAccessToken[:10]=}")
-        userProfile = ApplicationModel.UserProfile.fromFacebookAccessToken(
-            accessToken=x_FacebookAccessToken,
-            dbSession=dbSession
+    logger.debug(f"Updating personalization summory for {x_FacebookAccessToken[:10]=}")
+    facebookProfile = FacebookClient.getUsernameAndId(accessToken=x_FacebookAccessToken)
+    provider = UserService.getOrCreateSocialsProfileProvider('facebook', dbSession)
+    userSocialProfile = UserService.queryUserSocialProfile(
+        socialId=str(facebookProfile.facebookId),
+        provider=provider,
+        dbSession=dbSession
+    )
+    if userSocialProfile is None:
+        return ProfileSummoryRequest.Response(
+            success=False,
+            summory="Not Found",
         )
-        userProfile.personalizationSummory = userProfileSummory
-        userProfile.personalizationSummoryLastUpdate = datetime.datetime.now(datetime.UTC)
-        dbSession.commit()
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(
-            status_code=500,
-            detail="Error saving profile summory"
-        )
+    userSocialProfile.profileSummory = userProfileSummory
+    userSocialProfile.lastUpdate = datetime.datetime.now(datetime.UTC)
+    dbSession.commit()
 
     return ProfileSummoryRequest.Response(
         success=True,

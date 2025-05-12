@@ -4,26 +4,62 @@
 # The Mappings here should never have any effect on data in from ChatLLMv2
 # All mappings here is seperate from ChatLLMv2 as ChatLLMv2 is a seperate core component that can work on it own.
 # PS: There is virtually zero typing on facebook Graph API, might as well write raw requests
-import uuid
-import pytz
-import hashlib
+
 import datetime
 import typing as t
 import sqlalchemy as sa
 import sqlalchemy.orm as so
+import sqlalchemy.sql as sl
 
 from ChatLLMv2.DataHandler import TableBase
 
-from . import FacebookClient
-from ..config import logger
+
+class SocialsProfileProvider(TableBase):
+    """
+    Represents a social profile provider 
+
+    SocialsProfileProvider class represents a social idnetifer provider.
+    e.g. Facebook, Google SSO, X(Twitter)
+    """
+    __tablename__ = "socials_provider"
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, unique=True)
+    socials: so.Mapped[t.List["UserSocialProfile"]] = so.relationship(back_populates="provider")
+
+    def __init__(self, name: str):
+        """
+        Initialize a SocialsProfileProvider instance.
+
+        :param name: The name of the provider.
+        """
+        self.name = name
 
 
-class FacebookUserIdentifyExeception(Exception):
-    pass
+class UserSocialProfile(TableBase):
+    """
+    Represents a social profile
 
+    This class represents the mapping of user and their social media profiles
+    """
+    __tablename__ = "user_profile_socials"
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    socialId: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
+    profileSummory: so.Mapped[str | None] = so.mapped_column(sa.String, nullable=True)
+    lastUpdate: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime(timezone=True), default=sl.func.now())
 
-class UserProifileChatRecordsExistExeception(Exception):
-    pass
+    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile.id"))
+    profile: so.Mapped["UserProfile"] = so.relationship(back_populates="socials")
+    provider_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("socials_provider.id"))
+    provider: so.Mapped["SocialsProfileProvider"] = so.relationship(back_populates="socials")
+
+    def __init__(self, profileId: str, provider: SocialsProfileProvider) -> None:
+        """
+        Initialize a UserProfileSocialRecord instance.
+
+        :param name: The profileId of the socials.
+        """
+        self.profileId = profileId
+        self.provider = provider
 
 
 class UserProfile(TableBase):
@@ -31,88 +67,27 @@ class UserProfile(TableBase):
     __tablename__ = "user_profile"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
-    facebookId: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, index=True, unique=True)
-    personalizationSummory: so.Mapped[str | None] = so.mapped_column(sa.String, nullable=True)
-    personalizationSummoryLastUpdate: so.Mapped[datetime.datetime | None] = so.mapped_column(sa.DateTime, nullable=True)
-    chatRecordIds: so.Mapped[t.List["UserProifileChatRecords"]] = so.relationship(back_populates="profile")
-    sessions: so.Mapped[t.List["UserProfileSession"]] = so.relationship(back_populates="profile")
+    public: so.Mapped[bool] = so.mapped_column(sa.Boolean, nullable=True, default=False)
+    chatRecordIds: so.Mapped[t.List["UserChatRecord"]] = so.relationship(back_populates="profile")
+    sessions: so.Mapped[t.List["UserSession"]] = so.relationship(back_populates="profile")
+    socials: so.Mapped[t.List["UserSocialProfile"]] = so.relationship(back_populates="profile")
 
-    def __init__(self, username: str, facebookId: int):
+    def __init__(self, username: str):
         """
         Initialize a UserProfile instance.
 
-        :param username: The username of the facebook user.
-        :param messages: The facebook id of the user.
+        :param username: The username of the user.
         """
         self.username = username
-        self.facebookId = facebookId
-
-    @classmethod
-    def fromFacebookAccessToken(cls, accessToken: str, dbSession: so.Session) -> "UserProfile":
-        """
-        Initialize UserProfile instance from facebook access token.
-
-        :param accessToken: The access token of a given facebook user.
-
-        :return: A new instance of UserProfile with Id and username populated.
-        """
-        logger.debug(f"Initializing user instance from facebook access key")
-        try:
-            logger.debug(f"performing lookup for facebook user")
-            facebookProfile = FacebookClient.getUsernameAndId(accessToken=accessToken)
-            instance = cls(
-                username=facebookProfile.username,
-                facebookId=facebookProfile.facebookId
-            )
-        except Exception as e:
-            logger.error(f"Error performing user identification, {e}")
-            raise FacebookUserIdentifyExeception("Error performing facebook user identification")
-
-        try:
-            logger.debug(f"Looking for user in database: {instance.facebookId}({instance.username})")
-            instanceInDb = dbSession.query(cls).where(cls.facebookId == instance.facebookId).first()
-            if instanceInDb is not None:
-                logger.debug(f"Found user in database: {instance.facebookId}({instance.username})")
-                return instanceInDb
-        except Exception as e:
-            logger.error(f"Error performing user lookup in db, {e}")
-            raise Exception("Error looking up user in database")
-
-        try:
-            logger.debug(f"User: {instance.facebookId} ({instance.username}) was not found in database, creating")
-            dbSession.add(instance)
-            dbSession.commit()
-            return instance
-        except Exception as e:
-            logger.error(f"Error creating user, {e}")
-            raise Exception("Error creating user profile")
-
-    def updatePersonalizationSummory(self, newSummory: str, dbSession: so.Session) -> None:
-        """
-        Update profile personalization summory
-
-        :param newSummory: The new profile summory
-        :param dbSession: The dbSession to make the query.
-
-        :return: None.
-        """
-        try:
-            logger.debug(f"Updating User profile personalizationa summory for user {self.facebookId=}")
-            self.personalizationSummory = newSummory
-            self.personalizationSummoryLastUpdate = datetime.datetime.now()
-            dbSession.commit()
-        except Exception as e:
-            logger.error(e)
-            raise Exception(f"Error updating personalizationa summory for user {self.facebookId=}")
 
 
-class UserProifileChatRecords(TableBase):
+class UserChatRecord(TableBase):
     """Represents a semi key-value pair of user profile and chat records."""
     __tablename__ = "user_proifile_chat_records"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"user_profile.id"), index=True)
+    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"user_profile.id"), index=True, nullable=False)
     profile: so.Mapped["UserProfile"] = so.relationship(back_populates="chatRecordIds")
-    chatId: so.Mapped[str] = so.mapped_column(sa.ForeignKey(f"chats.chatId"), index=True)
+    chatId: so.Mapped[str] = so.mapped_column(sa.ForeignKey(f"chats.chatId"), index=True, nullable=False)
     summory: so.Mapped[str] = so.mapped_column(sa.String, nullable=True)
 
     def __init__(self, chatId: str, userProfile: UserProfile) -> None:
@@ -127,58 +102,6 @@ class UserProifileChatRecords(TableBase):
         self.chatId = chatId
         self.profile = userProfile
 
-    @classmethod
-    def fromChatId(cls, chatId: str, dbSession: so.Session) -> "UserProifileChatRecords | None":
-        """
-        Get associated User Profile of a chatId
-
-        :param chatId: The chatId.
-        :param dbSession: The dbSession to make the query.
-
-        :return: A new instance of UserProfile or None.
-        """
-        try:
-            logger.debug(f"Getting User profile of {chatId=}")
-            existingRecord = dbSession.query(cls).where(cls.chatId == chatId).first()
-            if existingRecord is not None:
-                logger.debug(f"Found UserProfile {existingRecord.profile.facebookId=} for {chatId=}")
-                return existingRecord
-            logger.debug(f"Record for {chatId=} not found")
-            return None
-        except Exception as e:
-            logger.error(e)
-            raise Exception("Error querying database")
-
-    @classmethod
-    def add(cls, chatId: str, userProfile: UserProfile, dbSession: so.Session) -> "UserProifileChatRecords":
-        """
-        Add chat user pair record, throw exeception if chatId is aready associated with a profile
-
-        :param chatId: The chatId.
-        :param userProfile: The User Profile.
-        :param dbSession: The dbSession to make the query.
-
-        :return: True if success
-        """
-        try:
-            logger.debug(f"adding chatId and user pair for {chatId=} | {userProfile.facebookId=}")
-            existingRecord = cls.fromChatId(chatId=chatId, dbSession=dbSession)
-            if existingRecord is not None:
-                logger.debug(f"Profile record already exists for {chatId=}")
-                if existingRecord.profile == userProfile:
-                    logger.debug(f"Profile record for {chatId=} matched, nothing to do")
-                    return existingRecord
-                if existingRecord.profile != userProfile:
-                    raise UserProifileChatRecordsExistExeception("The chatId is already associated with a profile")
-            logger.debug(f"adding chatId and user pair for {chatId=} | {userProfile.facebookId=}")
-            record = cls(chatId=chatId, userProfile=userProfile)
-            dbSession.add(record)
-            dbSession.commit()
-            return record
-        except Exception as e:
-            logger.error(e)
-            raise Exception("Error creating UserProfileChatId pair")
-
     def editSummory(self, newSummory: str, dbSession: so.Session) -> None:
         """
         Edit summory of this chat
@@ -191,14 +114,14 @@ class UserProifileChatRecords(TableBase):
         dbSession.commit()
 
 
-class UserProfileSession(TableBase):
+class UserSession(TableBase):
     """Used to store temporary access to user profiles"""
     __tablename__ = "user_proifile_sessions"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"user_profile.id"))
     profile: so.Mapped["UserProfile"] = so.relationship(back_populates="sessions")
     sessionToken: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, index=True)
-    expire: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime, nullable=False)
+    expire: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime(timezone=True), nullable=False)
 
     def __init__(self, profile: UserProfile, sessionToken: str, expire: datetime.datetime):
         """
@@ -211,87 +134,3 @@ class UserProfileSession(TableBase):
         self.profile = profile
         self.sessionToken = sessionToken
         self.expire = expire
-
-    @classmethod
-    def create(cls, userProfile: UserProfile, expire: datetime.datetime, dbSession: so.Session) -> "UserProfileSession":
-        """
-        Creates a new UserProfileSessions instance.
-
-        :param userProfile: The user profile associated with the session.
-        :param expire: The expiration datetime of the session.
-        :param dbSession: The dbSession to make the query.
-
-        :return: A new instance of UserProfileSessions with the provided profile and expiration.
-        """
-        try:
-            logger.debug(f"Initializing session from user profile: {userProfile.facebookId=}")
-            instance = cls(
-                profile=userProfile,
-                expire=expire,
-                sessionToken=hashlib.md5(f"{userProfile.facebookId}{str(uuid.uuid4())}".encode()).hexdigest(),
-            )
-        except Exception as e:
-            logger.error(e)
-            raise Exception("Session Creation Failed")
-
-        try:
-            logger.debug(f"Writing session data for: {userProfile.facebookId=}, {instance.sessionToken[:5]=}")
-            dbSession.add(instance)
-            dbSession.commit()
-            return instance
-        except Exception as e:
-            logger.error(f"Error creating session for user {userProfile.facebookId=}, {e}")
-            raise Exception("Error creating user session")
-
-    @classmethod
-    def get(cls, sessionToken: str, currentTime: datetime.datetime, dbSession: so.Session) -> UserProfile | None:
-        """
-        Get profile from sessionToken with expire check
-
-        :param sessionToken: The Sesion Token.
-        :param currentTime: The current Time Stamp.
-        :param dbSession: The dbSession to make the query.
-
-        :return: The user profile associated with the given session token. or None      
-        """
-        try:
-            logger.debug(f"getting profile for {sessionToken[:10]=}")
-            queryResault = dbSession.query(cls).where(cls.sessionToken == sessionToken).first()
-        except Exception as e:
-            logger.error(e)
-            raise Exception("Error querying db")
-
-        if queryResault is None:
-            logger.debug(f"session Token: {sessionToken[:10]=} - not found in db")
-            return None
-
-        try:
-            logger.debug(f"session Token: {sessionToken[:10]=} - checking expirery")
-            if currentTime >= pytz.UTC.localize(queryResault.expire):
-                logger  .debug(f"session Token: {sessionToken[:10]=} - expired, delete in db")
-                dbSession.delete(queryResault)
-                dbSession.commit()
-                return None
-        except Exception as e:
-            logger.error(e)
-            raise Exception("Error removing expired token")
-
-        return queryResault.profile
-
-    @classmethod
-    def clearProfile(cls, userProfile: UserProfile, dbSession: so.Session) -> None:
-        """
-        Delete all session for a user profile
-
-        :param userProfile: The user profile associated with the session.
-        :param dbSession: The dbSession to make the query.
-
-        :return: None
-        """
-        try:
-            logger.debug(f"Deleting userprofile session {userProfile.facebookId=}")
-            dbSession.query(cls).where(cls.profile == userProfile).delete()
-            dbSession.commit()
-        except Exception as e:
-            logger.error(e)
-            raise Exception(f"Error removing token for profile {str(userProfile.facebookId)[:10]=}")
