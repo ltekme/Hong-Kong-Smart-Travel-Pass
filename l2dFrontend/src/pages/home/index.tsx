@@ -76,9 +76,24 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             console.log(`[Home][useEffect(facebookProfile)] Set facebook profile to\n${JSON.stringify({
                 id: facebookProfile.id,
                 username: facebookProfile.name
-            }, null, 4)}`)
-            setUsername(facebookProfile.name)
+            }, null, 4)}`);
+            setUsername(facebookProfile.name);
+            return;
         }
+        fetch(chatLLMApiUrl, {
+            method: "GET",
+            headers: {},
+        }).then(data => data.json())
+            .then(d => {
+                setFacebookProfile({
+                    id: "",
+                    name: d.username,
+                    profilePicture: "",
+                    gender: "",
+                    accessToken: "",
+                    sessionId: d.sessionToken,
+                });
+            });
     }, [facebookProfile])
 
     // Check messageList length
