@@ -220,11 +220,11 @@ class ChatRecord(TableBase):
     """Represents a chat record."""
     __tablename__ = "chats"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest()), nullable=False, unique=True, index=True)
+    chatId: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, unique=True, index=True)
     messages: so.Mapped[t.List["ChatMessage"]] = so.relationship(back_populates="chat")
 
     def __init__(self,
-                 chatId: str = hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest(),
+                 chatId: t.Optional[str] = None,
                  messages: list[ChatMessage] = []
                  ):
         """
@@ -233,13 +233,13 @@ class ChatRecord(TableBase):
         :param chatId: The unique identifier for the chat.
         :param messages: A list of messages in the chat.
         """
-        self.chatId = chatId
+        self.chatId = chatId or hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest()
         self.messages = messages
 
     @classmethod
     def init(cls,
              dbSession: so.Session,
-             chatId: str = hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest()
+             chatId: t.Optional[str] = None,
              ) -> "ChatRecord":
         """
         Initialize a ChatRecord instance from the database.
@@ -249,7 +249,7 @@ class ChatRecord(TableBase):
         :return: An instance of ChatRecord.
         """
         logger.info(f"Initializing {__name__} from {chatId=}")
-        instance = cls(chatId)
+        instance = cls(chatId or hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest())
         existingChat = dbSession.query(cls).filter(cls.chatId == chatId).first()
         instance = existingChat if existingChat is not None else instance
         dbSession.add(instance)
@@ -265,6 +265,8 @@ class ChatRecord(TableBase):
         logger.debug(f"Adding message to chat {self.chatId}, {message.role=}:{message.text[:10]=}")
         if message.role not in ["user", "system", "ai"]:
             raise ValueError(f'message role must be one of ["user", "system", "ai"]')
+        if not message.text.strip():
+            message.text = "<EMPTY>"
         if len(self.messages) == 0 and message.role == "ai":
             raise ValueError("Cannot append message role=AI on the first message")
         if len(self.messages) > 0 and self.messages[-1].role == "ai" and message.role == "ai":

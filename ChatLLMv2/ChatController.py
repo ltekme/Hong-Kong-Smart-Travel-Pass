@@ -1,6 +1,7 @@
 import logging
 import hashlib
 import datetime
+import typing as t
 import sqlalchemy.orm as so
 
 from .DataHandler import (
@@ -30,7 +31,7 @@ class ChatController:
     def __init__(self,
                  dbSession: so.Session,
                  llmModel: BaseModel,
-                 chatId: str = hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest(),
+                 chatId: t.Optional[str] = None,
                  ) -> None:
         """
         Initialize a ChatController instance.
@@ -41,7 +42,7 @@ class ChatController:
         """
         logger.info(f"Initializing {__name__}")
         self.dbSession = dbSession
-        self._chatId = chatId
+        self._chatId = chatId or hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest()
         self.llmModel = llmModel
         self.chatInited = False  # to prevent hitting db when this just got inited
 

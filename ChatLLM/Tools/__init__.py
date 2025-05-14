@@ -10,12 +10,11 @@ from .Google import *
 class LLMTools:
 
     def __init__(self,
-                 credentials: t.Optional[Credentials],
+                 credentials: t.Optional[Credentials] = None,
                  google_api_key: Optional[str] = "",
                  google_cse_id: Optional[str] = "",
-                 verbose: bool = False) -> None:
+                 ) -> None:
         self.credentials = credentials
-        self.verbose = verbose
         self.google_api_key = google_api_key
         self.google_cse_id = google_cse_id
 
@@ -31,17 +30,17 @@ class LLMTools:
 
             # OpenRice
             GetOpenriceRestaurantRecommendationTool(
-                credentials=self.credentials, verbose=self.verbose),
+                credentials=self.credentials),
             GetOpenriceFilterTool(
-                credentials=self.credentials, verbose=self.verbose),
+                credentials=self.credentials),
 
             # MTR
             GetAllMTRStationInfoTool(
-                credentials=self.credentials, verbose=self.verbose),
+                credentials=self.credentials),
             GetMTRRouteSuggestionTool(
-                credentials=self.credentials, verbose=self.verbose),
+                credentials=self.credentials),
             GetMTRStationByNameTool(
-                credentials=self.credentials, verbose=self.verbose),
+                credentials=self.credentials),
 
             # Google
             PerformGoogleSearchTool(

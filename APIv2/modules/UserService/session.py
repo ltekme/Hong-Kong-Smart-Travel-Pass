@@ -39,7 +39,7 @@ def sessionDatetimeExpired(
 def createUserSession(
     userProfile: UserProfile,
     dbSession: so.Session,
-    expire: datetime.datetime = createSessionTokenExpireDatetime()
+    expire: t.Optional[datetime.datetime] = None
 ) -> UserSession:
     """
     Creates a new UserSessions instance.
@@ -51,6 +51,8 @@ def createUserSession(
     :return: A new instance of UserSessions with the provided profile and expiration.
     """
     logger.info(f"Initializing session from user profile: {userProfile.id=}")
+    if not expire:
+        expire = createSessionTokenExpireDatetime()
     encoString = f"{userProfile.id}{str(random.random())}{datetime.datetime.now(datetime.UTC)}"
     instance = UserSession(
         profile=userProfile,
@@ -81,7 +83,7 @@ def clearExpiredUserSession(userProfile: UserProfile, dbSession: so.Session) -> 
 def updateSessionTokenExpiration(
     sessionToken: str,
     dbSession: so.Session,
-    expire: datetime.datetime = createSessionTokenExpireDatetime(),
+    expire: t.Optional[datetime.datetime] = None,
     overide: bool = False
 ) -> UserSession | None:
     """
@@ -92,6 +94,8 @@ def updateSessionTokenExpiration(
     :param dbSession: The database session to use.
     :return: The updated expiration date.
     """
+    if not expire:
+        expire = createSessionTokenExpireDatetime()
     session = dbSession.query(UserSession).where(
         UserSession.sessionToken == sessionToken
     ).first()

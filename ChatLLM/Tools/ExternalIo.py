@@ -1,7 +1,20 @@
 import os
 import json
 import requests
-import inspect
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
+def setLogger(external_logger: logging.Logger) -> None:
+    """
+    Set the logger for the module.
+
+    :param external_logger: The external logger to use.
+    """
+    global logger
+    logger = external_logger
 
 
 REQUEST_HEADERS = {
@@ -22,10 +35,8 @@ REQUEST_HEADERS = {
 }
 
 
-def fetch(url: str, params: dict = {}, log_print=True) -> dict | list | str:
-    if log_print:
-        print(
-            f'\033[93m[{inspect.stack()[1][3]}] Fetching data from: ' + url + '\x1b[0m')
+def fetch(url: str, params: dict = {}) -> dict | list | str:
+    logger.info(f"Fetching data from: {url}")
     response = requests.request(
         method=params.get("method", "GET"),
         url=url,
@@ -33,9 +44,7 @@ def fetch(url: str, params: dict = {}, log_print=True) -> dict | list | str:
         data=params.get("body", None),
     )
     if not response.ok:
-        if log_print:
-            print(
-                f'\033[31m[{inspect.stack()[1][3]}] Failed Fetching data from: ' + url + '\x1b[0m')
+        logger.error(f'Failed Fetching data from: {url}')
         return "Failed to get data from url"
     try:
         responseContent = response.content
@@ -49,53 +58,41 @@ def fetch(url: str, params: dict = {}, log_print=True) -> dict | list | str:
                 f.write(str(responseContent))
             with open("./errors/last-dev.txt", 'w') as f:
                 f.write(str(decodedContent))
-            print(
-                f'\033[31m[{inspect.stack()[1][3]}] Failed Decoding data from: ' + url + f", Error {e}" + '\x1b[0m')
+            logger.error(f'Failed Decoding data from: {url}: Error: {e}')
 
 
-def create_folder_if_not_exists(folder_path: str, log_print=True):
+def create_folder_if_not_exists(folder_path: str):
     if not os.path.exists(folder_path):
-        if log_print:
-            print(
-                f'\033[31m[{inspect.stack()[1][3]}] Folder {folder_path} does not exist, creating\x1b[0m')
+        logger.info(f"Folder {folder_path} does not exist, creating")
         os.makedirs(folder_path)
 
 
-def write_json_file(data: dict | list, path: str, log_print=True) -> None:
+def write_json_file(data: dict | list, path: str) -> None:
     create_folder_if_not_exists(os.path.dirname(path))
-    if log_print:
-        print(
-            f'\033[31m[{inspect.stack()[1][3]}] Writing data to {path}\x1b[0m')
+    logger.info(f"Writing data to {path}")
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
 
 
-def read_json_file(path: str,  log_print=True) -> dict | list | None:
-    if log_print:
-        print(
-            f'\033[31m[{inspect.stack()[1][3]}] Trying to read data from {path}\x1b[0m')
+def read_json_file(path: str) -> dict | list | None:
+    logger.info(f"Trying to read data from {path}")
     try:
         with open(path, "r") as f:
             return json.load(f)
     except Exception as e:
-        print(
-            f'\033[31m[{inspect.stack()[1][3]}] Error reading data from {path}, {e}\x1b[0m')
+        logger.error(f"Error reading data from {path}")
         return None
 
 
-def write_file(data: str, path: str, log_print=True):
+def write_file(data: str, path: str):
     create_folder_if_not_exists(os.path.dirname(path))
-    if log_print:
-        print(
-            f'\033[31m[{inspect.stack()[1][3]}] Writing data to {path}\x1b[0m')
+    logger.info(f" Writing data to {path}")
     with open(path, 'w', encoding="utf-8-sig") as f:
         f.write(data)
 
 
-def read_file(path: str, log_print=True):
-    if log_print:
-        print(
-            f'\033[31m[{inspect.stack()[1][3]}] Trying to read data from {path}\x1b[0m')
+def read_file(path: str):
+    logger.info(f"Trying to read data from {path}")
     try:
         with open(path, 'r', encoding="utf-8-sig") as f:
             return f.read()

@@ -9,7 +9,7 @@ from .caller import MTRApi
 class MTRApiToolBase(BaseTool):
 
     def __init__(self,
-                 credentials: t.Optional[Credentials],
+                 credentials: t.Optional[Credentials] = None,
                  **kwargs:  dict[str, t.Any],
                  ) -> None:
         super().__init__(**kwargs)
@@ -23,14 +23,14 @@ class MTRApiToolBase(BaseTool):
 class GetAllMTRStationInfoTool(MTRApiToolBase):
 
     def __init__(self,
-                 credentials: t.Optional[Credentials],
+                 credentials: t.Optional[Credentials] = None,
                  **kwargs):
         super().__init__(credentials=credentials, **kwargs)
 
     class ToolArgs(BaseModel):
         pass
 
-    name: str = "Get All MTR Station Info"
+    name: str = "Get_All_MTR_Station_Info"
     description: str = "A tool used to get all mtr stations info, no input needed. This tool return a csv like string."
     args_schema: t.Type[BaseModel] = ToolArgs
 
@@ -41,7 +41,7 @@ class GetAllMTRStationInfoTool(MTRApiToolBase):
 class GetMTRStationByNameTool(MTRApiToolBase):
 
     def __init__(self,
-                 credentials: t.Optional[Credentials],
+                 credentials: t.Optional[Credentials] = None,
                  **kwargs):
         super().__init__(credentials=credentials, **kwargs)
 
@@ -50,7 +50,7 @@ class GetMTRStationByNameTool(MTRApiToolBase):
             description="Name of the MTR Station to search from, can be in English or Chinese. Provide as sccurate name as possible."
         )
 
-    name: str = "Get MTR Station By Name"
+    name: str = "Get_MTR_Station_By_Name"
     description: str = "A tool used to get mtr station by name, return a csv like string. More then one resautly may come up out of 4. When not sure which, ask the user. A complete list of stations can be obtained from the `Get All MTR Station Info` tool. This tool return a csv like string."
     args_schema: t.Type[BaseModel] = ToolArgs
 
@@ -64,7 +64,7 @@ class GetMTRStationByNameTool(MTRApiToolBase):
 class GetMTRRouteSuggestionTool(MTRApiToolBase):
 
     def __init__(self,
-                 credentials: t.Optional[Credentials],
+                 credentials: t.Optional[Credentials] = None,
                  **kwargs):
         super().__init__(credentials=credentials, **kwargs)
 
@@ -76,7 +76,7 @@ class GetMTRRouteSuggestionTool(MTRApiToolBase):
             description="ID of the destination MTR Station, can be either obtained from the `Get MTR Station By Name` tool, or the `Get All MTR Station Info` tool."
         )
 
-    name: str = "Get MTR Route Suggention"
+    name: str = "Get_MTR_Route_Suggention"
     description: str = "Used to get route suggestion by MTR, providing the origin and destination station id will resault one or more route option from origin to destination station. This tool return a string description of each route info."
     args_schema: t.Type[BaseModel] = ToolArgs
 

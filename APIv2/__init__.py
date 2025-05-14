@@ -6,7 +6,6 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from .routers import (
     chatLLM,
     googleServices,
@@ -28,18 +27,18 @@ app.include_router(profile.router)
 
 
 @app.exception_handler(500)
-@app.exception_handler(404)
 async def handleError(request: Request, exeception: t.Any) -> JSONResponse:
-    if isinstance(exeception, StarletteHTTPException):
-        statusCode = exeception.status_code
-    else:
-        statusCode = 418
     return JSONResponse(
-        status_code=statusCode,
-        headers={
-            "X-Error": "Nope" if statusCode == 404 else "I'm a teapot",
-        },
-        content={"detail": "Hello World! :-]"},
+        status_code=500,
+        content={"detail": "Server Error"},
+    )
+
+
+@app.exception_handler(404)
+async def handleNotFound(request: Request, exeception: t.Any) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content={"detail": "Content Not Avalable"},
     )
 
 
@@ -47,8 +46,5 @@ async def handleError(request: Request, exeception: t.Any) -> JSONResponse:
 async def handleValidationError(request: Request, exeception: RequestValidationError) -> JSONResponse:
     return JSONResponse(
         status_code=422,
-        headers={
-            "X-Error": "Invalid Request"
-        },
-        content={"detail": "Hello World! :-]"},
+        content={"detail": "Mailformed Request"},
     )

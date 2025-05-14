@@ -22,7 +22,7 @@ class GoogleServices:
     """Service class for interacting with Google Cloud's Text-to-Speech and Speech-to-Text APIs."""
 
     def __init__(self,
-                 credentials: t.Optional[Credentials],
+                 credentials: t.Optional[Credentials] = None,
                  apiKey: str | None = "",
                  ) -> None:
         """
@@ -45,7 +45,7 @@ class GoogleServices:
         :param lang: The language of the text ("en" for English, "zh" for Chinese).
         :return: The base64 encoded audio representation of the text.
         """
-        logger.debug(f"Synthesis starting for {text}")
+        logger.debug(f"Synthesis starting for {text[10:]=}")
         try:
             voiceLangMapping = {
                 "zh": VoiceSelectionParams(
@@ -97,7 +97,7 @@ class GoogleServices:
             logger.error(f"Cannot Perform Reverse Geocode Search: {e}")
             raise Exception("Cannot Perform Reverse Geocode Search due to errors")
 
-    def speechToText(self, audioData: str, lang: str = "zh-HK") -> str:
+    def speechToText(self, audioData: str) -> str:
         """
         Convert speech to text
 
@@ -105,9 +105,7 @@ class GoogleServices:
         :param lang: The language of the audio data ("zh-HK" for Cantonese, "en-US" for English).
         :return: The text representation of the audio data.
         """
-        logger.debug(f'Decoding audioData {audioData[:20]=}')
-        base64AudioData = audioData.split(',')[1]
-        audio_content = base64.b64decode(base64AudioData)
+        audio_content = base64.b64decode(audioData)
 
         logger.debug(f'Starting text regization for audioData {audioData[:20]=}')
         audio = RecognitionAudio(content=audio_content)

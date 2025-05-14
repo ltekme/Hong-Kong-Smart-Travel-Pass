@@ -59,7 +59,7 @@ class GetOpenriceRestaurantRecommendationTool(OpenricaApiToolBase):
             description="Number of search results, default 3, can be 1 to 10"
         )
 
-    name: str = "Get Openrice Restaurant Recommendation"
+    name: str = "Get_Openrice_Restaurant_Recommendation"
     description: str = """Used to get restaurant recommendation from Openrice. When no resault is found an empty list will be returned.
 Real-time data from Openrice like the restaurant information(phone, links, ...) can be obtained using this tool.
 When no input is provided, general recommendations will be provided.
@@ -105,7 +105,7 @@ class GetOpenriceFilterTool(OpenricaApiToolBase):
             description="""Used to get avalable filter options from keyword. Enter the keyword of the filter option like 'dim sum' for dish, 'kowloon bay station' for landmark, 'romantic' for theme, 'pet friendly' for amenity, 'below $50' for price range. This tool will return all avaliable filters that match the keyword."""
         )
 
-    name: str = "Get Openrice Filters"
+    name: str = "Get_Openrice_Filters"
     description: str = "Used to get filter options from Openrice. All avaliable filters can be obtained using this tool. Enter the filter keyword to search for avaliable filters. YOU MUST USE THIS TOOL TO GET AVALABLE FILTERS. THIS TOOL IS REQUIRED TO USE `Get Openrice Restaurant Recommendation` TOOL TO MAKE SURE THE CORRECTNESS OF EACH FILTER ID."
     args_schema:  t.Type[BaseModel] = ToolArgs
 

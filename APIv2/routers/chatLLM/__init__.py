@@ -7,6 +7,8 @@ from fastapi import (
 import sqlalchemy.orm as so
 
 from ChatLLMv2 import DataHandler
+from ChatLLMv2.ChatController import ChatController
+
 from .models import (
     chatLLMDataModel,
     ChatRecallModel,
@@ -17,9 +19,9 @@ from ...config import (
     logger,
 )
 from ...dependence import (
-    chatControllerDepend,
     googleServicesDepend,
     dbSessionDepend,
+    llmModel
 )
 from ...modules import (
     UserService
@@ -30,7 +32,7 @@ router = APIRouter(prefix="/chatLLM")
 
 def checkSessionTokenChatIdAssociation(
     chatId: str,
-    sessionToken: str,
+    sessionToken: t.Optional[str],
     dbSession: so.Session
 ) -> bool:
     """
@@ -42,6 +44,11 @@ def checkSessionTokenChatIdAssociation(
 
     :return: True if the session token is associated with the chatId.
     """
+    if sessionToken is None or not sessionToken.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="No Session Found"
+        )
     sessionTokenUserProfile = UserService.getUserProfileFromSessionToken(
         sessionToken=sessionToken,
         dbSession=dbSession,
@@ -62,6 +69,7 @@ def checkSessionTokenChatIdAssociation(
             status_code=403,
             detail="Converstation No Longer Valid"
         )
+    logger.debug(f"Validating {chatIdProfileRecord.profile.id=} == {sessionTokenUserProfile.id=}")
     if chatIdProfileRecord.profile != sessionTokenUserProfile:
         raise HTTPException(
             status_code=403,
@@ -73,7 +81,6 @@ def checkSessionTokenChatIdAssociation(
 @router.post("", response_model=chatLLMDataModel.Response)
 async def chatLLM(
     googleServices: googleServicesDepend,
-    chatController: chatControllerDepend,
     messageRequest: chatLLMDataModel.Request,
     dbSession: dbSessionDepend,
     x_SessionToken: t.Annotated[str | None, Header()] = None,
@@ -86,20 +93,14 @@ async def chatLLM(
     requestAttachmentList = messageRequest.content.media
     requestDisableTTS = messageRequest.disableTTS
 
-    logger.info(f"starting chatLLM request {messageRequest=}")
-    if x_SessionToken is None or not x_SessionToken.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="No Session Found"
-        )
-
+    logger.info(f"Validating chatLLM request {messageRequest=}")
     checkSessionTokenChatIdAssociation(
         chatId=requestChatId,
         sessionToken=x_SessionToken,
         dbSession=dbSession
     )
 
-    logger.info(f"Invoking {requestChatId=} chat controller")
+    logger.debug(f"Parcing {requestChatId=} chat message")
     try:
         attachments = list(map(
             lambda url: DataHandler.MessageAttachment(url, settings.applicationChatLLMMessageAttachmentPath),
@@ -110,7 +111,12 @@ async def chatLLM(
 
     message = DataHandler.ChatMessage("user", requestMessageText, attachments)
 
-    chatController.chatId = requestChatId
+    logger.debug(f"Invoking {requestChatId=} controller")
+    chatController = ChatController(
+        dbSession=dbSession,
+        llmModel=llmModel,
+        chatId=requestChatId
+    )
     response = chatController.invokeLLM(message)
 
     if not requestDisableTTS:
@@ -132,24 +138,23 @@ async def chatLLM(
 @router.get("/recall/{chatId}", response_model=ChatRecallModel.Response)
 async def chatRecall(
     chatId: str,
-    chatController: chatControllerDepend,
     dbSession: dbSessionDepend,
     x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> ChatRecallModel.Response:
-    logger.info(f"Recalling {chatId=} chat controller")
-    if x_SessionToken is None or not x_SessionToken.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="No Session Found"
-        )
-
+    """
+    Recall a chat session and return the session.
+    """
+    logger.info(f"Recalling {chatId=} controller")
     checkSessionTokenChatIdAssociation(
         chatId=chatId,
         sessionToken=x_SessionToken,
         dbSession=dbSession
     )
-
-    chatController.chatId = chatId
+    chatController = ChatController(
+        dbSession=dbSession,
+        llmModel=llmModel,
+        chatId=chatId
+    )
     messages = chatController.currentChatRecords.messages
     responseMessageList = [ChatRecallModel.ResponseMessage(
         role=i.role,
@@ -164,7 +169,6 @@ async def chatRecall(
 
 @router.get("/request", response_model=ChatIdResponse)
 async def chatRequest(
-    chatController: chatControllerDepend,
     dbSession: dbSessionDepend,
     x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> ChatIdResponse:
@@ -187,10 +191,15 @@ async def chatRequest(
             status_code=400,
             detail="Session Expired or invalid"
         )
+    chatController = ChatController(
+        dbSession=dbSession,
+        llmModel=llmModel,
+    )
     chatId = chatController.chatId
     UserService.associateChatIdWithUserProfile(
         chatId=chatId,
         userProfile=userProfile,
         dbSession=dbSession
     )
+    logger.debug(f"Returning {chatId=} to {userProfile.id=}")
     return ChatIdResponse(chatId=chatId)

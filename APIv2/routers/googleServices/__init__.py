@@ -1,6 +1,9 @@
-from fastapi import HTTPException, APIRouter
+from fastapi import APIRouter
 
-from .models import geocodeDataModel
+from .models import (
+    geocodeDataModel,
+    SpeechToTextModel,
+)
 from ...dependence import googleServicesDepend
 from ...config import logger
 
@@ -18,16 +21,23 @@ def get_geocoding(
     """
     longitude = location.longitude
     latitude = location.latitude
-    try:
-        logger.debug(f"Performing geocode location lookup for {(longitude, latitude)=}")
-        response = googleServices.geoLocationLookup(longitude, latitude)
-    except Exception as e:
-        logger.error(f"Got exeception of {e}")
-        if "Config Error" in str(e):
-            raise HTTPException(status_code=500, detail="Cannot perform geolocation lookup")
-        raise HTTPException(status_code=400, detail="Error performing geolocation lookup")
-    logger.debug(f"Got location of {response}")
+    logger.debug(f"Performing geocode location lookup for {(longitude, latitude)=}")
+    response = googleServices.geoLocationLookup(longitude, latitude)
+    logger.debug(f"Got location of {response} for {(longitude, latitude)=}")
     return geocodeDataModel.Response(location=response)
 
-# @router.post("/stt")
-# This is in v1, I am not bothered to move it
+
+@router.post("/stt")
+def speechToText(
+    googleServices: googleServicesDepend,
+    request: SpeechToTextModel.Request,
+) -> SpeechToTextModel.Response:
+    """
+    Transcribe base64 audio data 
+    """
+    logger.debug(f"Performing transcribe for {request.audioData[10:]=}")
+    response = googleServices.speechToText(request.audioData)
+    logger.debug(f"Respondign to transcribe {request.audioData[10:]=} - {response[10:]=}")
+    return SpeechToTextModel.Response(
+        message=response
+    )
