@@ -39,16 +39,18 @@ def fetch(url: str, params: dict = {}, log_print=True) -> dict | list | str:
         return "Failed to get data from url"
     try:
         responseContent = response.content
-        decodedContent = responseContent.decode("latin-1")
+        decodedContent = responseContent.decode("utf-8")
         return json.loads(decodedContent)
-    except Exception as e:
-        with open("./errors/last.txt", 'w') as f:
-            f.write(str(responseContent))
-        with open("./errors/last-dev.txt", 'w') as f:
-            f.write(str(decodedContent))
-        print(
-                f'\033[31m[{inspect.stack()[1][3]}] Failed Decoding data from: ' + url + f", Error {e}" +'\x1b[0m')
+    except json.decoder.JSONDecodeError:
         return response.content.decode("utf-8")
+    except Exception as e:
+        if os.path.exists("./errors"):
+            with open("./errors/last.txt", 'w') as f:
+                f.write(str(responseContent))
+            with open("./errors/last-dev.txt", 'w') as f:
+                f.write(str(decodedContent))
+            print(
+                f'\033[31m[{inspect.stack()[1][3]}] Failed Decoding data from: ' + url + f", Error {e}" + '\x1b[0m')
 
 
 def create_folder_if_not_exists(folder_path: str, log_print=True):

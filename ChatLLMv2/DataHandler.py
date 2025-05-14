@@ -2,10 +2,10 @@ import os
 import base64
 import logging
 import hashlib
+import datetime
 import typing as t
 from PIL import Image
 from io import BytesIO
-from uuid import uuid4
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 import sqlalchemy.sql as sl
@@ -220,10 +220,13 @@ class ChatRecord(TableBase):
     """Represents a chat record."""
     __tablename__ = "chats"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(uuid4()), nullable=False, unique=True, index=True)
+    chatId: so.Mapped[str] = so.mapped_column(sa.String, default=str(hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest()), nullable=False, unique=True, index=True)
     messages: so.Mapped[t.List["ChatMessage"]] = so.relationship(back_populates="chat")
 
-    def __init__(self, chatId: str = str(uuid4()), messages: list[ChatMessage] = []):
+    def __init__(self,
+                 chatId: str = hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest(),
+                 messages: list[ChatMessage] = []
+                 ):
         """
         Initialize a ChatRecord instance.
 
@@ -234,7 +237,10 @@ class ChatRecord(TableBase):
         self.messages = messages
 
     @classmethod
-    def init(cls, dbSession: so.Session, chatId: str = str(uuid4())) -> "ChatRecord":
+    def init(cls,
+             dbSession: so.Session,
+             chatId: str = hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest()
+             ) -> "ChatRecord":
         """
         Initialize a ChatRecord instance from the database.
 

@@ -7,3 +7,13 @@ export interface IFacebookProfile {
   sessionExpire?: number;
   sessionId?: string;
 }
+
+
+export interface IMessage {
+  role: "user" | "ai" | "loading",
+  media?: string[],
+  placeHolder?: boolean,
+  text?: string,
+  time?: string,
+  error?: boolean,
+}

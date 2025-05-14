@@ -1,5 +1,6 @@
 import logging
-from uuid import uuid4
+import hashlib
+import datetime
 import sqlalchemy.orm as so
 
 from .DataHandler import (
@@ -29,7 +30,7 @@ class ChatController:
     def __init__(self,
                  dbSession: so.Session,
                  llmModel: BaseModel,
-                 chatId: str = str(uuid4()),
+                 chatId: str = hashlib.md5(str(datetime.datetime.now(datetime.UTC)).encode()).hexdigest(),
                  ) -> None:
         """
         Initialize a ChatController instance.

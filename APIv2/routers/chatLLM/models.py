@@ -16,7 +16,8 @@ class chatLLMDataModel:
             )
 
         chatId: str = Field(
-            description="The chat ID, should be uuid string",
+            description="The chat ID, should be string",
+            default=None
         )
         content: MessageContent = Field(
             description="content to be sent to LLM",
@@ -45,6 +46,7 @@ class chatLLMDataModel:
             description="TTS Audio data in base64",
         )
 
+
 class ChatRecallModel:
 
     class ResponseMessage(BaseModel):
@@ -58,8 +60,14 @@ class ChatRecallModel:
 
     class Response(BaseModel):
         chatId: str = Field(
-            description="The chat ID, should be uuid string",
+            description="The chat ID, should be string",
         )
         messages: list["ChatRecallModel.ResponseMessage"] = Field(
             description="List of Messages",
         )
+
+
+class ChatIdResponse(BaseModel):
+    chatId: str = Field(
+        description="The chat ID, should be string",
+    )

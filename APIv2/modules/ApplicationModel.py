@@ -21,7 +21,7 @@ class SocialsProfileProvider(TableBase):
     SocialsProfileProvider class represents a social idnetifer provider.
     e.g. Facebook, Google SSO, X(Twitter)
     """
-    __tablename__ = "socials_provider"
+    __tablename__ = "user_profile_socials_provider"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, unique=True)
     socials: so.Mapped[t.List["UserSocialProfile"]] = so.relationship(back_populates="provider")
@@ -49,7 +49,7 @@ class UserSocialProfile(TableBase):
 
     profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile.id"))
     profile: so.Mapped["UserProfile"] = so.relationship(back_populates="socials")
-    provider_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("socials_provider.id"))
+    provider_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile_socials_provider.id"))
     provider: so.Mapped["SocialsProfileProvider"] = so.relationship(back_populates="socials")
 
     def __init__(self, profileId: str, provider: SocialsProfileProvider) -> None:
@@ -62,6 +62,22 @@ class UserSocialProfile(TableBase):
         self.provider = provider
 
 
+class UserType(TableBase):
+    """Represents a profile type."""
+    __tablename__ = "user_profile_type"
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, unique=True)
+    profiles: so.Mapped[t.List["UserProfile"]] = so.relationship(back_populates="type")
+
+    def __init__(self, name: str):
+        """
+        Initialize a UserType instance.
+
+        :param name: The name of the profile type.
+        """
+        self.name = name
+
+
 class UserProfile(TableBase):
     """Represents a user profile."""
     __tablename__ = "user_profile"
@@ -71,23 +87,26 @@ class UserProfile(TableBase):
     chatRecordIds: so.Mapped[t.List["UserChatRecord"]] = so.relationship(back_populates="profile")
     sessions: so.Mapped[t.List["UserSession"]] = so.relationship(back_populates="profile")
     socials: so.Mapped[t.List["UserSocialProfile"]] = so.relationship(back_populates="profile")
+    type_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile_type.id"), nullable=False)
+    type: so.Mapped["UserType"] = so.relationship(back_populates="profiles")
 
-    def __init__(self, username: str):
+    def __init__(self, username: str, type: UserType) -> None:
         """
         Initialize a UserProfile instance.
 
         :param username: The username of the user.
         """
         self.username = username
+        self.type = type
 
 
 class UserChatRecord(TableBase):
     """Represents a semi key-value pair of user profile and chat records."""
     __tablename__ = "user_proifile_chat_records"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"user_profile.id"), index=True, nullable=False)
+    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile.id"), index=True, nullable=False)
     profile: so.Mapped["UserProfile"] = so.relationship(back_populates="chatRecordIds")
-    chatId: so.Mapped[str] = so.mapped_column(sa.ForeignKey(f"chats.chatId"), index=True, nullable=False)
+    chatId: so.Mapped[str] = so.mapped_column(sa.ForeignKey("chats.chatId"), index=True, nullable=False)
     summory: so.Mapped[str] = so.mapped_column(sa.String, nullable=True)
 
     def __init__(self, chatId: str, userProfile: UserProfile) -> None:
@@ -118,7 +137,7 @@ class UserSession(TableBase):
     """Used to store temporary access to user profiles"""
     __tablename__ = "user_proifile_sessions"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(f"user_profile.id"))
+    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile.id"))
     profile: so.Mapped["UserProfile"] = so.relationship(back_populates="sessions")
     sessionToken: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, index=True)
     expire: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime(timezone=True), nullable=False)

@@ -1,14 +1,12 @@
-import { IMessage } from "../pages/home";
-import { chatLLMApiUrl, userPofilePersonalizationApiUrl } from "../Config";
+import { IMessage } from "../components/Interface";
+import { chatLLMApiRecallUrl, chatLLMApiUrl, userPofilePersonalizationApiUrl } from "../Config";
 import { IFacebookProfile } from "./Interface";
-import { getTTS, setTTS } from "./LocalStorageParamaters"
+import { getChatId, getTTS, setChatId, setTTS } from "./ParamStore"
 
 interface UserMenuProps {
     input: string;
     menuKeys: string[];
     setMenuKeys: React.Dispatch<React.SetStateAction<string[]>>;
-    chatId?: string;
-    setChatId?: React.Dispatch<React.SetStateAction<string>>;
     setMessageList?: React.Dispatch<React.SetStateAction<IMessage[]>>;
     facebookProfile?: IFacebookProfile;
 }
@@ -22,12 +20,10 @@ export const userMenu = async ({
     input,
     menuKeys,
     setMenuKeys,
-    chatId,
-    setChatId,
     facebookProfile,
     setMessageList
 }: UserMenuProps) => {
-    let chatIdDisplay = chatId;
+    let chatIdDisplay = getChatId();
 
     const Init000 = () => {
         setMenuKeys(["Init000"])
@@ -53,7 +49,7 @@ export const userMenu = async ({
         return "Please type chat id to recall";
     }
     const Init000_1_2_ = () => {
-        const response = fetch(`${chatLLMApiUrl}/${input}`)
+        const response = fetch(`${chatLLMApiRecallUrl}/${input}`)
         response
             .then(x => x.json())
             .then(data => {

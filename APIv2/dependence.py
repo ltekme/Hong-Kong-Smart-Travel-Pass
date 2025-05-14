@@ -1,3 +1,4 @@
+import os
 import typing as t
 
 from fastapi import Depends
@@ -14,6 +15,7 @@ from ChatLLMv2.ChatModel import Graph
 from ChatLLMv2.ChatModel.Property import AdditionalModelProperty
 from ChatLLMv2 import (
     ChatController,
+    DataHandler,
 )
 
 from ChatLLM.Tools import LLMTools
@@ -22,25 +24,35 @@ from .config import (
     logger,
 )
 
-credentials = Credentials.from_service_account_file(settings.gcpServiceAccountFilePath)  # type: ignore
+ChatController.setLogger(logger)
+DataHandler.setLogger(logger)
+Graph.setLogger(logger)
+
+
+if not os.path.exists(settings.gcpServiceAccountFilePath):
+    logger.warning(f"Google Service Account File not found: {settings.gcpServiceAccountFilePath}, may lead to errors if client not set up correctly")
+    credentials = None
+else:
+    credentials = Credentials.from_service_account_file(settings.gcpServiceAccountFilePath)  # type: ignore
+
 llm = ChatVertexAI(
     model="gemini-1.5-flash-002",
     temperature=0.5,
     max_tokens=8192,
-    timeout=None,
     top_p=0.5,
     max_retries=2,
     credentials=credentials,
-    project=credentials.project_id,  # type: ignore
-    region="us-central1",
+    project=credentials.project_id if credentials is not None else None,  # type: ignore
 )
 
-ChatController.setLogger(logger)
-tools = LLMTools(
-    credentials=credentials,
-    verbose=True
+# TODO: Migrate to better LLM Tools Handling
+
+llmModelProperty = AdditionalModelProperty(
+    llmTools=LLMTools(
+        credentials=credentials,
+        verbose=True
+    ).all,
 )
-llmModelProperty = AdditionalModelProperty(llmTools=tools.all)
 
 llmModel = Graph.GraphModel(llm=llm)
 

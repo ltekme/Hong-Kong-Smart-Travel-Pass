@@ -9,8 +9,8 @@ from .caller import MTRApi
 class MTRApiToolBase(BaseTool):
 
     def __init__(self,
-                 credentials: Credentials,
-                 **kwargs,
+                 credentials: t.Optional[Credentials],
+                 **kwargs:  dict[str, t.Any],
                  ) -> None:
         super().__init__(**kwargs)
         self._mtr = MTRApi(credentials=credentials, **kwargs)
@@ -23,7 +23,7 @@ class MTRApiToolBase(BaseTool):
 class GetAllMTRStationInfoTool(MTRApiToolBase):
 
     def __init__(self,
-                 credentials: Credentials,
+                 credentials: t.Optional[Credentials],
                  **kwargs):
         super().__init__(credentials=credentials, **kwargs)
 
@@ -41,7 +41,7 @@ class GetAllMTRStationInfoTool(MTRApiToolBase):
 class GetMTRStationByNameTool(MTRApiToolBase):
 
     def __init__(self,
-                 credentials: Credentials,
+                 credentials: t.Optional[Credentials],
                  **kwargs):
         super().__init__(credentials=credentials, **kwargs)
 
@@ -64,7 +64,7 @@ class GetMTRStationByNameTool(MTRApiToolBase):
 class GetMTRRouteSuggestionTool(MTRApiToolBase):
 
     def __init__(self,
-                 credentials: Credentials,
+                 credentials: t.Optional[Credentials],
                  **kwargs):
         super().__init__(credentials=credentials, **kwargs)
 

@@ -1,13 +1,17 @@
-import uuid
 import typing as t
 from fastapi import (
     APIRouter,
     HTTPException,
     Header
 )
+import sqlalchemy.orm as so
 
 from ChatLLMv2 import DataHandler
-from .models import chatLLMDataModel, ChatRecallModel
+from .models import (
+    chatLLMDataModel,
+    ChatRecallModel,
+    ChatIdResponse
+)
 from ...config import (
     settings,
     logger,
@@ -24,6 +28,48 @@ from ...modules import (
 router = APIRouter(prefix="/chatLLM")
 
 
+def checkSessionTokenChatIdAssociation(
+    chatId: str,
+    sessionToken: str,
+    dbSession: so.Session
+) -> bool:
+    """
+    Check if the session token is associated with the chatId.
+
+    :param chatId: The chatId.
+    :param sessionToken: The session token.
+    :param dbSession: The database session to use.
+
+    :return: True if the session token is associated with the chatId.
+    """
+    sessionTokenUserProfile = UserService.getUserProfileFromSessionToken(
+        sessionToken=sessionToken,
+        dbSession=dbSession,
+        bypassExpire=False
+    )
+    if sessionTokenUserProfile is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Session Expired or invalid"
+        )
+    logger.info(f"Getting {chatId=} associated profile")
+    chatIdProfileRecord = UserService.getUserProfileChatRecordFromChatId(
+        chatId=chatId,
+        dbSession=dbSession,
+    )
+    if chatIdProfileRecord is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Converstation No Longer Valid"
+        )
+    if chatIdProfileRecord.profile != sessionTokenUserProfile:
+        raise HTTPException(
+            status_code=403,
+            detail="The requested chatId does not belong to your session"
+        )
+    return True
+
+
 @router.post("", response_model=chatLLMDataModel.Response)
 async def chatLLM(
     googleServices: googleServicesDepend,
@@ -35,52 +81,25 @@ async def chatLLM(
     """
     Invoke the language model with a user message and get the response.
     """
-    requestChatId = messageRequest.chatId or str(uuid.uuid4())
+    requestChatId = messageRequest.chatId
     requestMessageText = messageRequest.content.message
     requestAttachmentList = messageRequest.content.media
     requestDisableTTS = messageRequest.disableTTS
 
-    logger.debug(f"starting chatLLM request {messageRequest=}")
-    if x_SessionToken is None:
+    logger.info(f"starting chatLLM request {messageRequest=}")
+    if x_SessionToken is None or not x_SessionToken.strip():
         raise HTTPException(
             status_code=400,
             detail="No Session Found"
         )
-    sessionTokenUserProfile = UserService.getUserProfileFromSessionToken(
-        sessionToken=x_SessionToken,
-        dbSession=dbSession,
-        bypassExpire=False
-    )
-    if sessionTokenUserProfile is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Session Expired or invalid"
-        )
 
-    logger.debug(f"Getting {requestChatId=} associated profile")
-    chatIdProfileRecord = UserService.getUserProfileChatRecordFromChatId(
+    checkSessionTokenChatIdAssociation(
         chatId=requestChatId,
-        dbSession=dbSession,
+        sessionToken=x_SessionToken,
+        dbSession=dbSession
     )
-    if chatIdProfileRecord is None:
-        if dbSession.query(DataHandler.ChatRecord).where(
-            DataHandler.ChatRecord.chatId == requestChatId
-        ).first() is not None:
-            raise HTTPException(
-                status_code=403,
-                detail="Converstation No Longer Valid"
-            )
-        chatIdProfileRecord = UserService.associateChatIdWithUserProfile(
-            chatId=requestChatId,
-            userProfile=sessionTokenUserProfile,
-            dbSession=dbSession,
-        )
-    if sessionTokenUserProfile != chatIdProfileRecord.profile:
-        raise HTTPException(
-            status_code=403,
-            detail="Invalid"
-        )
 
+    logger.info(f"Invoking {requestChatId=} chat controller")
     try:
         attachments = list(map(
             lambda url: DataHandler.MessageAttachment(url, settings.applicationChatLLMMessageAttachmentPath),
@@ -110,11 +129,26 @@ async def chatLLM(
     )
 
 
-@router.get("/{chatId}", response_model=ChatRecallModel.Response)
+@router.get("/recall/{chatId}", response_model=ChatRecallModel.Response)
 async def chatRecall(
     chatId: str,
     chatController: chatControllerDepend,
+    dbSession: dbSessionDepend,
+    x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> ChatRecallModel.Response:
+    logger.info(f"Recalling {chatId=} chat controller")
+    if x_SessionToken is None or not x_SessionToken.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="No Session Found"
+        )
+
+    checkSessionTokenChatIdAssociation(
+        chatId=chatId,
+        sessionToken=x_SessionToken,
+        dbSession=dbSession
+    )
+
     chatController.chatId = chatId
     messages = chatController.currentChatRecords.messages
     responseMessageList = [ChatRecallModel.ResponseMessage(
@@ -126,3 +160,37 @@ async def chatRecall(
         chatId=chatId,
         messages=responseMessageList
     )
+
+
+@router.get("/request", response_model=ChatIdResponse)
+async def chatRequest(
+    chatController: chatControllerDepend,
+    dbSession: dbSessionDepend,
+    x_SessionToken: t.Annotated[str | None, Header()] = None,
+) -> ChatIdResponse:
+    """
+    Create a new chat session and return the chat ID.
+    """
+    logger.info(f"Creating new chat session")
+    if x_SessionToken is None or not x_SessionToken.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="No Session Found"
+        )
+    userProfile = UserService.getUserProfileFromSessionToken(
+        sessionToken=x_SessionToken,
+        dbSession=dbSession,
+        bypassExpire=False
+    )
+    if userProfile is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Session Expired or invalid"
+        )
+    chatId = chatController.chatId
+    UserService.associateChatIdWithUserProfile(
+        chatId=chatId,
+        userProfile=userProfile,
+        dbSession=dbSession
+    )
+    return ChatIdResponse(chatId=chatId)

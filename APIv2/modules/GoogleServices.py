@@ -8,7 +8,11 @@ from google.cloud.texttospeech import (
     AudioConfig,
     AudioEncoding,
 )
-from google.cloud.speech import SpeechClient
+from google.cloud.speech import (
+    SpeechClient,
+    RecognitionAudio,
+    RecognitionConfig
+)
 from google.oauth2.service_account import Credentials
 
 from ..config import logger
@@ -18,7 +22,7 @@ class GoogleServices:
     """Service class for interacting with Google Cloud's Text-to-Speech and Speech-to-Text APIs."""
 
     def __init__(self,
-                 credentials: Credentials,
+                 credentials: t.Optional[Credentials],
                  apiKey: str | None = "",
                  ) -> None:
         """
@@ -28,6 +32,8 @@ class GoogleServices:
         :param apiKey: The API key for Google Cloud services.
         """
         self.apiKey = apiKey
+        if not credentials:
+            logger.warning(f'Google Service Credentials not present, may lead to errors if client is not set up')
         self.ttsClient = TextToSpeechClient(credentials=credentials)
         self.sttClient = SpeechClient(credentials=credentials)  # type: ignore
 
@@ -90,3 +96,37 @@ class GoogleServices:
         except Exception as e:
             logger.error(f"Cannot Perform Reverse Geocode Search: {e}")
             raise Exception("Cannot Perform Reverse Geocode Search due to errors")
+
+    def speechToText(self, audioData: str, lang: str = "zh-HK") -> str:
+        """
+        Convert speech to text
+
+        :param audioData: The base64 encoded audio data to convert to text.
+        :param lang: The language of the audio data ("zh-HK" for Cantonese, "en-US" for English).
+        :return: The text representation of the audio data.
+        """
+        logger.debug(f'Decoding audioData {audioData[:20]=}')
+        base64AudioData = audioData.split(',')[1]
+        audio_content = base64.b64decode(base64AudioData)
+
+        logger.debug(f'Starting text regization for audioData {audioData[:20]=}')
+        audio = RecognitionAudio(content=audio_content)
+        config = RecognitionConfig(
+            enable_spoken_emojis=False,
+            encoding=RecognitionConfig.AudioEncoding.WEBM_OPUS,
+            sample_rate_hertz=48000,
+            language_code='yue-Hant-HK',
+            alternative_language_codes=['en-US', 'yue-Hant-HK'],  # 'cmn-Hans-CN'
+            use_enhanced=True,
+            # Enable automatic punctuation
+            enable_automatic_punctuation=True,
+        )
+        response = self.sttClient.recognize(  # type: ignore
+            config=config,
+            audio=audio
+        )
+        transcript = ''
+        for result in response.results:  # type: ignore
+            transcript += result.alternatives[0].transcript  # type: ignore
+        logger.debug(f"Finish Recognition for {audioData[:20]=} got {transcript[:10]=}")
+        return str(transcript)  # type: ignore

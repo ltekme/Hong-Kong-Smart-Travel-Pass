@@ -188,8 +188,6 @@ export class WavFileHandler {
 
     const asyncFileLoad = async () => {
       return fetch(filePath).then((responce) => {
-        console.log('responce', responce);
-        console.log('responce body', responce.body);
         return responce.arrayBuffer();
       });
     };
@@ -235,7 +233,6 @@ export class WavFileHandler {
           ret = false;
           throw new Error("File is not linear PCM.");
         }
-        console.warn("some sht 9 pass all");
 
         this._wavFileInfo._numberOfChannels =
           this._byteReader.get16LittleEndian();
@@ -252,16 +249,11 @@ export class WavFileHandler {
           this._byteReader._readOffset += fmtChunkSize - 16;
         }          
         
-        
-        console.warn("some sht 9 shoud sstar play loo");
-  
 
         while (
           !this._byteReader.getCheckSignature("data") &&
           this._byteReader._readOffset < this._byteReader._fileSize
         ) {
-          console.warn("passed all check, shit audio should be playing on ", this._byteReader._readOffset);
-  
           this._byteReader._readOffset +=
             this._byteReader.get32LittleEndian() + 4;
         }
@@ -306,7 +298,7 @@ export class WavFileHandler {
 
         ret = true;
       } catch (e) {
-        console.log(e);
+        console.error(e);
       }
     })();
 

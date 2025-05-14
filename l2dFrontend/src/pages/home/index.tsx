@@ -10,42 +10,19 @@ import { userMenuActivationCommand } from "../../Config";
 
 import Swal from "sweetalert2";
 import { userMenu } from "../../components/Menu";
-import { getTTS } from "../../components/LocalStorageParamaters";
+import { getChatId, setChatId } from "../../components/ParamStore";
+
+import { callChatLLMApi } from "../../components/APIService";
+
+import { IMessage } from "../../components/Interface";
 
 export interface IHome {
     confirmAgree: boolean,
     l2dSpeak: (url: string) => void
 }
 
-export interface IMessage {
-    role: "user" | "ai" | "loading",
-    media?: string[],
-    placeHolder?: boolean,
-    text?: string,
-    time?: string,
-    error?: boolean,
-}
-
-export interface ILLMRequest {
-    chatId: string
-    content: {
-        message: string,
-        media: string[]
-    },
-    location: string,
-    context?: object,
-    disableTTS?: boolean,
-}
-
-export interface ILLMResponse {
-    audioBase64: string,
-    respondMessage: string,
-}
-
-
 const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
     const [messageList, setMessageList] = useState<IMessage[]>([]);
-    const [chatId, setChatId] = useState("");
     const [lastUserMessageMedia, setLastUserMessageMedia] = useState<string[]>([]);
     const [displayHello, setDisplayHello] = useState(true);
     const [userLocationLegent, setUserLocationLegent] = useState("");
@@ -63,14 +40,6 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
     });
     const [username, setUsername] = useState('');
 
-    //inti
-    useEffect(() => {
-        const initializeApp = async () => {
-            setChatId(sessionStorage.getItem('mockChatID') || crypto.randomUUID()); // 114115 crypto.randomUUID()
-        };
-        initializeApp();
-    }, [])
-
     useEffect(() => {
         if (facebookProfile.id) {
             console.log(`[Home][useEffect(facebookProfile)] Set facebook profile to\n${JSON.stringify({
@@ -80,20 +49,6 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             setUsername(facebookProfile.name);
             return;
         }
-        fetch(chatLLMApiUrl, {
-            method: "GET",
-            headers: {},
-        }).then(data => data.json())
-            .then(d => {
-                setFacebookProfile({
-                    id: "",
-                    name: d.username,
-                    profilePicture: "",
-                    gender: "",
-                    accessToken: "",
-                    sessionId: d.sessionToken,
-                });
-            });
     }, [facebookProfile])
 
     // Check messageList length
@@ -104,36 +59,6 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             setDisplayHello(true);
         }
     }, [messageList]);
-
-    // Fetch from server
-    const sendToLLM = async (userMessageObject: ILLMRequest): Promise<ILLMResponse> => {
-        console.debug(`[Home][setMessageMedia] Sending request to LLM API\n${JSON.stringify(userMessageObject, null, 4)}`)
-        let headers: {
-            'Content-Type': string,
-            'x-SessionToken'?: string,
-        } = {
-            'Content-Type': 'application/json',
-        }
-        if (facebookProfile.sessionId) {
-            headers["x-SessionToken"] = facebookProfile.sessionId
-        }
-        userMessageObject.disableTTS = !getTTS();
-        const response = await fetch(chatLLMApiUrl, {
-            method: "POST",
-            headers: headers,
-            body: JSON.stringify(userMessageObject),
-        });
-        const jsonResponse = await response.json();
-        if (response.status !== 200) {
-            throw new Error(jsonResponse.detail)
-        }
-        let responseObject = {
-            audioBase64: jsonResponse.ttsAudio ? jsonResponse.ttsAudio : "",
-            respondMessage: jsonResponse.message
-        }
-        console.debug(`[Home][setMessageMedia] Got ok response\n${JSON.stringify(responseObject, null, 4)}`)
-        return responseObject // respondMessage
-    }
 
     const setMessageMedia = (media: string[]) => {
         console.debug(`[Home][setMessageMedia] Setting Media\n${media.slice(0, 30)}`)
@@ -202,8 +127,6 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                 input: messageText,
                 menuKeys: userMenuKeys,
                 setMenuKeys: setUserMenuKeys,
-                chatId: chatId,
-                setChatId: setChatId,
                 setMessageList: setMessageList,
                 facebookProfile: facebookProfile,
             });
@@ -225,8 +148,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             newMessageList.push({ role: "loading", });
             return newMessageList;
         });
-        sendToLLM({
-            chatId: chatId,
+        callChatLLMApi({
             content: {
                 message: messageText,
                 media: lastUserMessageMedia
@@ -254,7 +176,7 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                 }
             })
             .catch(e => {
-                console.error(`[Home][sendMessage] Got error from [sendToLLM]\n${e}`);
+                console.error(`[Home][sendMessage] Got error from [callChatLLMApi]\n${e}`);
                 Swal.fire({
                     title: "Something went wrong",
                     text: e.toString(),

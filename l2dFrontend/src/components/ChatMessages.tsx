@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from 'react-markdown';
-import { IMessage } from "../pages/home";
+import { IMessage } from "./Interface";
 
 export interface IChatBox {
     message: IMessage,
     keyIdx: string,
     profilePictureUrl: string,
-    chatListRef: React.MutableRefObject<any>
+    chatListRef: React.RefObject<any>
 }
 export interface IUserChatList {
     messageList: IMessage[],
@@ -19,7 +19,6 @@ export const Chatbox = ({
     profilePictureUrl,
     chatListRef
 }: IChatBox) => {
-    const [delayDisplayText, setDelayDisplayText] = useState("");
     const userImage = require("./image/image.jpg");
     const aiImage = require("./image/gemini.svg").default;
     useEffect(() => {

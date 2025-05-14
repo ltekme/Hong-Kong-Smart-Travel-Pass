@@ -1,6 +1,8 @@
 import os
 import inspect
 
+import typing as t
+
 from google.oauth2.service_account import Credentials
 from langchain_google_vertexai import VertexAIEmbeddings
 from langchain_chroma import Chroma
@@ -19,7 +21,7 @@ class MTRApi():
         print(f'\033[41;37m[mtr][{inspect.stack()[1][3]}] ' + msg + '\x1b[0m')
 
     def __init__(self,
-                 credentials: Credentials,
+                 credentials: t.Optional[Credentials],
                  store=True,
                  verbose=False,
                  chroma_db_path="./chroma_db",

@@ -32,7 +32,7 @@ class FilterBase(OpenriceBase):
 
     _raw_data = None
     _data = None
-    _FILTER_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/region/all?uiLang=en&uiCity=hongkong"
+    _FILTER_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/region/all"# ?uiLang=en&uiCity=hongkong"
     _METADATA_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/country/all"
 
     def __init__(self,

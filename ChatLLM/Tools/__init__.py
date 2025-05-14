@@ -10,10 +10,10 @@ from .Google import *
 class LLMTools:
 
     def __init__(self,
-                 credentials: Credentials,
+                 credentials: t.Optional[Credentials],
                  google_api_key: Optional[str] = "",
                  google_cse_id: Optional[str] = "",
-                 verbose=False) -> None:
+                 verbose: bool = False) -> None:
         self.credentials = credentials
         self.verbose = verbose
         self.google_api_key = google_api_key
@@ -23,7 +23,7 @@ class LLMTools:
     def all(self) -> list[BaseTool]:
         return self.getall()
 
-    def getall(self):
+    def getall(self) -> list[t.Any]:
         return [
             # Hong Kong Observery
             GetWeatherForcastTool(),
@@ -44,10 +44,10 @@ class LLMTools:
                 credentials=self.credentials, verbose=self.verbose),
 
             # Google
-            # PerformGoogleSearchTool(
-            #     google_cse_id=self.google_cse_id,
-            #     google_api_key=self.google_api_key,
-            # ),
+            PerformGoogleSearchTool(
+                google_cse_id=self.google_cse_id,
+                google_api_key=self.google_api_key,
+            ),
             ReverseGeocodeConvertionTool(
                 google_api_key=self.google_api_key,
             ),
