@@ -44,21 +44,23 @@ class UserSocialProfile(TableBase):
     __tablename__ = "user_profile_socials"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     socialId: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
-    profileSummory: so.Mapped[str | None] = so.mapped_column(sa.String, nullable=True)
+    socialName: so.Mapped[str | None] = so.mapped_column(sa.String, nullable=True)
+    socialProfileSummory: so.Mapped[str | None] = so.mapped_column(sa.String, nullable=True)
     lastUpdate: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime(timezone=True), default=sl.func.now())
 
-    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile.id"))
-    profile: so.Mapped["UserProfile"] = so.relationship(back_populates="socials")
-    provider_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile_socials_provider.id"))
+    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile.id"), nullable=True)
+    profile: so.Mapped[t.Optional["UserProfile"]] = so.relationship(back_populates="socials")
+    provider_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile_socials_provider.id"), nullable=False)
     provider: so.Mapped["SocialsProfileProvider"] = so.relationship(back_populates="socials")
 
-    def __init__(self, profileId: str, provider: SocialsProfileProvider) -> None:
+    def __init__(self, socialId: str, provider: SocialsProfileProvider) -> None:
         """
         Initialize a UserProfileSocialRecord instance.
 
+        :param socialId: The socialId of the user.
         :param name: The profileId of the socials.
         """
-        self.profileId = profileId
+        self.socialId = socialId
         self.provider = provider
 
 

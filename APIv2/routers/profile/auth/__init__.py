@@ -12,7 +12,9 @@ from ....dependence import (
 from ....config import (
     logger,
 )
-from ....modules import UserService
+from ....modules.FacebookClient import FacebookClient
+from ....modules.Services.user import UserSessionService, UserTypeService, UserService
+from ....modules.Services.social import FacebookService, SocialProfileService, SocialProviderService, FacebookUserIdentifyExeception
 
 router = APIRouter(prefix="/auth")
 
@@ -23,43 +25,40 @@ async def auth(
     x_FacebookAccessToken: t.Annotated[str | None, Header()] = None,
 ) -> AuthDataModel.Response:
     """Get sessionToken for a user"""
+    userService = UserService(dbSession, UserTypeService(dbSession))
+    userSessionService = UserSessionService(dbSession)
+    facebookService = FacebookService(
+        dbSession=dbSession,
+        userService=userService,
+        socialProfileService=SocialProfileService(dbSession),
+        socialProviderService=SocialProviderService(dbSession),
+        facebookClient=FacebookClient(),
+    )
     if x_FacebookAccessToken is None:
         # Anonymous User
-        anonymousUser = UserService.createAnonymousUser(dbSession=dbSession)
-        anonymousUserSession = UserService.createUserSession(
-            userProfile=anonymousUser,
-            expire=UserService.createSessionTokenExpireDatetime(),
-            dbSession=dbSession,
-        )
+        anonymousUser = userService.createAnonymous()
+        anonymousUserSession = userSessionService.createForUserProfile(anonymousUser)
+        logger.info(f"Created session for anonymous user {anonymousUser.username=}")
+        dbSession.commit()
         return AuthDataModel.Response(
             sessionToken=anonymousUserSession.sessionToken,
             expireEpoch=int(time.mktime(anonymousUserSession.expire.timetuple())),
             username=anonymousUser.username,
         )
-
     try:
-        user = UserService.getUserProfileFromFacebookAccessToken(
-            accessToken=x_FacebookAccessToken,
-            dbSession=dbSession,
-        )
-    except UserService.FacebookUserIdentifyExeception as e:
+        user = facebookService.getOrCreateUserProfileFromAccessToken(x_FacebookAccessToken)
+    except FacebookUserIdentifyExeception as e:
         logger.warning(e)
         raise HTTPException(
             status_code=400,
             detail=e
         )
     logger.info(f"Removing existing session for {user.id=}")
-    UserService.clearExpiredUserSession(
-        userProfile=user,
-        dbSession=dbSession,
-    )
+    userSessionService.clearExpiredUserSession(user)
     logger.info(f"Creating session for {x_FacebookAccessToken[:10]=}")
-    session = UserService.createUserSession(
-        userProfile=user,
-        expire=UserService.createSessionTokenExpireDatetime(),
-        dbSession=dbSession
-    )
+    session = userSessionService.createForUserProfile(user)
     logger.info(f"created session for {x_FacebookAccessToken[:10]=}, {session.sessionToken[:10]=}")
+    dbSession.commit()
     return AuthDataModel.Response(
         sessionToken=session.sessionToken,
         expireEpoch=int(time.mktime(session.expire.timetuple())),
@@ -78,15 +77,15 @@ async def ping(
             status_code=400,
             detail="No Session Found"
         )
-    session = UserService.updateSessionTokenExpiration(
-        sessionToken=x_SessionToken,
-        dbSession=dbSession,
-    )
+    userSessionService = UserSessionService(dbSession)
+    session = userSessionService.updateExpiration(x_SessionToken)
     if session is None:
         raise HTTPException(
             status_code=400,
             detail="Session Expired or invalid"
         )
+    dbSession.commit()
+    logger.info(f"Updated session {x_SessionToken[:10]=} for {session.profile.username=}")
     return AuthDataModel.Response(
         sessionToken=x_SessionToken,
         expireEpoch=int(time.mktime(session.expire.timetuple())),

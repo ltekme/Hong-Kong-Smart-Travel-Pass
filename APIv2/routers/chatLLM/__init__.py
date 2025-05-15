@@ -4,8 +4,6 @@ from fastapi import (
     HTTPException,
     Header
 )
-import sqlalchemy.orm as so
-
 from ChatLLMv2 import DataHandler
 from ChatLLMv2.ChatController import ChatController
 
@@ -23,9 +21,8 @@ from ...dependence import (
     dbSessionDepend,
     llmModel
 )
-from ...modules import (
-    UserService
-)
+from ...modules.Services.user import UserSessionService, UserChatRecordService
+
 
 router = APIRouter(prefix="/chatLLM")
 
@@ -33,7 +30,8 @@ router = APIRouter(prefix="/chatLLM")
 def checkSessionTokenChatIdAssociation(
     chatId: str,
     sessionToken: t.Optional[str],
-    dbSession: so.Session
+    userChatRecordService: UserChatRecordService,
+    userSessionService: UserSessionService,
 ) -> bool:
     """
     Check if the session token is associated with the chatId.
@@ -49,28 +47,24 @@ def checkSessionTokenChatIdAssociation(
             status_code=400,
             detail="No Session Found"
         )
-    sessionTokenUserProfile = UserService.getUserProfileFromSessionToken(
+    sessionTokenSession = userSessionService.getSessionFromSessionToken(
         sessionToken=sessionToken,
-        dbSession=dbSession,
         bypassExpire=False
     )
-    if sessionTokenUserProfile is None:
+    if sessionTokenSession is None:
         raise HTTPException(
             status_code=400,
             detail="Session Expired or invalid"
         )
     logger.info(f"Getting {chatId=} associated profile")
-    chatIdProfileRecord = UserService.getUserProfileChatRecordFromChatId(
-        chatId=chatId,
-        dbSession=dbSession,
-    )
+    chatIdProfileRecord = userChatRecordService.getByChatId(chatId)
     if chatIdProfileRecord is None:
         raise HTTPException(
             status_code=403,
             detail="Converstation No Longer Valid"
         )
-    logger.debug(f"Validating {chatIdProfileRecord.profile.id=} == {sessionTokenUserProfile.id=}")
-    if chatIdProfileRecord.profile != sessionTokenUserProfile:
+    logger.debug(f"Validating {chatIdProfileRecord.profile.id=} == {sessionTokenSession.profile.id=}")
+    if chatIdProfileRecord.profile != sessionTokenSession.profile:
         raise HTTPException(
             status_code=403,
             detail="The requested chatId does not belong to your session"
@@ -92,12 +86,15 @@ async def chatLLM(
     requestMessageText = messageRequest.content.message
     requestAttachmentList = messageRequest.content.media
     requestDisableTTS = messageRequest.disableTTS
+    userChatRecordService = UserChatRecordService(dbSession)
+    userSessionService = UserSessionService(dbSession)
 
     logger.info(f"Validating chatLLM request {messageRequest=}")
     checkSessionTokenChatIdAssociation(
         chatId=requestChatId,
         sessionToken=x_SessionToken,
-        dbSession=dbSession
+        userSessionService=userSessionService,
+        userChatRecordService=userChatRecordService,
     )
 
     logger.debug(f"Parcing {requestChatId=} chat message")
@@ -127,7 +124,7 @@ async def chatLLM(
             ttsAudio = ""
     else:
         ttsAudio = ""
-
+    dbSession.commit()
     return chatLLMDataModel.Response(
         message=response.text,
         chatId=chatController.chatId,
@@ -148,7 +145,8 @@ async def chatRecall(
     checkSessionTokenChatIdAssociation(
         chatId=chatId,
         sessionToken=x_SessionToken,
-        dbSession=dbSession
+        userSessionService=UserSessionService(dbSession),
+        userChatRecordService=UserChatRecordService(dbSession),
     )
     chatController = ChatController(
         dbSession=dbSession,
@@ -161,6 +159,7 @@ async def chatRecall(
         message=i.text,
         dateTime=str(i.dateTime)
     ) for i in messages if i.role != "system"]
+    logger.debug(f"Recalled {chatId=} messages")
     return ChatRecallModel.Response(
         chatId=chatId,
         messages=responseMessageList
@@ -175,18 +174,19 @@ async def chatRequest(
     """
     Create a new chat session and return the chat ID.
     """
+    userChatRecordService = UserChatRecordService(dbSession)
+    userSessionService = UserSessionService(dbSession)
     logger.info(f"Creating new chat session")
     if x_SessionToken is None or not x_SessionToken.strip():
         raise HTTPException(
             status_code=400,
             detail="No Session Found"
         )
-    userProfile = UserService.getUserProfileFromSessionToken(
+    userSession = userSessionService.getSessionFromSessionToken(
         sessionToken=x_SessionToken,
-        dbSession=dbSession,
         bypassExpire=False
     )
-    if userProfile is None:
+    if userSession is None:
         raise HTTPException(
             status_code=400,
             detail="Session Expired or invalid"
@@ -196,10 +196,10 @@ async def chatRequest(
         llmModel=llmModel,
     )
     chatId = chatController.chatId
-    UserService.associateChatIdWithUserProfile(
+    userChatRecordService.associateChatIdWithUserProfile(
         chatId=chatId,
-        userProfile=userProfile,
-        dbSession=dbSession
+        userProfile=userSession.profile,
     )
-    logger.debug(f"Returning {chatId=} to {userProfile.id=}")
+    logger.debug(f"Returning {chatId=} to {userSession.id=}")
+    dbSession.commit()
     return ChatIdResponse(chatId=chatId)
