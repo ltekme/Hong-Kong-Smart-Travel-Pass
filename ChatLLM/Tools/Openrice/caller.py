@@ -1,12 +1,12 @@
 import os
-import logging
+import inspect
 import typing as t
 from google.oauth2.service_account import Credentials
 from langchain_google_vertexai import VertexAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-from ..ExternalIo import fetch, write_json_file, read_json_file, logger
+from ..ExternalIo import fetch, write_json_file, read_json_file
 
 
 def divide_chunks(data, chunk_size):
@@ -15,16 +15,30 @@ def divide_chunks(data, chunk_size):
         yield data[i:i + chunk_size]
 
 
-class FilterBase():
+class OpenriceBase():
+
+    lang_dict_options: list = ["en", "tc", "sc"]
+
+    def __init__(self, verbose: bool):
+        self.verbose = verbose
+
+    def logger(self, msg: str):
+        if self.verbose:
+            print(
+                f'\033[43;30m[openrice][{inspect.stack()[1][3]}] ' + msg + '\x1b[0m')
+
+
+class FilterBase(OpenriceBase):
 
     _raw_data = None
     _data = None
-    _FILTER_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/region/all"  # ?uiLang=en&uiCity=hongkong"
+    _FILTER_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/region/all?uiLang=en&uiCity=hongkong"
     _METADATA_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/country/all"
 
     def __init__(self,
                  credentials: Credentials,
                  store_data: bool = True,
+                 verbose: bool = False,
                  searchKey: str = "",
                  searchKeyParentKey: list[str] = [],
                  data_base_path: str = "./data",
@@ -33,11 +47,12 @@ class FilterBase():
                  metadata_url=False,  # weather to use metadata url or filter url
                  data_url=None,  # custom data url, data schema must match api
                  ):
+        super().__init__(verbose)
         self.searchKey = searchKey
         self.store_data = store_data
 
         # chroma setup
-        logger.debug(f"initializing chroma db filter for {searchKey}")
+        self.logger(f"initializing chroma db filter for {searchKey}")
         # when only doing where doc search, no embedding func is needed
         embeddings = VertexAIEmbeddings(
             credentials=credentials,
@@ -49,14 +64,14 @@ class FilterBase():
             "embedding_function": embeddings,
         }
         if self.store_data:
-            logger.debug("chroma presist directory enabled")
+            self.logger("chroma presist directory enabled")
             chroma_param["persist_directory"] = chroma_db_path
-        logger.debug("setting up chromadb")
+        self.logger("setting up chromadb")
         self.vector_store = Chroma(**chroma_param)
 
         # case for non specific filter, dont inti data
         if self.searchKey is None:
-            logger.debug(
+            self.logger(
                 "Non specific filter is search key is specificed, exiting data init, chroma db may containes incomplete or incorrect data"
             )
             return
@@ -74,14 +89,14 @@ class FilterBase():
             data_base_path, f"openrice_{searchKey}.json")
 
         # check data file exists and appempt load
-        logger.debug(f"setting up {searchKey} filter data")
+        self.logger(f"setting up {searchKey} filter data")
         if self.store_data and os.path.exists(self.data_path):
-            logger.debug(f"getting {searchKey} filter from file")
+            self.logger(f"getting {searchKey} filter from file")
             self._data = read_json_file(self.data_path)
 
         # check for no data in file
         if not self._data:
-            logger.debug(
+            self.logger(
                 f"{searchKey} filter data not in file or file store not enabled, parsing from raw data")
 
             # get the items from list of dict keys
@@ -107,39 +122,39 @@ class FilterBase():
         else:
             raise TypeError("Expected self._data to be a list of dictionaries")
 
-        logger.debug(f"filter {searchKey} data loaded")
+        self.logger(f"filter {searchKey} data loaded")
 
     @property
     def raw_data(self):
-        logger.debug("getting raw data from cache")
+        self.logger("getting raw data from cache")
         if self._raw_data:
-            logger.debug("raw data exist in cache, returning")
+            self.logger("raw data exist in cache, returning")
             return self._raw_data
 
-        logger.debug("raw data not exist in cache")
+        self.logger("raw data not exist in cache")
         if self.store_data and os.path.exists(self.raw_data_path):
-            logger.debug("getting raw data from file")
+            self.logger("getting raw data from file")
             self._raw_data = read_json_file(self.raw_data_path)
-            # logger.debug(f"Got data from file: {self._raw_data}")
+            # self.logger(f"Got data from file: {self._raw_data}")
             if self._raw_data:
-                logger.debug("got raw data from file, returning")
+                self.logger("got raw data from file, returning")
                 return self._raw_data
 
-        logger.debug(
+        self.logger(
             "raw data not in file or file store not enabled, fetching from api")
         raw_data = fetch(self.data_url)
         if self.store_data:
-            logger.debug("storage enabled, writing raw data to file")
+            self.logger("storage enabled, writing raw data to file")
             if isinstance(raw_data, (dict, list)):
                 write_json_file(raw_data, self.raw_data_path)
             else:
-                logger.debug(f"Error, Got {type(raw_data)=},{raw_data=}")
+                self.logger(f"Error, Got {type(raw_data)=},{raw_data=}")
                 raise TypeError("Expected raw_data to be a dictionary or list")
-        logger.debug("got raw data from API, returning")
+        self.logger("got raw data from API, returning")
         return raw_data
 
     def init_chroma_data(self, data_expected: list[dict]):
-        logger.debug(f"attempt to get {self.searchKey} data from chroma")
+        self.logger(f"attempt to get {self.searchKey} data from chroma")
         coll = self.vector_store.get(
             where={"$and": [
                 {"openrice_searchKey": self.searchKey},
@@ -150,15 +165,15 @@ class FilterBase():
         collection_len = len(coll["ids"])
         data_expected_len = len(data_expected)
         if collection_len != data_expected_len:
-            logger.debug(
+            self.logger(
                 f"{self.searchKey} data count mismatch ({collection_len=} {data_expected_len=}), cleaning up chroma db")
             if collection_len > 0:
                 self.vector_store._collection.delete(coll["ids"])
             else:
-                logger.debug(
+                self.logger(
                     f"empty collection for {self.searchKey} nothing to delete")
 
-            logger.debug("adding documents to chroma db")
+            self.logger("adding documents to chroma db")
             self.vector_store.add_documents(list(map(lambda item: Document(
                 ', '.join(list(map(
                     lambda l: f"\"{str(l)}\": \"{item[l]}\"",
@@ -171,7 +186,7 @@ class FilterBase():
                 },
             ), data_expected)))
 
-        logger.debug(f"finishing initializing chroma db for {self.searchKey}")
+        self.logger(f"finishing initializing chroma db for {self.searchKey}")
 
     @property
     def all(self) -> list:
@@ -209,11 +224,11 @@ class FilterBase():
         return None
 
     def get_api_filter_search_key(self, id: int) -> str:
-        logger.debug(f"getting {id=} on {self.searchKey}")
+        self.logger(f"getting {id=} on {self.searchKey}")
         if self.by_id(id) != None:
-            logger.debug(f"found {id=} on {self.searchKey}")
+            self.logger(f"found {id=} on {self.searchKey}")
             return f"{self.searchKey}={id}"
-        logger.debug(f"{id=} not found on {self.searchKey}")
+        self.logger(f"{id=} not found on {self.searchKey}")
         return ""
 
 
@@ -287,17 +302,20 @@ class Filters(FilterBase):
         self.priceRange = PriceRangeFilter(**kwargs)
 
 
-class RestaurantSearchApi():
+class RestaurantSearchApi(OpenriceBase):
     _SEARCH_BASE_API_URL: str = "https://www.openrice.com/api/v2/search?uiCity=hongkong&regionId=0&pageToken=CONST_DUMMY_TOKEN"
 
     def __init__(self,
                  credentials: Credentials,
+                 verbose: bool = False,
                  **kwargs):
         kwargs["credentials"] = credentials
+        kwargs["verbose"] = verbose
+        super().__init__(verbose)
         self.filters = Filters(**kwargs)
 
     def format_opening_hours(self, data):
-        logger.debug(f"processing opening hours on {data[0]['poiId']=}")
+        self.logger(f"processing opening hours on {data[0]['poiId']=}")
         # Dictionary to hold the strings for each day of the week and special days
         days = {
             "Monday": [],
@@ -355,7 +373,7 @@ class RestaurantSearchApi():
         return result
 
     def format_raw_restaurant_data(self, raw_data: dict) -> dict:
-        logger.debug(f"parsing poiId:{raw_data['poiId']}")
+        self.logger(f"parsing poiId:{raw_data['poiId']}")
         return {
             "name": raw_data.get('name'),
             "openSince": raw_data.get("openSince"),
@@ -405,16 +423,16 @@ class RestaurantSearchApi():
         if type(landmarkIds) == int:
             landmarkIds = [landmarkIds]
         for id in landmarkIds:
-            logger.debug(f"finding {landmarkIds=} to search")
+            self.logger(f"finding {landmarkIds=} to search")
             searchKey = self.filters.landmark.get_api_filter_search_key(id)
             if searchKey:
-                logger.debug(f"adding {searchKey=} to search key")
+                self.logger(f"adding {searchKey=} to search key")
                 filterSearchKeys.append(searchKey)
         # district]
         if type(districtIds) == int:
             districtIds = [districtIds]
         for id in districtIds:
-            logger.debug(f"finding {districtIds=} to search")
+            self.logger(f"finding {districtIds=} to search")
             searchKey = self.filters.district.get_api_filter_search_key(id)
             if searchKey:
                 filterSearchKeys.append(searchKey)
@@ -422,46 +440,46 @@ class RestaurantSearchApi():
         if type(cuisineIds) == int:
             cuisineIds = [cuisineIds]
         for id in cuisineIds:
-            logger.debug(f"finding {cuisineIds=} to search")
+            self.logger(f"finding {cuisineIds=} to search")
             searchKey = self.filters.cuisine.get_api_filter_search_key(id)
             if searchKey:
-                logger.debug(f"adding {searchKey=} to search key")
+                self.logger(f"adding {searchKey=} to search key")
                 filterSearchKeys.append(searchKey)
         # dish
         if type(dishIds) == int:
             dishIds = [dishIds]
         for id in dishIds:
-            logger.debug(f"finding {dishIds=} to search")
+            self.logger(f"finding {dishIds=} to search")
             searchKey = self.filters.dish.get_api_filter_search_key(id)
             if searchKey:
-                logger.debug(f"adding {searchKey=} to search key")
+                self.logger(f"adding {searchKey=} to search key")
                 filterSearchKeys.append(searchKey)
         # theme
         if type(themeIds) == int:
             themeIds = [themeIds]
         for id in themeIds:
-            logger.debug(f"finding {themeIds=} to search")
+            self.logger(f"finding {themeIds=} to search")
             searchKey = self.filters.theme.get_api_filter_search_key(id)
             if searchKey:
-                logger.debug(f"adding {searchKey=} to search key")
+                self.logger(f"adding {searchKey=} to search key")
                 filterSearchKeys.append(searchKey)
         # amenity
         if type(amenityIds) == int:
             amenityIds = [amenityIds]
         for id in amenityIds:
-            logger.debug(f"finding {amenityIds=} to search")
+            self.logger(f"finding {amenityIds=} to search")
             searchKey = self.filters.amenity.get_api_filter_search_key(id)
             if searchKey:
-                logger.debug(f"adding {searchKey=} to search key")
+                self.logger(f"adding {searchKey=} to search key")
                 filterSearchKeys.append(searchKey)
         # price range
         if type(priceRangeIds) == int:
             priceRangeIds = [priceRangeIds]
         for id in priceRangeIds:
-            logger.debug(f"finding {priceRangeIds=} to search")
+            self.logger(f"finding {priceRangeIds=} to search")
             searchKey = self.filters.priceRange.get_api_filter_search_key(id)
             if searchKey:
-                logger.debug(f"adding {searchKey=} to search key")
+                self.logger(f"adding {searchKey=} to search key")
                 filterSearchKeys.append(searchKey)
 
         searchParams = "&".join(filterSearchKeys)
@@ -470,7 +488,7 @@ class RestaurantSearchApi():
 
         resault = fetch(searchUrl)
         if isinstance(resault, dict) and resault.get('success') == False:
-            logger.debug(f'Error: from API\n{resault}')
+            self.logger(f'Error: from API\n{resault}')
             return []
 
         if isinstance(resault, dict) and "paginationResult" in resault and "results" in resault["paginationResult"]:
@@ -479,5 +497,21 @@ class RestaurantSearchApi():
                 resault["paginationResult"]["results"]
             ))
         else:
-            logger.debug(f'Unexpected API response format: {resault}')
+            self.logger(f'Unexpected API response format: {resault}')
             return []
+
+
+if __name__ == "__main__":
+    # cannot directory run, due to relative import
+    # but can be imported to test
+    credentials_path = os.getenv(
+        "GCP_AI_SA_CREDENTIAL_PATH", './gcp_cred-ai.json')
+    credentials = Credentials.from_service_account_file(credentials_path)
+
+    kwargs = {
+        "verbose": True,
+        "credentials": credentials
+    }
+    filters = Filters(**kwargs)
+    resault = filters.search("kowloon bay")
+    print("\n".join(resault))

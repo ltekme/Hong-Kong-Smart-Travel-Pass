@@ -1,12 +1,12 @@
 import logging
-from langchain_core.language_models.chat_models import BaseChatModel
+import typing as t
 
 from ..DataHandler import (
     ChatRecord,
     ChatMessage,
 )
 
-from .Property import AdditionalModelProperty
+from .Property import AdditionalModelProperty, InvokeContextValues
 
 logger = logging.getLogger(__name__)
 
@@ -25,25 +25,21 @@ class BaseModel:
     """Base model class for language model interactions."""
 
     def __init__(self,
-                 llm: BaseChatModel | None = None,
-                 additionalLLMProperty: AdditionalModelProperty | None = None,
+                 additionalLLMProperty: t.Optional[AdditionalModelProperty] = None,
                  ) -> None:
         """
         Initialize a BaseModel instance.
 
-        :param llm: The language model to use.
-        :param tools: A list of tools for the model to use.
+        :param additionalLLMProperty: Additional properties for the model, if any.
         """
-        self.llm = llm
-        if additionalLLMProperty is None:
-            self.additionalLLMProperty = AdditionalModelProperty()
+        self.additionalLLMProperty = AdditionalModelProperty() if additionalLLMProperty is None else additionalLLMProperty
 
-    def invoke(self, chatRecord: ChatRecord) -> ChatMessage:
+    def invoke(self, chatRecord: ChatRecord, contextValues: InvokeContextValues) -> ChatMessage:
         """
         Invoke the model with a chat record and get the response message.
 
         :param chatRecord: The chat record to process.
         :return: The response message from the model.
         """
-        logger.info(f"Invoking Base Mock Model")
-        return ChatMessage("ai", f"MockMessage: {chatRecord.messages[-1].text}")
+        logger.info(f"Invoking Base Mock Model with chatRecord: {chatRecord.chatId} and contextValues: {contextValues}")
+        return ChatMessage("ai", f"MockMessage Respond: {chatRecord.messages[-1].text}")

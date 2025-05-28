@@ -1,88 +1,79 @@
-# Langchain-RestAPI-Framework
+# Hong Kong Smart Travel Pass
 
-Orgionally this is a Langchain bot with a specific usecase, but at some point down the rabbit hole of adding feature to feature to feature, I found out I am no longer building a bot with a specific use case anymore. It has became a API wrapper for LLM.    
+## Enviroments and Tuneables
 
-## Setup
-
-### Enviroments
-
-```.env
-GOOGLE_API_KEY
-GOOGLE_CSE_ID
-GCP_AI_SA_CREDENTIAL_PATH='gcp_cred-ai.json'
-CHATLLM_DB_URL='sqlite:///chat_data/chatLLM.db'
-CHATLLM_ATTACHMENT_URL='./chat_data/messageAttachment'
-PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION='upb'
-OPENAI_API_URL
-OPENAI_API_KEY
-OPENAI_DPLY_NAME
-OPENAI_API_VERSION
-```
-
-The enviroments above are just a template, set to specific values to match your usecase.
-
-| Enviroment Variable | Description |
-| - | - |
-|GOOGLE_API_KEY| Google Cloud Maps API Key |
-|GOOGLE_CSE_ID| The Google Custom Search Engine ID |
-|GCP_AI_SA_CREDENTIAL_PATH | The GCP Vertex AI Service Account Key file location |
-|CHATLLM_DB_URL | The SQLAlchemy database url for storing application data |
-|CHATLLM_ATTACHMENT_URL| The dir for storing image attachments |
+| Enviroment Variable          | Description                                              | Default                       |
+| ---------------------------- | -------------------------------------------------------- | ----------------------------- |
+| GOOGLE_API_KEY               | Google Cloud Maps API Key                                | --                            |
+| GOOGLE_CSE_ID                | The Google Custom Search Engine ID                       | --                            |
+| GCP_AI_SA_CREDENTIAL_PATH    | The GCP Vertex AI Service Account Key file location      | gcp_cred-ai.json              |
+| CHATLLM_DB_URL               | The SQLAlchemy database url for storing application data | sqlite:///./chat_data/app.db  |
+| CHATLLM_ATTACHMENT_URL       | The dir for storing image attachments                    | ./chat_data/messageAttachment |
+| AZURE_OPENAI_API_KEY         |                                                          | --                            |
+| AZURE_OPENAI_API_URL         |                                                          | --                            |
+| AZURE_OPENAI_DEPLOYMENT_NAME |                                                          | --                            |
+| AZURE_OPENAI_API_VERSION     |                                                          | --                            |
+| USER_SESSION_EXPIRE_SECONDS  |                                                          | 7200                          |
 
 All path above are relative to /app.py in the project root.
 
-### Why GCP
+## Deployment
 
-During the time of development, Google's GeminAI was used and kept as is.
+### Create Google Maps API
 
-### Setup Application
+This is optional.
 
-- install requirements
+Please follow this guide and create an API Key
 
-    ```sh
-    pip install -r requirements.txt
-    ```
+[https://developers.google.com/maps/documentation/javascript/get-api-key](https://developers.google.com/maps/documentation/javascript/get-api-key)
 
-- set env
+Assigne the key to the ENV: `GOOGLE_API_KEY`
 
-    create a .env file in the same dir as this README.md file and set all paramaters in [#Enviroments](#Enviroments)
+### Create custom google search engine
 
-- create db
+This is optional.
 
-    ```sh
-    python createDB.py
-    ```
+Please go to the following page to create a programavle search engine.
 
-    run this script before starting any application
+[https://programmablesearchengine.google.com/controlpanel/all](https://programmablesearchengine.google.com/controlpanel/all)
 
-- build frontend
+Assigne the key to the ENV: `GOOGLE_CSE_ID`
 
-    view [Readme](l2dFrontend/README.md)
+### GCP Service Account
 
-## Starting The APP
+Please go to
 
-To run the app
+[https://cloud.google.com/iam/docs/service-accounts-create](https://cloud.google.com/iam/docs/service-accounts-create)
+
+to create a service accont and assign role to allow `aiplatform.endpoints.predict`
+
+1. Put the json at the same location as the app.py
+
+2. rename the json file to `gcp_cred-ai.json` or change the ENV: `GCP_AI_SA_CREDENTIAL_PATH` to the name of the json file.
+
+### Fix openrice data
+
+One of the tools uses openrice API, to do filtering the tool needs a few files
+
+Enter the following links and save the file to path provided in the following table
+
+| Link                                                                                                                                                           | path                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| [https://www.openrice.com/api/v2/metadata/region/all?uiLang=en&uiCity=hongkong](https://www.openrice.com/api/v2/metadata/region/all?uiLang=en&uiCity=hongkong) | ./data/openrice_raw.json          |
+| [https://www.openrice.com/api/v2/metadata/country/all](https://www.openrice.com/api/v2/metadata/all)                                                           | ./data/openrice_metadata_raw.json |
+
+The file should be just json, and it is, however for some reason the pathon `.decode()` function cannot decode it from bytes back to string for the json parcer
+
+With the 2 file in place, the tool will not try to reach out to open rice server to get the 2 metadata content and try to fetch from the 2 file itself.
+
+## Bring Up and Deployment
+
+This is not mega-scaling production kind of ready. You can open it up to with WWW, but do it at your own risk.
 
 ```sh
-python app.py
+docker compose up
 ```
 
-## Addittional Notes
+adjust `docker-compose.yaml` as needed
 
-- upgrade the db
-
-    after setting envs, the DB need to be upgraded for anything v2 or after to function properly
-    
-    !!! important !!! make sure a copy of the DB exists before altering ORM Models and have alembic generate a revision
-
-    ```sh
-    alembic upgrade head
-    ```
-
-    run this command to upgrade the db
-
-    ```sh
-    alembic revision --autogenerate -m "revision"
-    ```
-
-    run this command to create a db revision
+It's a [Monolithic application](https://en.wikipedia.org/wiki/Monolithic_application), nothing wrong with it, simple and easy, just not 10k people spamming it all at once ready.

@@ -12,8 +12,11 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts.chat import MessagesPlaceholder
 
+from google.oauth2.service_account import Credentials
+from langchain_google_vertexai import ChatVertexAI, HarmBlockThreshold, HarmCategory
+
 from .Base import BaseModel
-from .Property import AdditionalModelProperty
+from .Property import AdditionalModelProperty, InvokeContextValues
 from ..DataHandler import ChatRecord, ChatMessage
 
 logger = logging.getLogger(__name__)
@@ -29,7 +32,7 @@ def setLogger(external_logger: logging.Logger) -> None:
     logger = external_logger
 
 
-class Model(BaseModel):
+class Model:
 
     prompt = (
         "You are a travel assistant designed to support a tourist in their journy."
@@ -57,12 +60,27 @@ class Model(BaseModel):
     def __init__(self,
                  llm: BaseChatModel,
                  additionalLLMProperty: AdditionalModelProperty,
+                 contextValues: InvokeContextValues,
                  ) -> None:
-        super().__init__(llm, additionalLLMProperty)
+        """
+        Initialize a Model instance.
+
+        :param llm: The language model to use for generating responses.
+        :param additionalLLMProperty: Additional properties for the model.
+        :param contextValues: Additional context values for the invocation.
+        :return: None
+        """
         promptTemplate = ChatPromptTemplate([
             ("system", self.prompt),
+            ("system", (
+                f"<context>"
+                f"  <location>{contextValues.location}</location>"
+                f"  <utctime>{contextValues.utctime}</utctime>"
+                f"</context>"
+            )),
             MessagesPlaceholder("messages")
         ])
+        self.llm = llm
         self.llmWithTool = promptTemplate | self.llm.bind_tools(additionalLLMProperty.llmTools)  # type: ignore
 
         self.graphBuilder = StateGraph(self.State)
@@ -96,20 +114,35 @@ class GraphModel(BaseModel):
     """Graph model class for language model interactions."""
 
     def __init__(self,
-                 llm: BaseChatModel,
                  additionalLLMProperty: AdditionalModelProperty,
+                 gcpCredentials: t.Optional[Credentials] = None,
                  ) -> None:
-        super().__init__(llm, additionalLLMProperty)
-        self.llm = llm
-        self.additionalLLMProperty = additionalLLMProperty
+        super().__init__(additionalLLMProperty)
+        if gcpCredentials is None:
+            logger.warning("No GCP credentials provided, Improper setup will cause issues.")
+        self.llm = ChatVertexAI(
+            model="gemini-2.0-flash-001",
+            temperature=1,
+            max_retries=2,
+            credentials=gcpCredentials,
+            project=gcpCredentials.project_id if gcpCredentials else None,  # type: ignore
+            safety_settings={
+                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.OFF,
+                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.OFF,
+                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.OFF,
+                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.OFF,
+            },
+            response_mime_type="application/json",
+            # response_schema={"type": "OBJECT", "properties": {"action": {"type": "STRING"}, "action_input": {"type": "STRING"}}, "required": ["action", "action_input"]},
+        )
 
-    def invoke(self, chatRecord: ChatRecord) -> ChatMessage:
+    def invoke(self, chatRecord: ChatRecord, contextValues: InvokeContextValues) -> ChatMessage:
         """
         Invoke the model with a chat record and get the response message.
 
         :param chatRecord: The chat record to process.
+        :param contextValues: Additional context values for the invocation.
         :return: The response message from the model.
         """
-        graph = Model(self.llm, additionalLLMProperty=self.additionalLLMProperty)
-        response = graph.invoke(chatRecord)
-        return response
+        model = Model(self.llm, self.additionalLLMProperty, contextValues)
+        return model.invoke(chatRecord)

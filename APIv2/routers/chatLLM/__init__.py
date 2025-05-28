@@ -6,6 +6,7 @@ from fastapi import (
 )
 from ChatLLMv2 import DataHandler
 from ChatLLMv2.ChatController import ChatController
+from ChatLLMv2.ChatModel.Property import InvokeContextValues
 
 from .models import (
     chatLLMDataModel,
@@ -107,14 +108,16 @@ async def chatLLM(
         raise HTTPException(status_code=400, detail="Invalid Image Provided")
 
     message = DataHandler.ChatMessage("user", requestMessageText, attachments)
-
+    contextValues = InvokeContextValues(
+        location=messageRequest.location if messageRequest.location else "unknown",
+    )
     logger.debug(f"Invoking {requestChatId=} controller")
     chatController = ChatController(
         dbSession=dbSession,
         llmModel=llmModel,
         chatId=requestChatId
     )
-    response = chatController.invokeLLM(message)
+    response = chatController.invokeLLM(message, contextValues=contextValues)
 
     if not requestDisableTTS:
         try:

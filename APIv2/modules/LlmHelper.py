@@ -1,3 +1,4 @@
+from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages import HumanMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
@@ -5,8 +6,16 @@ from langchain_core.prompts import (
 )
 from ChatLLMv2.DataHandler import ChatMessage
 
-from ..dependence import llm
 from ..config import logger
+from ..dependence import credentials
+
+llm = ChatVertexAI(
+    model="gemini-1.5-flash",
+    temperature=1,
+    max_retries=2,
+    credentials=credentials,
+    project=credentials.project_id if credentials else None,  # type: ignore
+)
 
 
 def generateUserProfileSummory(profileDetails: str) -> str:

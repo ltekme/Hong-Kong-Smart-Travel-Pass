@@ -9,6 +9,7 @@ from .DataHandler import (
     ChatMessage
 )
 from .ChatModel.Base import BaseModel
+from .ChatModel.Property import InvokeContextValues
 
 
 logger = logging.getLogger(__name__)
@@ -104,6 +105,7 @@ class ChatController:
 
     def invokeLLM(self,
                   message: ChatMessage,
+                  contextValues: InvokeContextValues
                   ) -> ChatMessage:
         """
         Invoke the language model with a user message and get the AI response.
@@ -124,7 +126,7 @@ class ChatController:
         self._chat.add_message(message)
 
         logger.debug(f"Invoking LlmModel with current chat:{self._chat.id=}")
-        aiMessage = self.llmModel.invoke(self._chat)
+        aiMessage = self.llmModel.invoke(self._chat, contextValues)
 
         logger.debug(f"Got LlmModel Response:{aiMessage.text[:10]=}")
         self._chat.add_message(aiMessage)

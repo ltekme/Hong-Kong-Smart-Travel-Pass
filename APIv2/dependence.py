@@ -4,23 +4,19 @@ import typing as t
 from fastapi import Depends
 from google.oauth2.service_account import Credentials
 
-from langchain_google_vertexai import ChatVertexAI
-
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 
-from ChatLLM.Tools import ExternalIo
+from ChatLLM.Tools import ExternalIo, LLMTools
 
-from ChatLLMv2.ChatModel import Graph
-from ChatLLMv2.ChatModel.Property import AdditionalModelProperty
+from ChatLLMv2.ChatModel import v1ChainMigrate
+from ChatLLMv2.ChatModel.Property import AdditionalModelProperty, AzureChatAIProperty
 from ChatLLMv2 import (
     ChatController,
     DataHandler,
 )
 
 from .modules.GoogleServices import GoogleServices
-from .modules.Services.user import *
-from .modules.Services.social import *
 
 from .config import (
     settings,
@@ -30,7 +26,7 @@ from .config import (
 ExternalIo.setLogger(logger)
 ChatController.setLogger(logger)
 DataHandler.setLogger(logger)
-Graph.setLogger(logger)
+v1ChainMigrate.setLogger(logger)
 
 
 if not os.path.exists(settings.gcpServiceAccountFilePath):
@@ -39,28 +35,24 @@ if not os.path.exists(settings.gcpServiceAccountFilePath):
 else:
     credentials = Credentials.from_service_account_file(settings.gcpServiceAccountFilePath)  # type: ignore
 
-llm = ChatVertexAI(
-    model="gemini-1.5-flash-002",
-    temperature=0.5,
-    max_tokens=8192,
-    top_p=0.5,
-    max_retries=2,
-    credentials=credentials,
-    project=credentials.project_id if credentials is not None else None,  # type: ignore
+
+llmModelProperty = AdditionalModelProperty(
+    llmTools=LLMTools(
+        credentials=credentials,
+    ).all,
+    openAIProperty=AzureChatAIProperty(
+        deploymentName=settings.azureOpenAIAPIDeploymentName,
+        version=settings.azureOpenAIAPIVersion,
+        apiKey=settings.azureOpenAIAPIKey,
+        apiUrl=settings.azureOpenAIAPIUrl,
+    ),
 )
 
-if True:
-    from ChatLLM.Tools import LLMTools
-
-    llmModelProperty = AdditionalModelProperty(
-        llmTools=LLMTools(
-            credentials=credentials,
-        ).all,
-    )
-
-llmModel = Graph.GraphModel(llm, llmModelProperty)
-
-dbEngine = sa.create_engine(url=settings.applicationDatabaseURI, connect_args={'check_same_thread': False}, logging_name=logger.name)
+llmModel = v1ChainMigrate.v1LLMChainModel(credentials, llmModelProperty)
+connectArgs: dict[str, t.Any] = dict()
+if not settings.applicationDatabaseURI.startswith("postgresql"):
+    connectArgs["check_same_thread"] = False
+dbEngine = sa.create_engine(url=settings.applicationDatabaseURI, connect_args=connectArgs, logging_name=logger.name)
 
 
 def getSession():
