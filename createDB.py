@@ -1,12 +1,9 @@
 import os
-import logging
 import sqlalchemy as sa
 from dotenv import load_dotenv
-from ChatLLMv2 import DataHandler
+from APIv2.modules.ApplicationModel import TableBase 
 
 load_dotenv('.env')
-
-logger = logging.getLogger(__name__)
 
 dbUrl = os.environ.get("CHATLLM_DB_URL", "sqlite:///./chat_data/app.db")
 
@@ -15,13 +12,4 @@ if dbUrl.startswith("sqlite:///"):
     if not os.path.exists(os.path.dirname(dbFile)):
         os.makedirs(os.path.dirname(dbFile))
 
-dbEngine = sa.create_engine(url=dbUrl)
-
-target_metadata = DataHandler.TableBase.metadata
-try:
-    from APIv2.modules import ApplicationModel
-    target_metadata = ApplicationModel.TableBase.metadata
-except:
-    logger.warning(f"Module ApplicationModel not found. Skipping import.")
-
-target_metadata.create_all(dbEngine)
+TableBase.metadata.create_all(sa.create_engine(url=dbUrl))

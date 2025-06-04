@@ -6,6 +6,7 @@ from .Base import BaseModel
 from .Property import AdditionalModelProperty, InvokeContextValues
 
 import typing as t
+import typing_extensions as te
 
 from pydantic import SecretStr
 
@@ -31,20 +32,19 @@ def setLogger(external_logger: logging.Logger) -> None:
     logger = external_logger
 
 
+class LLMResponseFormat(te.TypedDict):
+    action: te.Annotated[str, ..., "The action to take"]
+    action_input: te.Annotated[t.Any, ..., "The action input"]
+
+
 class v1LLMChainModel(BaseModel):
     """Model class for pure language model interactions."""
     systemPromptTemplate = (
-        "You are a travel assistant designed to support a tourist in their journy."
-        "You have access to real-time date, including time, weather, and more."
-        "Your primary task is to help the tourist plan their trip and provide assistance on their question."
-        "Use markdown in the \"Final Answer\" if possible."
-        "The tool you have will provide realtime data."
-        "Use tools avalable to provide the most accurate infromation possible.\n"
-        "You have access to the following tools:\n"
+        "Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n"
         "{tools}\n"
         "Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n"
-        """Valid "action" values: "Final Answer" or {tool_names}"""
-        "Provide only ONE action per $JSON_BLOB, as shown:"
+        "Valid \"action\" values: \"Final Answer\" or {tool_names}\n"
+        "Provide only ONE action per $JSON_BLOB, as shown:\n"
         "```"
         "{{"
         '  "action": $TOOL_NAME,'
@@ -52,20 +52,22 @@ class v1LLMChainModel(BaseModel):
         "}}"
         "```\n"
         "Follow this format:\n"
-        "Question: input question to answer\n"
-        "Thought: consider previous and subsequent steps\n"
-        "Action:\n"
-        "```$JSON_BLOB```"
-        "Observation: action result\n"
-        "... (repeat Thought/Action/Observation N times)\n"
-        "Thought: I know what to respond\n"
-        "Action:\n"
+        "Question: input question to answer"
+        "Thought: consider previous and subsequent steps"
+        "Action:"
+        "```"
+        "$JSON_BLOB"
+        "```"
+        "Observation: action result"
+        "... (repeat Thought/Action/Observation N times)"
+        "Thought: I know what to respond"
+        "Action:"
         "```"
         "{{"
-        "  \"action\": \"Final Answer\","
-        "  \"action_input\": \"Final response to human\""
+        '  "action": "Final Answer",'
+        '  "action_input": "Final response to human"'
         "}}"
-        "```"
+        "```\n"
         "Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Format is Action:```$JSON_BLOB```then Observation"
     )
 
@@ -108,6 +110,7 @@ class v1LLMChainModel(BaseModel):
         openAIProperty = self.additionalLLMProperty.openAIProperty
         self.tools = self.additionalLLMProperty.llmTools
         try:
+            logger.info(f"Attempting to create AzureChatOpenAI")
             self.llm = AzureChatOpenAI(
                 model="gpt-4o",
                 temperature=1,

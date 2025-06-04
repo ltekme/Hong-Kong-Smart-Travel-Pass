@@ -58,7 +58,7 @@ def fetch(url: str, params: dict = {}) -> dict | list | str:
                 f.write(str(responseContent))
             with open("./errors/last-dev.txt", 'w') as f:
                 f.write(str(decodedContent))
-            logger.error(f'Failed Decoding data from: {url}: Error: {e}')
+        raise Exception(f'Failed Decoding data from: {url}: Error: {e}')
 
 
 def create_folder_if_not_exists(folder_path: str):

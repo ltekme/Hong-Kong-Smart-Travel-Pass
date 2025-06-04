@@ -1,55 +1,77 @@
 import os
 import logging
 import typing as t
-from pydantic_settings import BaseSettings
+
+from dotenv import load_dotenv, dotenv_values
 
 
-class Settings(BaseSettings):
+class Settings:
+
+    useEnvFile = False
+    envFilePath = ""
+
+    def __init__(self, envFilePath: t.Optional[str] = None):
+        if envFilePath and os.path.exists(envFilePath):
+            self.useEnvFile = True
+            self.envFilePath = envFilePath
+            load_dotenv(envFilePath)
+
+    def getAttr(self, attr: str, default: str = "", checkSystemEnvIfFileValNone: t.Optional[bool] = True) -> str:
+        val = None
+        if self.useEnvFile:
+            val = dotenv_values(self.envFilePath).get(attr)
+            if val is not None:
+                return val
+            if checkSystemEnvIfFileValNone:
+                val = os.environ.get(attr)
+        if val is None:
+            val = default
+        return val
 
     @property
-    def googleCSEId(self) -> str | None:
+    def googleCSEId(self) -> t.Optional[str]:
         """Used to perform custom google search for LangChain agents"""
-        return os.environ.get("GOOGLE_CSE_ID")
+        return self.getAttr("GOOGLE_CSE_ID")
 
     @property
-    def googleApiKey(self) -> str | None:
+    def googleApiKey(self) -> t.Optional[str]:
         """Used to perform Geo location address lookup"""
-        return os.environ.get("GOOGLE_API_KEY")
+        return self.getAttr("GOOGLE_API_KEY")
 
     @property
     def gcpServiceAccountFilePath(self) -> str:
         """The service account path for google services"""
-        return os.environ.get("GCP_AI_SA_CREDENTIAL_PATH", 'gcp_cred-ai.json')
+        return self.getAttr("GCP_AI_SA_CREDENTIAL_PATH", 'gcp_cred-ai.json')
 
     @property
     def applicationDatabaseURI(self) -> str:
         """The Database URI for the application"""
-        return os.environ.get("CHATLLM_DB_URL", 'sqlite:///./chat_data/app.db')
+        return self.getAttr("CHATLLM_DB_URL", 'sqlite:///./chat_data/app.db')
 
     @property
     def applicationChatLLMMessageAttachmentPath(self) -> str:
         """The local path for where message attachments are stored"""
-        return os.environ.get("CHATLLM_ATTACHMENT_URL", "./chat_data/messageAttachment")
+        return self.getAttr("CHATLLM_ATTACHMENT_URL", "./chat_data/messageAttachment")
 
     @property
-    def azureOpenAIAPIKey(self) -> str | None:
+    def azureOpenAIAPIKey(self) -> t.Optional[str]:
         """The Azure OpenAI API Key"""
-        return os.environ.get("AZURE_OPENAI_API_KEY")
+        return self.getAttr("AZURE_OPENAI_API_KEY")
 
     @property
-    def azureOpenAIAPIUrl(self) -> str | None:
+    def azureOpenAIAPIUrl(self) -> t.Optional[str]:
         """The Azure OpenAI API Url"""
-        return os.environ.get("AZURE_OPENAI_API_URL")
+        return self.getAttr("AZURE_OPENAI_API_URL")
 
     @property
-    def azureOpenAIAPIDeploymentName(self) -> str | None:
+    def azureOpenAIAPIDeploymentName(self) -> t.Optional[str]:
         """The Azure OpenAI Deployment Name"""
-        return os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME")
+        return self.getAttr("AZURE_OPENAI_DEPLOYMENT_NAME")
 
     @property
-    def azureOpenAIAPIVersion(self) -> str | None:
+    def azureOpenAIAPIVersion(self) -> t.Optional[str]:
         """The Azure OpenAI API Version"""
-        return os.environ.get("AZURE_OPENAI_API_VERSION")
+        return self.getAttr("AZURE_OPENAI_API_VERSION")
 
     @property
     def userSessionExpireInSeconds(self) -> int:
@@ -77,7 +99,7 @@ class ClientCookiesKeys:
 # uvicorn only stdout uvicorn.asgi, uvicorn.access, uvicorn.error
 # see site-packages/uvicorn/config.py: 383-393
 logger = logging.getLogger("uvicorn.asgi")
-settings = Settings()
+settings = Settings(".env")
 
 animals = [
     "alligator",

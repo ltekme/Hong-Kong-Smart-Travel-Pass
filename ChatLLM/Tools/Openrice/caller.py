@@ -56,7 +56,7 @@ class FilterBase(OpenriceBase):
         # when only doing where doc search, no embedding func is needed
         embeddings = VertexAIEmbeddings(
             credentials=credentials,
-            project=credentials.project_id,
+            project=credentials.project_id if credentials is not None else None,
             model_name="text-multilingual-embedding-002",
         )
         chroma_param = {
