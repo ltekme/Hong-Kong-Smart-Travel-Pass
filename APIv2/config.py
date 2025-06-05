@@ -6,7 +6,6 @@ from dotenv import load_dotenv, dotenv_values
 
 
 class Settings:
-
     useEnvFile = False
     envFilePath = ""
 
@@ -90,10 +89,6 @@ class Settings:
             return int(os.environ.get("ANONYMOUS_USER_MESSAGE_QOUTER", default))
         except ValueError:
             return default
-
-
-class ClientCookiesKeys:
-    SESSION_TOKEN: t.Final[str] = "sessionToken"
 
 
 # uvicorn only stdout uvicorn.asgi, uvicorn.access, uvicorn.error

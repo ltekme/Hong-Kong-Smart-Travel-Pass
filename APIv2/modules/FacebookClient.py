@@ -14,7 +14,8 @@ class FacebookUserInfo:
 
 
 class FacebookClient:
-    def getUsernameAndId(self, accessToken: str) -> FacebookUserInfo:
+    @classmethod
+    def getUsernameAndId(cls, accessToken: str) -> FacebookUserInfo:
         """
         Get facebook username and id from access token
         :param accessToken: The access token of a given facebook user.
@@ -34,7 +35,8 @@ class FacebookClient:
             facebookId=int(facebookProfile["id"]),  # type: ignore
         )
 
-    def getUserProfileDetails(self, accessToken: str) -> str:
+    @classmethod
+    def getUserProfileDetails(cls, accessToken: str) -> str:
         """
         Get facebook user profile details
         :param accessToken: The access token of a given facebook user.

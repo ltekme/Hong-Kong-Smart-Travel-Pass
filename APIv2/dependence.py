@@ -9,13 +9,19 @@ import sqlalchemy.orm as so
 
 from ChatLLM.Tools import ExternalIo, LLMTools
 
-from ChatLLMv2.ChatModel import v1ChainMigrate
+from ChatLLMv2.ChatModel import v1ChainMigrate, Base
 from ChatLLMv2.ChatModel.Property import AdditionalModelProperty, AzureChatAIProperty
 from ChatLLMv2 import (
     ChatController,
     DataHandler,
 )
 
+from .modules.Services.user import (
+    UserTypeService,
+    UserService,
+    UserChatRecordService,
+    UserSessionService
+)
 from .modules.GoogleServices import GoogleServices
 
 from .config import (
@@ -60,9 +66,45 @@ def getSession():
         yield session
 
 
-def getGoogleService() -> t.Generator[GoogleServices, None, None]:
-    yield GoogleServices(credentials=credentials, apiKey=settings.googleApiKey)
+def getGoogleService() -> GoogleServices:
+    return GoogleServices(credentials=credentials, apiKey=settings.googleApiKey)
+
+
+def getUserService() -> t.Callable[[so.Session], UserService]:
+    def func(dbSession: so.Session) -> UserService:
+        userTypeService = UserTypeService(dbSession)
+        return UserService(dbSession, userTypeService)
+    return func
+
+
+def getUserTypeService() -> t.Callable[[so.Session], UserTypeService]:
+    return lambda dbSession: UserTypeService(dbSession)
+
+
+def getUserChatRecordService() -> t.Callable[[so.Session], UserChatRecordService]:
+    return lambda dbSession: UserChatRecordService(dbSession)
+
+
+def getUserSessionService() -> t.Callable[[so.Session], UserSessionService]:
+    return lambda dbSession: UserSessionService(dbSession)
+
+
+def getChatController() -> t.Callable[[so.Session, Base.BaseModel, t.Optional[str]], ChatController.ChatController]:
+    def func(dbSession: so.Session, llmModel: Base.BaseModel, chatId: t.Optional[str] = None) -> ChatController.ChatController:
+        return ChatController.ChatController(
+            dbSession=dbSession,
+            llmModel=llmModel,
+            chatId=chatId
+        )
+    return func
 
 
 dbSessionDepend = t.Annotated[so.Session, Depends(getSession)]
 googleServicesDepend = t.Annotated[GoogleServices, Depends(getGoogleService)]
+
+userTypeServiceDepend = t.Annotated[t.Callable[[so.Session], UserTypeService], Depends(getUserService)]
+userServiceDepend = t.Annotated[t.Callable[[so.Session], UserService], Depends(getUserService)]
+userChatRecordServiceDepend = t.Annotated[t.Callable[[so.Session], UserChatRecordService], Depends(getUserChatRecordService)]
+userSessionServiceDepend = t.Annotated[t.Callable[[so.Session], UserSessionService], Depends(getUserSessionService)]
+
+chatControllerDepend = t.Annotated[t.Callable[[so.Session, Base.BaseModel, t.Optional[str]], ChatController.ChatController], Depends(getChatController)]
