@@ -48,3 +48,11 @@ async def handleValidationError(request: Request, exeception: RequestValidationE
         status_code=422,
         content={"detail": "Mailformed Request"},
     )
+
+
+@app.exception_handler(PermissionError)
+async def handlePermissionError(request: Request, exeception: PermissionError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "Permission Denied"},
+    )

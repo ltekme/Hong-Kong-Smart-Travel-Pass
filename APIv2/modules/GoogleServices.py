@@ -1,6 +1,8 @@
 import base64
 import googlemaps  # type: ignore
 import typing as t
+import sqlalchemy.orm as so
+
 from google.cloud.texttospeech import (
     TextToSpeechClient,
     VoiceSelectionParams,
@@ -16,12 +18,15 @@ from google.cloud.speech import (
 from google.oauth2.service_account import Credentials
 
 from ..config import logger
+from .Services.Permission.Permission import ServiceWithPermissions
+from .ApplicationModel import User
 
 
-class GoogleServices:
+class GoogleServices(ServiceWithPermissions):
     """Service class for interacting with Google Cloud's Text-to-Speech and Speech-to-Text APIs."""
 
     def __init__(self,
+                 dbSession: so.Session, serivceName: str, user: t.Optional[User] = None,
                  credentials: t.Optional[Credentials] = None,
                  apiKey: str | None = "",
                  ) -> None:
@@ -31,6 +36,7 @@ class GoogleServices:
         :param credentials: The Google Cloud credentials.
         :param apiKey: The API key for Google Cloud services.
         """
+        super().__init__(dbSession, serivceName, user)
         self.apiKey = apiKey
         if not credentials:
             logger.warning(f'Google Service Credentials not present, may lead to errors if client is not set up')

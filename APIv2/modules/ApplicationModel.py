@@ -21,7 +21,7 @@ class SocialsProfileProvider(TableBase):
     SocialsProfileProvider class represents a social idnetifer provider.
     e.g. Facebook, Google SSO, X(Twitter)
     """
-    __tablename__ = "user_profile_socials_provider"
+    __tablename__ = "socials_provider"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, unique=True)
     socials: so.Mapped[t.List["UserSocialProfile"]] = so.relationship(back_populates="provider")
@@ -41,21 +41,21 @@ class UserSocialProfile(TableBase):
 
     This class represents the mapping of user and their social media profiles
     """
-    __tablename__ = "user_profile_socials"
+    __tablename__ = "user_socials"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     socialId: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
-    socialName: so.Mapped[str | None] = so.mapped_column(sa.String, nullable=True)
-    socialProfileSummory: so.Mapped[str | None] = so.mapped_column(sa.String, nullable=True)
+    socialName: so.Mapped[t.Optional[str]] = so.mapped_column(sa.String, nullable=True)
+    socialProfileSummory: so.Mapped[t.Optional[str]] = so.mapped_column(sa.String, nullable=True)
     lastUpdate: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime(timezone=True), default=sl.func.now())
 
-    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile.id"), nullable=True)
-    profile: so.Mapped[t.Optional["UserProfile"]] = so.relationship(back_populates="socials")
-    provider_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile_socials_provider.id"), nullable=False)
+    user_id: so.Mapped[t.Optional[str]] = so.mapped_column(sa.ForeignKey("user.id"), nullable=True)
+    user: so.Mapped[t.Optional["User"]] = so.relationship(back_populates="socials")
+    provider_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("socials_provider.id"), nullable=False)
     provider: so.Mapped["SocialsProfileProvider"] = so.relationship(back_populates="socials")
 
     def __init__(self, socialId: str, provider: SocialsProfileProvider) -> None:
         """
-        Initialize a UserProfileSocialRecord instance.
+        Initialize a UserSocialRecord instance.
 
         :param socialId: The socialId of the user.
         :param name: The profileId of the socials.
@@ -64,64 +64,140 @@ class UserSocialProfile(TableBase):
         self.provider = provider
 
 
-class UserType(TableBase):
-    """Represents a profile type."""
-    __tablename__ = "user_profile_type"
+class Permission(TableBase):
+    """"Represents a permission."""
+    __tablename__ = "permission"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, unique=True)
-    profiles: so.Mapped[t.List["UserProfile"]] = so.relationship(back_populates="type")
+    name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, unique=True, index=True)
+    description: so.Mapped[t.Optional[str]] = so.mapped_column(sa.String, nullable=True)
 
-    def __init__(self, name: str):
+    roles: so.Mapped[t.List["Role"]] = so.relationship("Role", secondary="role_permission_association", back_populates="permissions")
+    users: so.Mapped[t.List["User"]] = so.relationship("User", secondary="user_permission_association", back_populates="permissions")
+
+    def __init__(self, name: str, description: t.Optional[str] = None) -> None:
         """
-        Initialize a UserType instance.
+        Initialize a Permission instance.
 
-        :param name: The name of the profile type.
+        :param name: The name of the permission.
+        :param description: A description of the permission.
         """
         self.name = name
+        self.description = description
 
 
-class UserProfile(TableBase):
+class RolePermission(TableBase):
+    """Represents the many-to-many relationship between roles and permissions."""
+    __tablename__ = "role_permission_association"
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    role_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("role.id"))
+    permission_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("permission.id"))
+    effect: so.Mapped[bool] = so.mapped_column(sa.Boolean, nullable=False, default=False)
+
+    def __init__(self, role: "Role", permission: Permission, effect: bool = True) -> None:
+        """
+        Initialize a RolePermission instance.
+
+        :param role_id: The ID of the role.
+        :param permission_id: The ID of the permission.
+        :param effect: Whether the permission is granted (True) or denied (False).
+        """
+        self.role_id = role.id
+        self.permission_id = permission.id
+        self.effect = effect
+
+
+class UserPermission(TableBase):
+    """Represents the many-to-many relationship between users and permissions."""
+    __tablename__ = "user_permission_association"
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"))
+    permission_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("permission.id"))
+    effect: so.Mapped[bool] = so.mapped_column(sa.Boolean, nullable=False, default=False)
+
+
+class Role(TableBase):
+    """Represents a user role."""
+    __tablename__ = "role"
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, unique=True, index=True)
+    description: so.Mapped[t.Optional[str]] = so.mapped_column(sa.String, nullable=True)
+
+    permissions: so.Mapped[t.List["Permission"]] = so.relationship("Permission", secondary="role_permission_association", back_populates="roles")
+    users: so.Mapped[t.List["User"]] = so.relationship("User", secondary="user_role_association", back_populates="roles")
+
+    def __init__(self, name: str, description: t.Optional[str] = None) -> None:
+        """
+        Initialize a Role instance.
+
+        :param name: The name of the user role.
+        :param description: A description of the user role.
+        """
+        self.name = name
+        self.description = description
+
+
+class UserRole(TableBase):
+    """Represents the many-to-many relationship between users and roles."""
+    __tablename__ = "user_role_association"
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"))
+    role_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("role.id"))
+
+    def __init__(self, user: "User", role: Role) -> None:
+        """
+        Initialize a UserRole instance.
+
+        :param user: The user instance.
+        :param role: The role instance.
+        """
+        self.user_id = user.id
+        self.role_id = role.id
+
+
+class User(TableBase):
     """Represents a user profile."""
-    __tablename__ = "user_profile"
+    __tablename__ = "user"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
     public: so.Mapped[bool] = so.mapped_column(sa.Boolean, nullable=True, default=False)
-    chatRecordIds: so.Mapped[t.List["UserChatRecord"]] = so.relationship(back_populates="profile")
-    sessions: so.Mapped[t.List["UserSession"]] = so.relationship(back_populates="profile")
-    socials: so.Mapped[t.List["UserSocialProfile"]] = so.relationship(back_populates="profile")
-    type_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile_type.id"), nullable=False)
-    type: so.Mapped["UserType"] = so.relationship(back_populates="profiles")
 
-    def __init__(self, username: str, type: UserType) -> None:
+    chatRecordIds: so.Mapped[t.List["UserChatRecord"]] = so.relationship(back_populates="user")
+    sessions: so.Mapped[t.List["UserSession"]] = so.relationship(back_populates="user")
+    socials: so.Mapped[t.List["UserSocialProfile"]] = so.relationship(back_populates="user")
+
+    roles: so.Mapped[t.List["Role"]] = so.relationship("Role", secondary="user_role_association", back_populates="users")
+    permissions: so.Mapped[t.List["Permission"]] = so.relationship("Permission", secondary="user_permission_association", back_populates="users")
+
+    def __init__(self, username: str) -> None:
         """
-        Initialize a UserProfile instance.
+        Initialize a User instance.
 
         :param username: The username of the user.
         """
         self.username = username
-        self.type = type
 
 
 class UserChatRecord(TableBase):
     """Represents a semi key-value pair of user profile and chat records."""
-    __tablename__ = "user_proifile_chat_records"
+    __tablename__ = "user_chat_records"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile.id"), index=True, nullable=False)
-    profile: so.Mapped["UserProfile"] = so.relationship(back_populates="chatRecordIds")
     chatId: so.Mapped[str] = so.mapped_column(sa.ForeignKey("chats.chatId"), index=True, nullable=False)
     summory: so.Mapped[str] = so.mapped_column(sa.String, nullable=True)
 
-    def __init__(self, chatId: str, userProfile: UserProfile) -> None:
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), index=True, nullable=False)
+    user: so.Mapped["User"] = so.relationship(back_populates="chatRecordIds")
+
+    def __init__(self, chatId: str, user: User) -> None:
         """
-        Initialize a UserProfile instance.
+        Initialize a User instance.
 
         :param chatId: The chatId.
-        :param userProfile: The User Profile.
+        :param User: The User Profile.
 
         :return: None.
         """
         self.chatId = chatId
-        self.profile = userProfile
+        self.user_id = user.id
 
     def editSummory(self, newSummory: str, dbSession: so.Session) -> None:
         """
@@ -137,21 +213,21 @@ class UserChatRecord(TableBase):
 
 class UserSession(TableBase):
     """Used to store temporary access to user profiles"""
-    __tablename__ = "user_proifile_sessions"
+    __tablename__ = "user_sessions"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    profile_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user_profile.id"))
-    profile: so.Mapped["UserProfile"] = so.relationship(back_populates="sessions")
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"))
+    user: so.Mapped["User"] = so.relationship(back_populates="sessions")
     sessionToken: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, index=True)
     expire: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime(timezone=True), nullable=False)
 
-    def __init__(self, profile: UserProfile, sessionToken: str, expire: datetime.datetime):
+    def __init__(self, user: User, sessionToken: str, expire: datetime.datetime):
         """
-        Initialize a UserProfile instance.
+        Initialize a User instance.
 
-        :param profile: The UserProfile instance that the session belong to.
+        :param profile: The User instance that the session belong to.
         :param sessionToken: The session identifer, used as a temporary key to access the user profile.
         :param expire: The datetime instance of when this session Id expire
         """
-        self.profile = profile
+        self.user = user
         self.sessionToken = sessionToken
         self.expire = expire

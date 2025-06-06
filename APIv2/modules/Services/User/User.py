@@ -2,77 +2,54 @@ import hashlib
 import random
 import datetime
 import typing as t
+
 import sqlalchemy.orm as so
 
-from .base import ServiceBase
-from .RandomPet import getRandomAnimal
+from fastapi import HTTPException
 
-from ..ApplicationModel import UserType, UserProfile, UserChatRecord, UserSession
-
-
-class UserTypeService(ServiceBase):
-
-    def getByName(self, name: str) -> t.Optional[UserType]:
-        """
-        Get a user type by name.
-        :param name: The name of the user type.
-        :return: The user type instance.
-        """
-        return self.dbSession.query(UserType).where(UserType.name == name).first()
-
-    def createByName(self, name: str) -> UserType:
-        """
-        Create a user type by name.
-        :param name: The name of the user type.
-        :return: The user type instance.
-        """
-        instance = UserType(name)
-        self.dbSession.add(instance)
-        return instance
-
-    def getOrCreateByName(self, name: str) -> UserType:
-        """
-        Get or create a user type by name.
-        :param name: The name of the user type.
-        :return: The user type instance.
-        """
-        instance = self.getByName(name)
-        if instance is not None:
-            return instance
-        return self.createByName(name)
+from .Role import RoleService
+from .UserRole import UserRoleService
+from ..base import ServiceBase
+from ..RandomPet import getRandomAnimal
+from ...ApplicationModel import (
+    User,
+    UserSession,
+    UserChatRecord,
+)
 
 
 class UserService(ServiceBase):
 
-    def __init__(self, dbSession: so.Session, userTypeService: UserTypeService) -> None:
+    def __init__(self, dbSession: so.Session, roleService: RoleService, userRoleService: UserRoleService) -> None:
         super().__init__(dbSession)
-        self.userTypeService = userTypeService
+        self.roleService = roleService
+        self.userRoleService = userRoleService
 
-    def createUserProfile(self, username: str, userType: UserType) -> UserProfile:
+    def createUser(self, username: str) -> User:
         """
         Create a user profile.
         :param username: The username of the user.
-        :param userType: The type of the user.
         :return: The user profile instance.
         """
-        instance = UserProfile(username, type=userType)
+        instance = User(username)
         self.dbSession.add(instance)
         return instance
 
-    def createAnonymous(self, username: t.Optional[str] = None, userType: t.Optional[UserType] = None) -> UserProfile:
+    def createAnonymous(self, username: t.Optional[str] = None) -> User:
         """
         Create an anonymous user.
+        :param username: The username of the user. If None, a random animal name will be used.
+
         :return: The user profile instance.
         """
-        userType = userType if userType else self.userTypeService.getOrCreateByName("Anonymous")
         username = username if username else f"Anonymous {getRandomAnimal().capitalize()}"
-        user = self.createUserProfile(username, userType)
-        self.dbSession.add(user)
+        user = self.createUser(username)
+        role = self.roleService.getOrCreateAnonymousRole()
+        self.userRoleService.associateUserWithRole(user, role)
         return user
 
 
 class UserChatRecordService(ServiceBase):
-
     def getByChatId(self, chatId: str) -> t.Optional[UserChatRecord]:
         """
         Get a user chat record by chat ID.
@@ -81,19 +58,18 @@ class UserChatRecordService(ServiceBase):
         """
         return self.dbSession.query(UserChatRecord).where(UserChatRecord.chatId == chatId).first()
 
-    def associateChatIdWithUserProfile(self, chatId: str, userProfile: UserProfile) -> UserChatRecord:
+    def associateChatIdWithUser(self, chatId: str, user: User) -> UserChatRecord:
         """
         Associate a chat ID with a user profile.
         :param chatId: The chat ID to associate.
-        :param userProfile: The user profile to associate with the chat ID.
+        :param User: The user profile to associate with the chat ID.
         """
-        record = UserChatRecord(chatId=chatId, userProfile=userProfile)
+        record = UserChatRecord(chatId=chatId, user=user)
         self.dbSession.add(record)
         return record
 
 
 class UserSessionService(ServiceBase):
-
     def creaeteExpirDatetime(self) -> datetime.datetime:
         """
         Create an expiration datetime for a session.
@@ -124,17 +100,17 @@ class UserSessionService(ServiceBase):
             return None
         return record
 
-    def createForUserProfile(self, userProfile: UserProfile, expire: t.Optional[datetime.datetime] = None) -> UserSession:
+    def createForUser(self, user: User, expire: t.Optional[datetime.datetime] = None) -> UserSession:
         """
         Create a session for a user profile.
-        :param userProfile: The user profile to create a session for.
+        :param User: The user profile to create a session for.
         :param expire: The expiration datetime for the session.
         :return: The created session.
         """
         expire = expire if expire else self.creaeteExpirDatetime()
-        semiEncodedString = f"{userProfile.id}{str(random.random())}{datetime.datetime.now(datetime.UTC)}"
+        semiEncodedString = f"{user.id}{str(random.random())}{datetime.datetime.now(datetime.UTC)}"
         instance = UserSession(
-            profile=userProfile,
+            user=user,
             expire=expire,
             sessionToken=hashlib.md5(semiEncodedString.encode()).hexdigest(),
         )
@@ -156,12 +132,47 @@ class UserSessionService(ServiceBase):
         session.expire = expire
         return session
 
-    def clearExpiredUserSession(self, userProfile: UserProfile) -> None:
+    def clearExpiredUserSession(self, User: User) -> None:
         """
         Clear expired user sessions.
-        :param userProfile: The user profile to clear sessions for.
+        :param User: The user profile to clear sessions for.
         """
         self.dbSession.query(UserSession).where(
-            UserSession.profile == userProfile,
+            UserSession.user == User,
             UserSession.expire < datetime.datetime.now(datetime.UTC)
         ).delete()
+
+    def validateSessionToken(self, sessionToken: t.Optional[str], bypassExpire: bool = False, updateExperation: bool = True) -> UserSession:
+        """
+        Validate the session token. 
+        Used in API endpoints to ensure the session is valid before proceeding with the request.
+        Raises an HTTPException if the session token is invalid or expired.
+        Not to be used in the service layer, but rather in the API layer.
+
+        When `updateExperation` is True, the expiration date of the session token will be updated.
+
+        :param sessionToken: The session token to validate.
+        :param userSessionService: The user session service to use.
+        :param updateExperation: Whether to update the expiration date of the session token.
+
+        :raises HTTPException: If the session token is invalid or expired.
+        :return: True if the session token is valid.
+        """
+        if sessionToken is None or not sessionToken.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="No Session Found"
+            )
+        if updateExperation:
+            session = self.updateExpiration(sessionToken=sessionToken, overide=bypassExpire)
+        else:
+            session = self.getSessionFromSessionToken(
+                sessionToken=sessionToken,
+                bypassExpire=bypassExpire
+            )
+        if session is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Session Expired or invalid"
+            )
+        return session

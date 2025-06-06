@@ -2,9 +2,9 @@ import typing as t
 import sqlalchemy.orm as so
 
 from .base import ServiceBase
-from .user import UserService
+from .User.User import UserService
 from ..FacebookClient import FacebookClient
-from ..ApplicationModel import SocialsProfileProvider, UserSocialProfile, UserProfile
+from ..ApplicationModel import SocialsProfileProvider, UserSocialProfile, User
 from ...config import logger
 
 
@@ -44,7 +44,6 @@ class SocialProviderService(ServiceBase):
 
 
 class SocialProfileService(ServiceBase):
-
     def get(self, socialId: str, provider: SocialsProfileProvider) -> t.Optional[UserSocialProfile]:
         """
         Get a social profile.
@@ -81,13 +80,13 @@ class SocialProfileService(ServiceBase):
             return instance
         return self.create(socialId, provider, name)
 
-    def associateProfile(self, socialProfile: UserSocialProfile, profile: UserProfile) -> None:
+    def associateUser(self, socialProfile: UserSocialProfile, user: User) -> None:
         """
         Associate a social profile with a user profile.
         :param socialProfile: The social profile instance.
         :param profile: The user profile instance.
         """
-        socialProfile.profile = profile
+        socialProfile.user = user
 
 
 class FacebookService(ServiceBase):
@@ -123,7 +122,7 @@ class FacebookService(ServiceBase):
         provider = self.socialProviderService.getOrCreateByName(self.providerName)
         return self.socialProfileService.getOrCreate(str(facebookProfile.facebookId), provider, facebookProfile.username)
 
-    def getOrCreateUserProfileFromAccessToken(self, accessToken: str) -> UserProfile:
+    def getOrCreateUserProfileFromAccessToken(self, accessToken: str) -> User:
         """
         Get a user profile from Facebook access token.
         :param accessToken: The access token of a given Facebook user.
@@ -131,12 +130,11 @@ class FacebookService(ServiceBase):
         :return: A new instance of UserSocialProfile with Id and username populated.
         """
         socialProfile = self.getOrCreateSocialProfileFromAccessToken(accessToken)
-        if socialProfile.profile is not None:
-            return socialProfile.profile
-        userType = self.userService.userTypeService.getOrCreateByName(self.providerName)
+        if socialProfile.user is not None:
+            return socialProfile.user
         if socialProfile.socialName is None:
-            userProfile = self.userService.createAnonymous(userType=userType)
+            userProfile = self.userService.createAnonymous()
         else:
-            userProfile = self.userService.createUserProfile(socialProfile.socialName, userType)
-        self.socialProfileService.associateProfile(socialProfile, userProfile)
+            userProfile = self.userService.createUser(socialProfile.socialName)
+        self.socialProfileService.associateUser(socialProfile, userProfile)
         return userProfile
