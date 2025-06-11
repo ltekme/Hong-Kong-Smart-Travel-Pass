@@ -1,6 +1,6 @@
 import typing as t
 
-from ..base import ServiceBase
+from ...Services.Base import ServiceBase
 
 from ...ApplicationModel import (
     User,

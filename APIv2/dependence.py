@@ -28,6 +28,7 @@ from .modules.Services.User.User import (
 from .modules.GoogleServices import GoogleServices
 from .modules.Services.Permission.Permission import PermissionService
 from .modules.Services.Permission.RolePermission import RolePermissionService
+from .modules.Services.ServiceAction.ServiceAction import ServiceActionService
 from .modules.ChatLLMService import ChatLLMService
 
 from .config import (
@@ -96,7 +97,8 @@ def getUserService() -> getUserServiceType:
     def func(dbSession: so.Session) -> UserService:
         permissionService = PermissionService(dbSession)
         rolePermissionService = RolePermissionService(dbSession)
-        roleService = RoleService(dbSession, permissionService, rolePermissionService)
+        serviceActionService = ServiceActionService(dbSession)
+        roleService = RoleService(dbSession, permissionService, rolePermissionService, serviceActionService,)
         userRoleService = UserRoleService(dbSession)
         return UserService(dbSession, roleService, userRoleService)
     return func
@@ -119,7 +121,8 @@ def getChatLLMService() -> getChatLLMServiceType:
         return ChatLLMService(
             user=user,
             dbSession=dbSession,
-            userChatRecordService=getUserChatRecordService()(dbSession),
+            userChatRecordService=UserChatRecordService(dbSession),
+            serviceActionService=ServiceActionService(dbSession),
             credentials=credentials,
             llmModelProperty=llmModelProperty,
         )

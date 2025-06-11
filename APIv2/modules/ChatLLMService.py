@@ -4,13 +4,15 @@ import sqlalchemy.orm as so
 
 from google.oauth2.service_account import Credentials
 
-from .Services.Permission.Permission import ServiceWithPermissions
+from .Services.PermissionAndQuota.Quota import QuotaService
+from .Services.PermissionAndQuota.Permission import PermissionService
+from .Services.PermissionAndQuota.ServiceBase import ServiceWithAAA
 from .Services.User.User import UserChatRecordService
 
 from .ApplicationModel import User
 
-from .Services.Permission.PermissionDefinations import (
-    CHATLLM_SERIVCE_NAME as SERIVCE_NAME,
+from .Services.ServiceDefination import (
+    ServiceActionDefination,
     CHATLLM_INVOKE as INVOKE,
     CHATLLM_RECALL as RECALL,
     CHATLLM_CREATE as CREATE,
@@ -24,17 +26,19 @@ from ChatLLMv2.ChatModel.v1ChainMigrate import v1LLMChainModel
 from ..config import logger
 
 
-class ChatLLMService(ServiceWithPermissions):
+class ChatLLMService(ServiceWithAAA):
 
     def __init__(self,
                  user: User,
                  dbSession: so.Session,
+                 quotaService: QuotaService,
+                 permissionService: PermissionService,
                  userChatRecordService: UserChatRecordService,
                  credentials: t.Optional[Credentials],
                  llmModelProperty: AdditionalModelProperty,
                  ) -> None:
         logger.info("Initializing ChatLLMService")
-        super().__init__(dbSession, SERIVCE_NAME, user)
+        super().__init__(dbSession, quotaService, permissionService, user)
         self.user = user
         self.userChatRecordService = userChatRecordService
         self.llmModel = v1LLMChainModel(credentials, llmModelProperty)
@@ -57,15 +61,14 @@ class ChatLLMService(ServiceWithPermissions):
         """
         Invoke the chat service with a user and a message.
 
-        Permission Action: invoke
-
         :param message: The message to send in the chat.
         :param contextValues: Additional context values for the chat invocation.
         :param bypassPermssionCheck: Whether to bypass the permission check.
         :param bypassChatAssociationCheck: Whether to bypass the chat ID association check.
         :return: The response from the chat service.
         """
-        if not self.cheackPermission(INVOKE) and not bypassPermssionCheck:
+        actionId = ServiceActionDefination.getId(INVOKE)
+        if not self.checkPermission(actionId) and not bypassPermssionCheck:
             raise PermissionError("User does not have permission to invoke the chat service.")
 
         if not self.checkUserChatIdAssociation(chatId) and not bypassChatAssociationCheck:
@@ -88,7 +91,8 @@ class ChatLLMService(ServiceWithPermissions):
         :param bypassPermissionCheck: Whether to bypass the permission check.
         :return: The ID of the created chat session.
         """
-        if not self.cheackPermission(CREATE) and not bypassPermissionCheck:
+        actionId = ServiceActionDefination.getId(CREATE)
+        if not self.checkPermission(actionId) and not bypassPermissionCheck:
             raise PermissionError("User does not have permission to create a chat session.")
 
         chatId = chatId if chatId else ChatController(
@@ -113,7 +117,8 @@ class ChatLLMService(ServiceWithPermissions):
         :param bypassPermissionCheck: Whether to bypass the permission check.
         :return: A list of messages in the chat session.
         """
-        if not self.cheackPermission(RECALL) and not bypassPermissionCheck:
+        actionId = ServiceActionDefination.getId(RECALL)
+        if not self.checkPermission(actionId) and not bypassPermissionCheck:
             raise PermissionError("User does not have permission to recall the chat session.")
 
         if not self.checkUserChatIdAssociation(chatId) and not bypassChatAssociationCheck:

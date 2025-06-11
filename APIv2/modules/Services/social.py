@@ -1,7 +1,7 @@
 import typing as t
 import sqlalchemy.orm as so
 
-from .base import ServiceBase
+from .Base import ServiceBase
 from .User.User import UserService
 from ..FacebookClient import FacebookClient
 from ..ApplicationModel import SocialsProfileProvider, UserSocialProfile, User

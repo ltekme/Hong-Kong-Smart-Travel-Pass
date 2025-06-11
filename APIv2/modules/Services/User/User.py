@@ -9,7 +9,7 @@ from fastapi import HTTPException
 
 from .Role import RoleService
 from .UserRole import UserRoleService
-from ..base import ServiceBase
+from ..Base import ServiceBase
 from ..RandomPet import getRandomAnimal
 from ...ApplicationModel import (
     User,

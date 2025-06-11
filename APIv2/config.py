@@ -82,7 +82,7 @@ class Settings:
             return default
 
     @property
-    def anonymousUserQouta(self) -> int:
+    def anonymousUserQuota(self) -> int:
         """How long untill user sesion expire"""
         default = 10
         try:
