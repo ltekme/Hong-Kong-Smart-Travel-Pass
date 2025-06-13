@@ -64,63 +64,34 @@ class UserSocialProfile(TableBase):
         self.provider = provider
 
 
-class Quota(TableBase):
-    """
-    Represents a quota for a user.
-
-    actionId: The ID of the service action that this permission applies to. Ref: ServiceDefination.py
-    resetPerid: The seconds before the current time when the quota will reset.
-    quotaValue: The value of the quota, e.g. number of requests allowed.
-    """
-    __tablename__ = "quota"
+class RoleQuota(TableBase):
+    __tablename__ = "role_quota"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    name: so.Mapped[str] = so.mapped_column(sa.String, nullable=False, unique=True, index=True)
-    description: so.Mapped[t.Optional[str]] = so.mapped_column(sa.String, nullable=True)
-    resetPeriod: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, default=1*60*24)  # Default to 1 day in seconds
-    quotaValue: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
+    roleId: so.Mapped[int] = so.mapped_column(sa.ForeignKey("role.id"), nullable=False)
 
     actionId: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
+    value: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, default=0)
+    resetInterval: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, default=60 * 60 * 24)
+    description: so.Mapped[t.Optional[str]] = so.mapped_column(sa.String, nullable=True)
 
-    roles: so.Mapped[t.List["Role"]] = so.relationship("Role", secondary="role_quota_association", back_populates="quota")
-    users: so.Mapped[t.List["User"]] = so.relationship("User", secondary="user_quota_association", back_populates="quota")
-
-    def __init__(self,
-                 name: str,
-                 actionId: int,
-                 quotaValue: int,
-                 resetPeriod: int = 1*60*24,
-                 description: t.Optional[str] = None
-                 ) -> None:
-        """
-        Initialize a Quota instance.
-
-        :param actionId: Ref: ServiceDefination.py
-        :param quotaValue: The value of the quota, e.g. number of requests allowed.
-        :param resetPeriod: The seconds before the current time when the quota will reset.
-        """
-        self.name = name
-        self.actionId = actionId
-        self.quotaValue = quotaValue
-        self.resetPeriod = resetPeriod
-        self.description = description
+    __table_args__ = (
+        sa.UniqueConstraint('roleId', 'actionId', name='uq_role_action'),
+    )
 
 
-class RoleQuota(TableBase):
-    """Represents the many-to-many relationship between roles and quotas."""
-    __tablename__ = "role_quota_association"
+class UserQuota(TableBase):
+    __tablename__ = "user_quota"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    role_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("role.id"))
-    quota_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("quota.id"))
+    userId: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
 
-    def __init__(self, role: "Role", quota: Quota) -> None:
-        """
-        Initialize a RoleQuota instance.
+    actionId: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
+    value: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, default=0)
+    resetInterval: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, default=60 * 60 * 24)
+    description: so.Mapped[t.Optional[str]] = so.mapped_column(sa.String, nullable=True)
 
-        :param role: The role instance.
-        :param quota: The quota instance.
-        """
-        self.role_id = role.id
-        self.quota_id = quota.id
+    __table_args__ = (
+        sa.UniqueConstraint('userId', 'actionId', name='uq_user_action'),
+    )
 
 
 class QuotaUsage(TableBase):
@@ -132,34 +103,11 @@ class QuotaUsage(TableBase):
     """
     __tablename__ = "quota_usage"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"))
-    quota_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("quota.id"))
+    userId: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"))
+    actionId: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False)
 
-    currentValue: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, default=0)
+    value: so.Mapped[int] = so.mapped_column(sa.Integer, nullable=False, default=0)
     lastReset: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime(timezone=True), nullable=False, default=sl.func.now())
-
-
-class UserQuota(TableBase):
-    """
-    Represents the many-to-many relationship between users and quotas.
-
-    The UserQuota takes presedence over the RoleQuota.
-
-    """
-    __tablename__ = "user_quota_association"
-    id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"))
-    quota_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("quota.id"))
-
-    def __init__(self, user: "User", quota: Quota) -> None:
-        """
-        Initialize a UserQuota instance.
-
-        :param user: The user instance.
-        :param quota: The quota instance.
-        """
-        self.user_id = user.id
-        self.quota_id = quota.id
 
 
 class Permission(TableBase):
@@ -227,7 +175,6 @@ class Role(TableBase):
 
     permissions: so.Mapped[t.List["Permission"]] = so.relationship("Permission", secondary="role_permission_association", back_populates="roles")
     users: so.Mapped[t.List["User"]] = so.relationship("User", secondary="user_role_association", back_populates="roles")
-    quotas: so.Mapped[t.List["Quota"]] = so.relationship("Quota", secondary="role_quota_association", back_populates="roles")
 
     def __init__(self, name: str, description: t.Optional[str] = None) -> None:
         """
@@ -270,7 +217,6 @@ class User(TableBase):
     socials: so.Mapped[t.List["UserSocialProfile"]] = so.relationship(back_populates="user")
 
     roles: so.Mapped[t.List["Role"]] = so.relationship("Role", secondary="user_role_association", back_populates="users")
-    quota: so.Mapped[t.List["Quota"]] = so.relationship("Quota", secondary="user_quota_association", back_populates="users")
     permissions: so.Mapped[t.List["Permission"]] = so.relationship("Permission", secondary="user_permission_association", back_populates="users")
 
     def __init__(self, username: str) -> None:

@@ -13,6 +13,9 @@ class FacebookUserIdentifyExeception(Exception):
 
 
 class SocialProviderService(ServiceBase):
+    def __init__(self, dbSession: so.Session) -> None:
+        super().__init__(dbSession, serviceName="SocialProviderService")
+
     def getByName(self, name: str) -> t.Optional[SocialsProfileProvider]:
         """
         Get a social provider by name.
@@ -44,6 +47,10 @@ class SocialProviderService(ServiceBase):
 
 
 class SocialProfileService(ServiceBase):
+    
+    def __init__(self, dbSession: so.Session) -> None:
+        super().__init__(dbSession, serviceName="SocialProfileService")
+
     def get(self, socialId: str, provider: SocialsProfileProvider) -> t.Optional[UserSocialProfile]:
         """
         Get a social profile.
@@ -94,7 +101,7 @@ class FacebookService(ServiceBase):
     providerName = "Facebook"
 
     def __init__(self, dbSession: so.Session, userService: UserService, socialProfileService: SocialProfileService, socialProviderService: SocialProviderService, facebookClient: FacebookClient) -> None:
-        super().__init__(dbSession)
+        super().__init__(dbSession, serviceName="FacebookService")
         self.userService = userService
         self.socialProfileService = socialProfileService
         self.socialProviderService = socialProviderService

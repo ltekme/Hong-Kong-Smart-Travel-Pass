@@ -17,11 +17,12 @@ from ...ApplicationModel import (
     UserChatRecord,
 )
 
+from ....config import settings
+
 
 class UserService(ServiceBase):
-
     def __init__(self, dbSession: so.Session, roleService: RoleService, userRoleService: UserRoleService) -> None:
-        super().__init__(dbSession)
+        super().__init__(dbSession, serviceName="UserService")
         self.roleService = roleService
         self.userRoleService = userRoleService
 
@@ -31,6 +32,7 @@ class UserService(ServiceBase):
         :param username: The username of the user.
         :return: The user profile instance.
         """
+        self.loggerDebug(f"Creating user with username: {username}")
         instance = User(username)
         self.dbSession.add(instance)
         return instance
@@ -44,12 +46,15 @@ class UserService(ServiceBase):
         """
         username = username if username else f"Anonymous {getRandomAnimal().capitalize()}"
         user = self.createUser(username)
-        role = self.roleService.getOrCreateAnonymousRole()
+        role = self.roleService.getOrCreateRole("Anonymous")
         self.userRoleService.associateUserWithRole(user, role)
         return user
 
 
 class UserChatRecordService(ServiceBase):
+    def __init__(self, dbSession: so.Session) -> None:
+        super().__init__(dbSession, serviceName="UserChatRecordService")
+
     def getByChatId(self, chatId: str) -> t.Optional[UserChatRecord]:
         """
         Get a user chat record by chat ID.
@@ -70,12 +75,15 @@ class UserChatRecordService(ServiceBase):
 
 
 class UserSessionService(ServiceBase):
+    def __init__(self, dbSession: so.Session) -> None:
+        super().__init__(dbSession, serviceName="UserSessionService")
+
     def creaeteExpirDatetime(self) -> datetime.datetime:
         """
         Create an expiration datetime for a session.
         :return: The expiration datetime.
         """
-        return datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
+        return datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=settings.userSessionExpireInSeconds)
 
     def expired(self, session: UserSession) -> bool:
         """

@@ -12,6 +12,9 @@ from .routers import (
     profile,
 )
 
+from .modules.Services.PermissionAndQuota.Quota import QoutaExceededError
+from .modules.Services.PermissionAndQuota.Permission import NoPermssionError
+from .modules.ChatLLMService import ChatLLMServiceError
 
 app = FastAPI(root_path="/api/v2")
 app.add_middleware(
@@ -50,9 +53,25 @@ async def handleValidationError(request: Request, exeception: RequestValidationE
     )
 
 
-@app.exception_handler(PermissionError)
-async def handlePermissionError(request: Request, exeception: PermissionError) -> JSONResponse:
+@app.exception_handler(NoPermssionError)
+async def handlePermissionError(request: Request, exeception: NoPermssionError) -> JSONResponse:
     return JSONResponse(
         status_code=403,
-        content={"detail": "Permission Denied"},
+        content={"detail": f"You do not have permission to perform \"{exeception.action}\""},
+    )
+
+
+@app.exception_handler(QoutaExceededError)
+async def handleQuotaExceededError(request: Request, exeception: QoutaExceededError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "Quota Exceeded"},
+    )
+
+
+@app.exception_handler(ChatLLMServiceError)
+async def handleChatLLMServiceError(request: Request, exeception: ChatLLMServiceError) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "There is an error processing your request" if not exeception.args else exeception.args[0]},
     )

@@ -1,33 +1,22 @@
 import typing as t
 
+import sqlalchemy.orm as so
+
 from ..Base import ServiceBase
 from ...ApplicationModel import Role
 from ..PermissionAndQuota.Permission import PermissionService
-from ..PermissionAndQuota.RolePermission import RolePermissionService
 from ..PermissionAndQuota.Quota import QuotaService
-from ..PermissionAndQuota.RoleQuota import RoleQoutaService
-from ..ServiceDefination import (
-    ServiceActionDefination,
-    CHATLLM_CREATE,
-    CHATLLM_INVOKE,
-)
-
-import sqlalchemy.orm as so
 
 
 class RoleService(ServiceBase):
     def __init__(self,
                  dbSession: so.Session,
                  permissionService: PermissionService,
-                 rolePermissionService: RolePermissionService,
                  qoutaService: QuotaService,
-                 roleQuotaService: RoleQoutaService
                  ) -> None:
-        super().__init__(dbSession)
+        super().__init__(dbSession, serviceName="RoleService")
         self.permissionService = permissionService
-        self.rolePermissionService = rolePermissionService
         self.qoutaService = qoutaService
-        self.roleQuotaService = roleQuotaService
 
     def createRole(self, name: str, description: t.Optional[str] = None) -> Role:
         """
@@ -36,6 +25,7 @@ class RoleService(ServiceBase):
         :param description: A description of the role.
         :return: The user role instance.
         """
+        self.loggerDebug(f"Creating role with name: {name}, description: {description}")
         instance = Role(name=name, description=description)
         self.dbSession.add(instance)
         return instance
@@ -46,6 +36,7 @@ class RoleService(ServiceBase):
         :param name: The name of the role to search for.
         :return: The user role instance or None if not found.
         """
+        self.loggerDebug(f"Getting role by name: {name}")
         return self.dbSession.query(Role).where(Role.name == name).first()
 
     def getOrCreateRole(self, name: str, description: t.Optional[str] = None) -> Role:
@@ -55,39 +46,9 @@ class RoleService(ServiceBase):
         :param description: A description of the role.
         :return: The user role instance.
         """
+        self.loggerDebug(f"Getting or creating role with name: {name}, description: {description}")
         role = self.getByName(name)
         if not role:
+            self.loggerDebug(f"Role with name: {name} not found, creating new one.")
             role = self.createRole(name, description)
-        return role
-
-    def getOrCreateAnonymousRole(self) -> Role:
-        """
-        Get or create the anonymous role.
-        :return: The anonymous user role instance.
-        """
-        defaultActionNames = [
-            CHATLLM_CREATE,
-            CHATLLM_INVOKE,
-        ]
-        defaultAnonymousActionIds = list(map(lambda aName: ServiceActionDefination.getId(aName), defaultActionNames))
-        role = self.getOrCreateRole(name="Anonymous", description="Role for anonymous users")
-        if not role.permissions:
-            # Assign default permissions to the anonymous role if not already assigned
-            defaultRolePermission = list(map(lambda aId: self.permissionService.getOrCreatePermission(aId), defaultAnonymousActionIds))
-            for permission in defaultRolePermission:
-                self.rolePermissionService.getOrCreateAssociation(
-                    role=role,
-                    permission=permission,
-                    effect=True
-                )
-        if not role.quotas:
-            # Assign default quota to the anonymous role if not already assigned
-            defaultRoleQuotas = list(map(lambda aId: self.qoutaService.getOrCreateQuotaByName(
-                name=f"Anonymous-{aId}",
-                actionId=aId,
-                quotaValue=5,
-                resetPeriod=1 * 60 * 24,  # Daily reset
-            ), defaultAnonymousActionIds))
-            for quota in defaultRoleQuotas:
-                self.roleQuotaService.getOrCreateAsociation(role=role, quota=quota)
         return role

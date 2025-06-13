@@ -81,15 +81,6 @@ class Settings:
         except ValueError:
             return default
 
-    @property
-    def anonymousUserQuota(self) -> int:
-        """How long untill user sesion expire"""
-        default = 10
-        try:
-            return int(os.environ.get("ANONYMOUS_USER_MESSAGE_QOUTER", default))
-        except ValueError:
-            return default
-
 
 # uvicorn only stdout uvicorn.asgi, uvicorn.access, uvicorn.error
 # see site-packages/uvicorn/config.py: 383-393

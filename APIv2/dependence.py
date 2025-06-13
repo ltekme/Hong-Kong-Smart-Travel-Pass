@@ -25,11 +25,10 @@ from .modules.Services.User.User import (
     UserChatRecordService,
     UserSessionService
 )
-from .modules.GoogleServices import GoogleServices
-from .modules.Services.Permission.Permission import PermissionService
-from .modules.Services.Permission.RolePermission import RolePermissionService
-from .modules.Services.ServiceAction.ServiceAction import ServiceActionService
+from .modules.Services.PermissionAndQuota.Quota import QuotaService
+from .modules.Services.PermissionAndQuota.Permission import PermissionService
 from .modules.ChatLLMService import ChatLLMService
+from .modules.GoogleServices import GoogleServices
 
 from .config import (
     settings,
@@ -84,23 +83,27 @@ getUserChatRecordServiceType = t.Callable[[so.Session], UserChatRecordService]
 def getGoogleService() -> getGoogleServicesType:
     def func(dbSession: so.Session, user: t.Optional[User]) -> GoogleServices:
         return GoogleServices(
-            dbSession=dbSession,
-            serivceName="google",
             user=user,
+            dbSession=dbSession,
             credentials=credentials,
             apiKey=settings.googleApiKey,
+            quotaService=QuotaService(dbSession),
+            permissionService=PermissionService(dbSession),
         )
     return func
 
 
 def getUserService() -> getUserServiceType:
     def func(dbSession: so.Session) -> UserService:
-        permissionService = PermissionService(dbSession)
-        rolePermissionService = RolePermissionService(dbSession)
-        serviceActionService = ServiceActionService(dbSession)
-        roleService = RoleService(dbSession, permissionService, rolePermissionService, serviceActionService,)
-        userRoleService = UserRoleService(dbSession)
-        return UserService(dbSession, roleService, userRoleService)
+        return UserService(
+            dbSession=dbSession,
+            roleService=RoleService(
+                dbSession=dbSession,
+                permissionService=PermissionService(dbSession),
+                qoutaService=QuotaService(dbSession),
+            ),
+            userRoleService=UserRoleService(dbSession),
+        )
     return func
 
 
@@ -121,10 +124,11 @@ def getChatLLMService() -> getChatLLMServiceType:
         return ChatLLMService(
             user=user,
             dbSession=dbSession,
-            userChatRecordService=UserChatRecordService(dbSession),
-            serviceActionService=ServiceActionService(dbSession),
             credentials=credentials,
             llmModelProperty=llmModelProperty,
+            userChatRecordService=UserChatRecordService(dbSession),
+            quotaService=QuotaService(dbSession),
+            permissionService=PermissionService(dbSession),
         )
     return func
 
