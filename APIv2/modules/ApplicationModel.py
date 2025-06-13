@@ -282,3 +282,15 @@ class UserSession(TableBase):
         self.user = user
         self.sessionToken = sessionToken
         self.expire = expire
+
+
+class ServiceConfig(TableBase):
+    """
+    Represents the config of each action/service.
+
+    This class is used to hold the status of a action/service, whether it is enabled or disabled. 
+    """
+    __tablename__ = "service_status_config"
+    actionId: so.Mapped[int] = so.mapped_column(sa.Integer, primary_key=True, index=True, unique=True)
+    enabled: so.Mapped[bool] = so.mapped_column(sa.Boolean, nullable=False, default=True)
+    lastUpdate: so.Mapped[datetime.datetime] = so.mapped_column(sa.DateTime(timezone=True), default=sl.func.now())

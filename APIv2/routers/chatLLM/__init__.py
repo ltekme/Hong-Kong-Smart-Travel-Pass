@@ -57,7 +57,7 @@ async def chatLLM(
     )
     logger.debug(f"Invoking {requestChatId=} controller")
     chatLLMService = getChatLLMService(dbSession, session.user)
-    response = chatLLMService.invokeChatModel(requestChatId, message, contextValues)
+    response: DataHandler.ChatMessage = chatLLMService.invokeChatModel(requestChatId, message, contextValues)
 
     ttsAudio = ""
     if not requestDisableTTS:
@@ -89,7 +89,7 @@ async def chatRecall(
     logger.info(f"Recalling {chatId=} controller")
     session = getUserSessionService(dbSession).validateSessionToken(x_SessionToken)
     chatLLMService = getChatLLMService(dbSession, session.user)
-    messages = chatLLMService.recall(chatId)
+    messages: t.List[DataHandler.ChatMessage] = chatLLMService.recall(chatId)
     responseMessageList = list(map(lambda i: ChatRecallModel.ResponseMessage(
         role=i.role,
         message=i.text,
@@ -113,7 +113,7 @@ async def chatRequest(
     session = getUserSessionService(dbSession).validateSessionToken(x_SessionToken)
     logger.info(f"Creating new chat session for {session.user.id=} with {session.id=}")
     chatLLMService = getChatLLMService(dbSession, session.user)
-    chatId = chatLLMService.createChat()
+    chatId: str = chatLLMService.createChat()
     logger.debug(f"Returning {chatId=} to {session.id=}")
     dbSession.commit()
     return ChatIdResponse(chatId=chatId)

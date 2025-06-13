@@ -76,9 +76,7 @@ class ServiceWithAAA(ServiceBase):
         return True
 
 
-def permissionRequired(
-    action: str,
-):
+def permissionRequired(action: str):
     """
     A decorator to validate user permissions for a specific action.
     Throws a PermissionError if the user does not have permission to perform the action.
@@ -94,13 +92,16 @@ def permissionRequired(
                         ) -> ChatMessage:
 
     This decorator can only be used on the methods of a class that inherits from ServiceWithAAA.
-
     """
     def decorator(func: t.Callable[..., t.Any]):
         def wrapper(*args: t.Any, **kwargs: dict[str, t.Any]) -> t.Any:
             self = args[0]
-            if not issubclass(self.__class__, ServiceWithAAA):
+            self: ServiceWithAAA = args[0]
+            if not issubclass(self.__class__, ServiceWithAAA):  # type: ignore
                 raise TypeError("This decorator can only be used on methods of a class that inherits from ServiceWithAAA.")
+            if self.user is None:
+                self.loggerWarning("No user provided, Assuming Public With Permission.")
+                return func(*args, **kwargs)
             actionId = ServiceActionDefination.getId(action)
             if not kwargs.get('bypassPermissionCheck', False):
                 hasPermission = self.checkPermission(actionId)
@@ -111,9 +112,7 @@ def permissionRequired(
     return decorator
 
 
-def quotaRequired(
-    action: str,
-):
+def quotaRequired(action: str):
     """
     A decorator to validate user quota for a specific action.
     Throws a QoutaExceededError if the user does not have quota to perform the action.
@@ -121,7 +120,7 @@ def quotaRequired(
     :param action: The the action to check permissions for or the string name of the action.
 
     example usage:
-    @validatePermission(INVOKE)
+    @quotaRequired(INVOKE)
     def invokeChatModel(self, chatId: str, message: ChatMessage, contextValues: InvokeContextValues,
                         bypassPermssionCheck: bool = False,
                         bypassChatAssociationCheck: bool = False,
@@ -133,9 +132,12 @@ def quotaRequired(
     """
     def decorator(func: t.Callable[..., t.Any]):
         def wrapper(*args: t.Any, **kwargs: dict[str, t.Any]) -> t.Any:
-            self = args[0]
-            if not issubclass(self.__class__, ServiceWithAAA):
+            self: ServiceWithAAA = args[0]
+            if not issubclass(self.__class__, ServiceWithAAA):  # type: ignore
                 raise TypeError("This decorator can only be used on methods of a class that inherits from ServiceWithAAA.")
+            if self.user is None:
+                self.loggerWarning("No user provided, Assuming Public With Permission.")
+                return func(*args, **kwargs)
             actionId = ServiceActionDefination.getId(action)
             if not kwargs.get('bypassQuotaCheck', False):
                 hasQouta = self.checkAndIncrementQuota(actionId)
