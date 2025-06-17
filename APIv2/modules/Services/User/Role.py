@@ -3,9 +3,9 @@ import typing as t
 import sqlalchemy.orm as so
 
 from ..Base import ServiceBase
-from ...ApplicationModel import Role
 from ..PermissionAndQuota.Permission import PermissionService
 from ..PermissionAndQuota.Quota import QuotaService
+from APIv2.modules.ApplicationModel import Role
 
 
 class RoleService(ServiceBase):

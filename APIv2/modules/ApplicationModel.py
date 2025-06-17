@@ -210,7 +210,10 @@ class User(TableBase):
     __tablename__ = "user"
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String, nullable=False)
+    email: so.Mapped[t.Optional[str]] = so.mapped_column(sa.String, nullable=True, unique=True, index=True)
     public: so.Mapped[bool] = so.mapped_column(sa.Boolean, nullable=True, default=False)
+
+    cognitoId: so.Mapped[t.Optional[str]] = so.mapped_column(sa.String, nullable=True, unique=True, index=True)
 
     chatRecordIds: so.Mapped[t.List["UserChatRecord"]] = so.relationship(back_populates="user")
     sessions: so.Mapped[t.List["UserSession"]] = so.relationship(back_populates="user")

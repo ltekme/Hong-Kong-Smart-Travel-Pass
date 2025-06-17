@@ -30,26 +30,28 @@ class OpenriceBase():
 
 class FilterBase(OpenriceBase):
 
-    _raw_data = None
-    _data = None
+    _raw_data: t.Optional[t.Any] = None
+    _data: t.Optional[t.Any] = None
     _FILTER_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/region/all?uiLang=en&uiCity=hongkong"
     _METADATA_RAW_DATA_URL: str = "https://www.openrice.com/api/v2/metadata/country/all"
 
     def __init__(self,
                  credentials: Credentials,
                  store_data: bool = True,
-                 verbose: bool = False,
-                 searchKey: str = "",
+                 verbose: bool = True,
+                 searchKey: t.Optional[str] = None,
                  searchKeyParentKey: list[str] = [],
                  data_base_path: str = "./data",
                  chroma_db_path: str = "./chroma_db",
                  chroma_db_collection_prefix: str = "shitrice",
-                 metadata_url=False,  # weather to use metadata url or filter url
-                 data_url=None,  # custom data url, data schema must match api
+                 initChroma: bool = False,
+                 metadata_url: bool = False,  # weather to use metadata url or filter url
+                 data_url: t.Optional[str] = None,  # custom data url, data schema must match api
                  ):
         super().__init__(verbose)
         self.searchKey = searchKey
         self.store_data = store_data
+        self.initChroma = initChroma
 
         # chroma setup
         self.logger(f"initializing chroma db filter for {searchKey}")
@@ -59,7 +61,7 @@ class FilterBase(OpenriceBase):
             project=credentials.project_id if credentials is not None else None,
             model_name="text-multilingual-embedding-002",
         )
-        chroma_param = {
+        chroma_param: dict[str, t.Any] = {
             "collection_name": chroma_db_collection_prefix,
             "embedding_function": embeddings,
         }
@@ -100,7 +102,7 @@ class FilterBase(OpenriceBase):
                 f"{searchKey} filter data not in file or file store not enabled, parsing from raw data")
 
             # get the items from list of dict keys
-            searchKeyMap = self.raw_data
+            searchKeyMap: t.Any = self.raw_data
             for layer in searchKeyParentKey:
                 if isinstance(searchKeyMap, dict):
                     searchKeyMap = searchKeyMap[layer]
@@ -125,7 +127,7 @@ class FilterBase(OpenriceBase):
         self.logger(f"filter {searchKey} data loaded")
 
     @property
-    def raw_data(self):
+    def raw_data(self) -> t.Any:
         self.logger("getting raw data from cache")
         if self._raw_data:
             self.logger("raw data exist in cache, returning")
@@ -153,7 +155,9 @@ class FilterBase(OpenriceBase):
         self.logger("got raw data from API, returning")
         return raw_data
 
-    def init_chroma_data(self, data_expected: list[dict]):
+    def init_chroma_data(self, data_expected: list[dict[str, t.Any]]):
+        if not self.initChroma:
+            return
         self.logger(f"attempt to get {self.searchKey} data from chroma")
         coll = self.vector_store.get(
             where={"$and": [
@@ -168,7 +172,7 @@ class FilterBase(OpenriceBase):
             self.logger(
                 f"{self.searchKey} data count mismatch ({collection_len=} {data_expected_len=}), cleaning up chroma db")
             if collection_len > 0:
-                self.vector_store._collection.delete(coll["ids"])
+                self.vector_store.delete(ids=coll["ids"])
             else:
                 self.logger(
                     f"empty collection for {self.searchKey} nothing to delete")

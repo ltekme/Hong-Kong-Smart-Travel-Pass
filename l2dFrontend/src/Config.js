@@ -12,4 +12,7 @@ export const userPofilePersonalizationApiUrl = `${defaultApiUrl}/v2/profile/summ
 export const requestProfileSummoryApiUrl = `${defaultApiUrl}/v2/profile/summory/request`;
 export const pingUserSessionApiUrl = `${defaultApiUrl}/v2/profile/auth/ping`;
 
+export const loginCognitoUrl = `${defaultApiUrl}/v2/profile/auth/cognito/redirect`;
+export const callbackGetCognitoSessionUrl = `${defaultApiUrl}/v2/profile/auth/cognito`;
+
 export const userMenuActivationCommand = `/menu`

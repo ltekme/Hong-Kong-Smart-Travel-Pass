@@ -1,12 +1,9 @@
 import typing as t
 
-from ...Services.Base import ServiceBase
-
-from ...ApplicationModel import (
-    User,
-    Role,
-    UserRole,
-)
+from APIv2.modules.Services.Base import ServiceBase
+from APIv2.modules.ApplicationModel import User
+from APIv2.modules.ApplicationModel import Role
+from APIv2.modules.ApplicationModel import UserRole
 
 
 class UserRoleService(ServiceBase):
@@ -22,7 +19,9 @@ class UserRoleService(ServiceBase):
         """
         self.loggerDebug(f"Getting user role association for user: {user.id}, role: {role.id}")
         return self.dbSession.query(UserRole).filter(
-            UserRole.user_id == user.id and UserRole.role_id == role.id
+            UserRole.user_id == user.id
+        ).filter(
+            UserRole.role_id == role.id
         ).first()
 
     def associateUserWithRole(self, user: User, role: Role) -> UserRole:

@@ -4,35 +4,31 @@ import sqlalchemy.orm as so
 
 from google.oauth2.service_account import Credentials
 
-from .Services.PermissionAndQuota.Quota import QuotaService
-from .Services.PermissionAndQuota.Permission import PermissionService
-from .Services.PermissionAndQuota.ServiceBase import (
-    ServiceWithAAA,
-    quotaRequired,
-    permissionRequired,
-)
 from .Services.User.User import UserChatRecordService
 
 from .ApplicationModel import User
 
 from .ServiceConfig import checksEnabled
 
-from .Services.ServiceDefination import (
-    CHATLLM_SERIVCE_NAME,
-    CHATLLM_INVOKE as INVOKE,
-    CHATLLM_RECALL as RECALL,
-    CHATLLM_CREATE as CREATE,
-)
+from .Services.PermissionAndQuota.Quota import QuotaService
+from .Services.PermissionAndQuota.Permission import PermissionService
+from .Services.PermissionAndQuota.ServiceBase import permissionRequired
+from .Services.PermissionAndQuota.ServiceBase import quotaRequired
+from .Services.PermissionAndQuota.ServiceBase import ServiceWithAAA
 
-from ChatLLMv2.ChatModel.Property import AdditionalModelProperty, InvokeContextValues
+from .Services.ServiceDefination import CHATLLM_SERIVCE_NAME
+from .Services.ServiceDefination import CHATLLM_INVOKE as INVOKE
+from .Services.ServiceDefination import CHATLLM_CREATE as CREATE
+from .Services.ServiceDefination import CHATLLM_RECALL as RECALL
+
+from ChatLLMv2.ChatModel.Property import AdditionalModelProperty
+from ChatLLMv2.ChatModel.Property import InvokeContextValues
 from ChatLLMv2.DataHandler import ChatMessage
 from ChatLLMv2.ChatController import ChatController
 from ChatLLMv2.ChatModel.v1ChainMigrate import v1LLMChainModel
 
-
-class ChatLLMServiceError(Exception):
-    """Base exception class for ChatLLMService errors."""
-    pass
+from .exception import NotAuthorizedError
+from .exception import ChatLLMServiceError
 
 
 class ChatLLMService(ServiceWithAAA):
@@ -81,7 +77,7 @@ class ChatLLMService(ServiceWithAAA):
         :return: The response from the chat service.
         """
         if not self.checkUserChatIdAssociation(chatId) and not bypassChatAssociationCheck:
-            raise PermissionError("The user is not associated with the specified chatId.")
+            raise NotAuthorizedError("The user is not associated with the specified chatId.", INVOKE)
 
         self.loggerInfo(f"Invoking chat model for user {self.user.id} with chatId {chatId}")
         try:
@@ -136,7 +132,7 @@ class ChatLLMService(ServiceWithAAA):
         :return: A list of messages in the chat session.
         """
         if not self.checkUserChatIdAssociation(chatId) and not bypassChatAssociationCheck:
-            raise PermissionError("The user is not associated with the specified chatId.")
+            raise NotAuthorizedError("The user is not associated with the specified chatId.", RECALL)
 
         self.loggerInfo(f"Recalling chat session with chatId: {chatId} for user {self.user.id}")
         return ChatController(

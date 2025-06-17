@@ -3,25 +3,30 @@ import { useState, useEffect } from "react";
 import { UserChatList } from '../../components/ChatMessages';
 import { InputControls } from '../../components/Input';
 import { Hello } from "../../components/Hello";
-import { chatLLMApiUrl, geolocationApiUrl } from "../../Config";
+import { chatLLMApiUrl, geolocationApiUrl, pingUserSessionApiUrl } from "../../Config";
 import './index.css'
 import { IFacebookProfile } from "../../components/Interface";
 import { userMenuActivationCommand } from "../../Config";
 
 import Swal from "sweetalert2";
 import { userMenu } from "../../components/Menu";
-import { getChatId, setChatId } from "../../components/ParamStore";
+import { getChatId, getSessionInfo, setChatId } from "../../components/ParamStore";
 
-import { callChatLLMApi } from "../../components/APIService";
+import { callChatLLMApi, configAnynmousSession, refreshSession } from "../../components/APIService";
 
 import { IMessage } from "../../components/Interface";
+import { redirect, useNavigate, useSearchParams } from "react-router-dom";
 
 export interface IHome {
     confirmAgree: boolean,
     l2dSpeak: (url: string) => void
 }
 
+
+
 const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [messageList, setMessageList] = useState<IMessage[]>([]);
     const [lastUserMessageMedia, setLastUserMessageMedia] = useState<string[]>([]);
     const [displayHello, setDisplayHello] = useState(true);
@@ -39,7 +44,34 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
         accessToken: ""
     });
     const [username, setUsername] = useState('');
-
+    let throwAccessCodeDialog = () => {
+        Swal.fire({
+            title: "Please Enter Access Code",
+            input: "text",
+            text: "The code can be found at the event host or should be provided to you",
+            inputAttributes: {
+                autocapitalize: "off"
+            },
+            showDenyButton: true,
+            denyButtonText: "Login to continue",
+            confirmButtonText: "Continue",
+            showLoaderOnConfirm: true,
+            allowEscapeKey: false,
+            preConfirm: async (code) => {
+                try {
+                    await configAnynmousSession(code);
+                } catch (error) {
+                    Swal.showValidationMessage(`Request failed: ${error}`);
+                }
+            },
+            allowOutsideClick: false
+        }).then((result) => {
+            if (result.isDenied) {
+                console.log("redirecting to login")
+                navigate("/auth/login")
+            }
+        });
+    };
     useEffect(() => {
         if (facebookProfile.id) {
             console.log(`[Home][useEffect(facebookProfile)] Set facebook profile to\n${JSON.stringify({
@@ -255,6 +287,27 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
         getAddressFromCoordinates();
     }, [confirmAgree]);
 
+    useEffect(() => {
+        let func = async () => {
+            if (getSessionInfo().sessionToken) {
+                return
+            }
+            if (searchParams.has("access_code")) {
+                try {
+                    await configAnynmousSession(searchParams.get("access_code"));
+                } catch {
+                    throwAccessCodeDialog();
+                }
+            } else {
+                try {
+                    await configAnynmousSession(undefined);
+                } catch {
+                    throwAccessCodeDialog()
+                }
+            }
+        }
+        func()
+    })
 
 
     return (

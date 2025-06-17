@@ -3,25 +3,22 @@ import googlemaps  # type: ignore
 import typing as t
 import sqlalchemy.orm as so
 
-from google.cloud.texttospeech import (
-    TextToSpeechClient,
-    VoiceSelectionParams,
-    SynthesisInput,
-    AudioConfig,
-    AudioEncoding,
-)
-from google.cloud.speech import (
-    SpeechClient,
-    RecognitionAudio,
-    RecognitionConfig
-)
+from google.cloud.texttospeech import TextToSpeechClient
+from google.cloud.texttospeech import VoiceSelectionParams
+from google.cloud.texttospeech import SynthesisInput
+from google.cloud.texttospeech import AudioConfig
+from google.cloud.texttospeech import AudioEncoding
+from google.cloud.speech import SpeechClient
+from google.cloud.speech import RecognitionAudio
+from google.cloud.speech import RecognitionConfig
 from google.oauth2.service_account import Credentials
 
-from ..config import logger
+from ..logger import logger
 from .Services.PermissionAndQuota.Quota import QuotaService
 from .Services.PermissionAndQuota.Permission import PermissionService
 from .Services.PermissionAndQuota.ServiceBase import ServiceWithAAA
 from .ApplicationModel import User
+from .exception import ConfigurationError
 
 
 class GoogleServices(ServiceWithAAA):
@@ -96,7 +93,7 @@ class GoogleServices(ServiceWithAAA):
         logger.debug(f'Performing location lookup for {longitude=},{latitude=},{lang=}')
         if not self.apiKey:
             logger.warning(f'API Key not present, cannot perform lookup')
-            raise Exception("Config Error: Cannot Perform Reverse Geocode Search without API Key")
+            raise ConfigurationError("Cannot Perform Reverse Geocode Search without API Key")
         try:
             # This works, it not our fault that this works but not show up on editors
             maps = googlemaps.Client(key=self.apiKey)

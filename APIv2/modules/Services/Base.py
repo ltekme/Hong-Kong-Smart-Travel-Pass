@@ -1,12 +1,25 @@
+import typing as t
 import sqlalchemy.orm as so
 
-from ...config import logger
+from APIv2.logger import logger
 
 
-class ServiceBase:
-    def __init__(self, dbSession: so.Session, serviceName: str) -> None:
-        self.dbSession = dbSession
+class ServiceWithLogging:
+    def __init__(self, serviceName: str) -> None:
         self.serviceName = serviceName
+
+    def setLoggerAdditionalPrefix(self, prefix: t.Optional[str] = None) -> None:
+        """
+        Set an additional prefix for the logger.
+        :param prefix: The prefix to set.
+        """
+        if prefix is None:
+            self.serviceName = f"[{self.serviceName}]"
+            return
+        if prefix:
+            self.serviceName = f"{self.serviceName}][{prefix}"
+            return
+        self.serviceName = f"[{self.serviceName}]"
 
     def loggerDebug(self, message: str) -> None:
         """
@@ -35,3 +48,9 @@ class ServiceBase:
         :param message: The message to log.
         """
         logger.error(f"[{self.serviceName}] {message}")
+
+
+class ServiceBase(ServiceWithLogging):
+    def __init__(self, dbSession: so.Session, serviceName: str) -> None:
+        super().__init__(serviceName)
+        self.dbSession = dbSession

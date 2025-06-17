@@ -1,12 +1,11 @@
 from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages import HumanMessage
-from langchain_core.prompts import (
-    ChatPromptTemplate,
-    MessagesPlaceholder,
-)
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import MessagesPlaceholder
+
 from ChatLLMv2.DataHandler import ChatMessage
 
-from ..config import logger
+from ..logger import logger
 from ..dependence import credentials
 
 llm = ChatVertexAI(

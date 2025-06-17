@@ -5,14 +5,7 @@ from .Services.Base import ServiceBase
 from .Services.ServiceDefination import ServiceActionDefination
 
 from .ApplicationModel import ServiceConfig as ServiceConfigModel
-
-
-class ServiceDisabledError(Exception):
-    """Exception raised when a service is disabled."""
-
-    def __init__(self, action: str) -> None:
-        super().__init__(f"Service for action '{action}' is disabled.")
-        self.action = action
+from .exception import ServiceDisabledError
 
 
 class ServiceConfig(ServiceBase):

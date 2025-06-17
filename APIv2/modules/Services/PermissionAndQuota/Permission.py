@@ -1,19 +1,11 @@
 import typing as t
 
 from ..Base import ServiceBase
-from ...ApplicationModel import (
-    User,
-    Role,
-    Permission,
-    UserPermission,
-    RolePermission,
-)
-
-
-class NoPermssionError(Exception):
-    def __init__(self, action: str, message: t.Optional[str] = None) -> None:
-        super().__init__(message)
-        self.action = action
+from APIv2.modules.ApplicationModel import User
+from APIv2.modules.ApplicationModel import Role
+from APIv2.modules.ApplicationModel import Permission
+from APIv2.modules.ApplicationModel import UserPermission
+from APIv2.modules.ApplicationModel import RolePermission
 
 
 class PermissionService(ServiceBase):

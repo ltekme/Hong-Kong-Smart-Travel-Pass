@@ -4,10 +4,9 @@ import datetime
 import typing as t
 import sqlalchemy.orm as so
 
-from .DataHandler import (
-    ChatRecord,
-    ChatMessage
-)
+from .DataHandler import ChatRecord
+from .DataHandler import ChatMessage
+
 from .ChatModel.Base import BaseModel
 from .ChatModel.Property import InvokeContextValues
 

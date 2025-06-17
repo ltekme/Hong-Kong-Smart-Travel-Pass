@@ -4,14 +4,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt install npm python3 python3-pip python3.12-venv -y
 ENV DEBIAN_FRONTEND=dialog
 
-RUN groupadd -g 1001 appgroup && \
-    useradd -m -u 1500 -g appgroup appuser
-
-RUN mkdir /app && chown appuser:appgroup /app
-
-RUN mkdir /opt/venv && chown appuser:appgroup /opt/venv
-
-USER appuser
+RUN mkdir /app
+RUN mkdir /opt/venv
 
 WORKDIR /app
 

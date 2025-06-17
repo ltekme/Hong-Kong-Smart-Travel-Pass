@@ -11,13 +11,11 @@ from .Role import RoleService
 from .UserRole import UserRoleService
 from ..Base import ServiceBase
 from ..RandomPet import getRandomAnimal
-from ...ApplicationModel import (
-    User,
-    UserSession,
-    UserChatRecord,
-)
 
-from ....config import settings
+from APIv2.modules.ApplicationModel import User
+from APIv2.modules.ApplicationModel import UserSession
+from APIv2.modules.ApplicationModel import UserChatRecord
+from APIv2.config import settings
 
 
 class UserService(ServiceBase):
@@ -37,6 +35,13 @@ class UserService(ServiceBase):
         self.dbSession.add(instance)
         return instance
 
+    def createAnonymousUsername(self) -> str:
+        """
+        Create a Anonymous username
+        :return: The username.
+        """
+        return f"Anonymous {getRandomAnimal().capitalize()}"
+
     def createAnonymous(self, username: t.Optional[str] = None) -> User:
         """
         Create an anonymous user.
@@ -44,9 +49,34 @@ class UserService(ServiceBase):
 
         :return: The user profile instance.
         """
-        username = username if username else f"Anonymous {getRandomAnimal().capitalize()}"
+        username = username if username else self.createAnonymousUsername()
         user = self.createUser(username)
         role = self.roleService.getOrCreateRole("Anonymous")
+        self.userRoleService.associateUserWithRole(user, role)
+        return user
+
+    def getByEmail(self, email: str) -> t.Optional[User]:
+        """
+        Get User By Email
+        :parma email: The email of the user to query.
+        :return: Optional User
+        """
+        return self.dbSession.query(User).filter(
+            User.email == email
+        ).first()
+
+    def createOrGetAuthenticatedUser(self, email: str, username: t.Optional[str]) -> User:
+        """
+        Get or create Authenticated User
+        :parma email: The email of the user to query.
+        :param username: The username of the user if not already in database.
+        """
+        user = self.getByEmail(email)
+        if user is not None:
+            return user
+        user = self.createUser(username if username else self.createAnonymousUsername())
+        user.email = email
+        role = self.roleService.getOrCreateRole("Authenticated")
         self.userRoleService.associateUserWithRole(user, role)
         return user
 

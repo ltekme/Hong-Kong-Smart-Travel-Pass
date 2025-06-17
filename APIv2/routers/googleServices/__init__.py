@@ -1,14 +1,10 @@
 from fastapi import APIRouter
 
-from .models import (
-    geocodeDataModel,
-    SpeechToTextModel,
-)
-from ...dependence import (
-    dbSessionDepend,
-    getGoogleServiceDepend,
-)
-from ...config import logger
+from .models import geocodeDataModel
+from .models import SpeechToTextModel
+from APIv2.dependence import dbSessionDepend
+from APIv2.dependence import getGoogleServiceDepend
+from APIv2.logger import logger
 
 
 router = APIRouter(prefix="/googleServices")

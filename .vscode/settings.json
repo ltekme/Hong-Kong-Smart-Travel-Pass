@@ -12,6 +12,11 @@
     "python.terminal.activateEnvironment": true,
     // copilot
     "github.copilot.nextEditSuggestions.enabled": false,
+    "editor.inlineSuggest.enabled": false,
+    // "github.copilot.inlineSuggest.enable": false,
+    "github.copilot.enable": {
+        "inlineSuggest": false,
+    },
     // formatting args
     "autopep8.args": [
         "--max-line-length=200"

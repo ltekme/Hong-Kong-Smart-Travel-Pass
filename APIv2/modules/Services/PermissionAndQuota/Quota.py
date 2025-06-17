@@ -3,17 +3,11 @@ import datetime as dt
 
 from ..Base import ServiceBase
 
-from ...ApplicationModel import (
-    User,
-    Role,
-    UserQuota,
-    RoleQuota,
-    QuotaUsage,
-)
-
-
-class QoutaExceededError(Exception):
-    pass
+from APIv2.modules.ApplicationModel import User
+from APIv2.modules.ApplicationModel import Role
+from APIv2.modules.ApplicationModel import UserQuota
+from APIv2.modules.ApplicationModel import RoleQuota
+from APIv2.modules.ApplicationModel import QuotaUsage
 
 
 class QuotaService(ServiceBase):

@@ -1,12 +1,14 @@
 import typing as t
 import sqlalchemy.orm as so
 
-from .Permission import PermissionService, NoPermssionError
-from .Quota import QuotaService, QoutaExceededError
-
-from ...ApplicationModel import User
-from ...Services.Base import ServiceBase
+from .Permission import PermissionService
+from .Quota import QuotaService
 from ..ServiceDefination import ServiceActionDefination
+
+from APIv2.modules.ApplicationModel import User
+from APIv2.modules.Services.Base import ServiceBase
+from APIv2.modules.exception import NotAuthorizedError
+from APIv2.modules.exception import InsufficientQoutaError
 
 
 class ServiceWithAAA(ServiceBase):
@@ -106,7 +108,7 @@ def permissionRequired(action: str):
             if not kwargs.get('bypassPermissionCheck', False):
                 hasPermission = self.checkPermission(actionId)
                 if not hasPermission:
-                    raise NoPermssionError(action)
+                    raise NotAuthorizedError("Not Permitted", action)
             return func(*args, **kwargs)
         return wrapper
     return decorator
@@ -142,7 +144,7 @@ def quotaRequired(action: str):
             if not kwargs.get('bypassQuotaCheck', False):
                 hasQouta = self.checkAndIncrementQuota(actionId)
                 if not hasQouta:
-                    raise QoutaExceededError(f"User {self.user.id} does not have permission to perform {action}.")
+                    raise InsufficientQoutaError(f"User {self.user.id} does not have permission to perform {action}.")
             return func(*args, **kwargs)
         return wrapper
     return decorator

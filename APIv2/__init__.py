@@ -1,20 +1,18 @@
 import typing as t
-from fastapi import (
-    FastAPI,
-    Request,
-)
+
+from fastapi import FastAPI
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import (
-    chatLLM,
-    googleServices,
-    profile,
-)
 
-from .modules.Services.PermissionAndQuota.Quota import QoutaExceededError
-from .modules.Services.PermissionAndQuota.Permission import NoPermssionError
-from .modules.ChatLLMService import ChatLLMServiceError
+from .routers import chatLLM
+from .routers import googleServices
+from .routers import profile
+from .modules.exception import NotAuthorizedError
+from .modules.exception import InsufficientQoutaError
+from .modules.exception import AuthorizationError
+from .modules.exception import ChatLLMServiceError
 
 app = FastAPI(root_path="/api/v2")
 app.add_middleware(
@@ -45,6 +43,14 @@ async def handleNotFound(request: Request, exeception: t.Any) -> JSONResponse:
     )
 
 
+@app.exception_handler(AuthorizationError)
+async def handleAuthorizationError(request: Request, exeception: AuthorizationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "Authorization Failed"},
+    )
+
+
 @app.exception_handler(RequestValidationError)
 async def handleValidationError(request: Request, exeception: RequestValidationError) -> JSONResponse:
     return JSONResponse(
@@ -53,16 +59,16 @@ async def handleValidationError(request: Request, exeception: RequestValidationE
     )
 
 
-@app.exception_handler(NoPermssionError)
-async def handlePermissionError(request: Request, exeception: NoPermssionError) -> JSONResponse:
+@app.exception_handler(NotAuthorizedError)
+async def handlePermissionError(request: Request, exeception: NotAuthorizedError) -> JSONResponse:
     return JSONResponse(
         status_code=403,
         content={"detail": f"You do not have permission to perform \"{exeception.action}\""},
     )
 
 
-@app.exception_handler(QoutaExceededError)
-async def handleQuotaExceededError(request: Request, exeception: QoutaExceededError) -> JSONResponse:
+@app.exception_handler(InsufficientQoutaError)
+async def handleQuotaExceededError(request: Request, exeception: InsufficientQoutaError) -> JSONResponse:
     return JSONResponse(
         status_code=403,
         content={"detail": "Quota Exceeded"},

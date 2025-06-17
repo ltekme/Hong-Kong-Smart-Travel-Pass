@@ -1,10 +1,8 @@
 import logging
 import typing as t
 
-from ..DataHandler import (
-    ChatRecord,
-    ChatMessage,
-)
+from ..DataHandler import ChatRecord
+from ..DataHandler import ChatMessage
 
 from .Property import AdditionalModelProperty, InvokeContextValues
 

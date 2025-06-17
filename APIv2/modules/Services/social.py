@@ -5,11 +5,9 @@ from .Base import ServiceBase
 from .User.User import UserService
 from ..FacebookClient import FacebookClient
 from ..ApplicationModel import SocialsProfileProvider, UserSocialProfile, User
-from ...config import logger
+from ..exception import AuthorizationError
 
-
-class FacebookUserIdentifyExeception(Exception):
-    pass
+from APIv2.logger import logger
 
 
 class SocialProviderService(ServiceBase):
@@ -47,7 +45,7 @@ class SocialProviderService(ServiceBase):
 
 
 class SocialProfileService(ServiceBase):
-    
+
     def __init__(self, dbSession: so.Session) -> None:
         super().__init__(dbSession, serviceName="SocialProfileService")
 
@@ -125,7 +123,7 @@ class FacebookService(ServiceBase):
             facebookProfile = self.facebookClient.getUsernameAndId(accessToken=accessToken)
         except Exception as e:
             logger.error(f"Error performing user identification, {e}")
-            raise FacebookUserIdentifyExeception("Error performing facebook user identification")
+            raise AuthorizationError("Error performing facebook user identification")
         provider = self.socialProviderService.getOrCreateByName(self.providerName)
         return self.socialProfileService.getOrCreate(str(facebookProfile.facebookId), provider, facebookProfile.username)
 

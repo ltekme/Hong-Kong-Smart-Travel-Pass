@@ -1,4 +1,4 @@
-import { chatLLMchatIDRequestApiUrl, pingUserSessionApiUrl, userPofileAuthApiUrl } from "../Config";
+import { callbackGetCognitoSessionUrl, chatLLMchatIDRequestApiUrl, pingUserSessionApiUrl, userPofileAuthApiUrl } from "../Config";
 import { IMessage } from "./Interface";
 import { getChatId, getSessionInfo, setChatId, setSessionInfo } from "./ParamStore";
 import { chatLLMApiUrl } from "../Config";
@@ -9,11 +9,12 @@ interface I_UserAuthResoibse {
     username: string;
 }
 
-export const getAnonymousUser = async () => {
+export const getAnonymousUser = async (totp: string | undefined) => {
     const response = await fetch(userPofileAuthApiUrl, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
+            "Authorization": "TOTP " + totp
         },
     });
     if (!response.ok) {
@@ -45,17 +46,21 @@ export const refreshSession = async () => {
     });
 }
 
-export const configAnynmousSession = async () => {
+export const configAnynmousSession = async (accessToken: string | undefined) => {
     console.debug(`[APIService] Configuring anonymous session`)
-    const user = await getAnonymousUser();
-    console.debug(`[APIService] Got anonymous user\n${JSON.stringify(user, null, 4)}`)
-    setSessionInfo({
-        sessionToken: user.sessionToken,
-        expireEpoch: user.expireEpoch,
-        username: user.username,
-        kind: "anonymous",
-    });
-    console.debug(`[APIService] Set session info\n${JSON.stringify(getSessionInfo(), null, 4)}`)
+    try {
+        const user = await getAnonymousUser(accessToken);
+        console.debug(`[APIService] Got anonymous user\n${JSON.stringify(user, null, 4)}`)
+        setSessionInfo({
+            sessionToken: user.sessionToken,
+            expireEpoch: user.expireEpoch,
+            username: user.username,
+            kind: "anonymous",
+        });
+        console.debug(`[APIService] Set session info\n${JSON.stringify(getSessionInfo(), null, 4)}`)
+    } catch {
+        throw new Error("Failed to fetch Anonymous User")
+    }
 }
 
 export const requestChatLLMApiConversationId = async () => {
@@ -83,10 +88,10 @@ export const callChatLLMApi = async (param: {
     context?: object,
 }) => {
     console.debug(`[APIService] Sending request to LLM API\n${JSON.stringify(param.content.message, null, 4)}`)
-    if (!getSessionInfo().sessionToken) {
-        console.debug(`[APIService] Session token is not set, configuring anonymous session`)
-        await configAnynmousSession();
-    }
+    // if (!getSessionInfo().sessionToken) {
+    //     console.debug(`[APIService] Session token is not set, configuring anonymous session`)
+    //     await configAnynmousSession(undefined);
+    // }
     if (!getChatId()) {
         console.debug(`[APIService] Chat ID is not set, requesting from server`)
         await requestChatLLMApiConversationId();
@@ -122,4 +127,29 @@ export const callChatLLMApi = async (param: {
         audioBase64: string,
         respondMessage: string,
     }
+}
+
+export const getCognotoUser = async (param: {
+    accessToken: string
+}) => {
+    console.debug(`[APIService] Sending request to Auth API\nAccessToken=${param.accessToken.substring(0, 8)}`)
+    const response = await fetch(callbackGetCognitoSessionUrl, {
+        method: "GET",
+        headers: {
+            'Authorization': `Bearer ${param.accessToken}`,
+        }
+    });
+    const data = await response.json() as I_UserAuthResoibse;
+    setSessionInfo({
+        sessionToken: data.sessionToken,
+        expireEpoch: data.expireEpoch,
+        username: data.username,
+        kind: "Authenticated",
+    });
+    return {
+        sessionToken: data.sessionToken,
+        expireEpoch: data.expireEpoch,
+        username: data.username,
+        kind: "Authenticated",
+    } as I_UserAuthResoibse;
 }

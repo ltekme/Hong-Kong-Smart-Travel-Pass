@@ -1,26 +1,24 @@
 import datetime
 import typing as t
-from fastapi import (
-    APIRouter,
-    HTTPException,
-    Header,
-)
 
-from .models import (
-    ProfileSummoryRequest,
-    ProfileSummoryGet,
-)
-from ....modules import (
-    FacebookClient,
-    LlmHelper,
-)
-from ....dependence import (
-    dbSessionDepend,
-    getUserSessionServiceDepend,
-    getUserServiceDepend
-)
-from ....config import logger
-from ....modules.Services.social import FacebookService, SocialProfileService, SocialProviderService
+from fastapi import APIRouter
+from fastapi import HTTPException
+from fastapi import Header
+
+from .models import ProfileSummoryRequest
+from .models import ProfileSummoryGet
+
+from APIv2.modules import FacebookClient
+from APIv2.modules import LlmHelper
+from APIv2.dependence import dbSessionDepend
+from APIv2.dependence import getUserSessionServiceDepend
+from APIv2.dependence import getUserServiceDepend
+
+from APIv2.logger import logger
+from APIv2.modules.Services.social import FacebookService
+from APIv2.modules.Services.social import SocialProfileService
+from APIv2.modules.Services.social import SocialProviderService
+
 
 router = APIRouter(prefix="/summory")
 

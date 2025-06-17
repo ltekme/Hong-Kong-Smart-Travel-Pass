@@ -7,7 +7,11 @@ export const getTTS = () => {
     return sessionStorage.getItem("enableTTS") !== "false"
 }
 
-export const setChatId = (val: string) => {
+export const setChatId = (val: string | undefined) => {
+    if (val === undefined) {
+        sessionStorage.removeItem("chatId");
+        return
+    }
     sessionStorage.setItem("chatId", val)
 }
 
