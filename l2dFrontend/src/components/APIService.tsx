@@ -1,5 +1,4 @@
 import { callbackGetCognitoSessionUrl, chatLLMchatIDRequestApiUrl, pingUserSessionApiUrl, userPofileAuthApiUrl } from "../Config";
-import { IMessage } from "./Interface";
 import { getChatId, getSessionInfo, setChatId, setSessionInfo } from "./ParamStore";
 import { chatLLMApiUrl } from "../Config";
 

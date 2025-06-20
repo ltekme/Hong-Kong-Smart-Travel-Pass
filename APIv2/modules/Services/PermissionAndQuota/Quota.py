@@ -1,6 +1,8 @@
 import typing as t
 import datetime as dt
 
+import sqlalchemy.orm as so
+
 from ..Base import ServiceBase
 
 from APIv2.modules.ApplicationModel import User
@@ -12,7 +14,7 @@ from APIv2.modules.ApplicationModel import QuotaUsage
 
 class QuotaService(ServiceBase):
 
-    def __init__(self, dbSession: t.Any) -> None:
+    def __init__(self, dbSession: so.Session) -> None:
         super().__init__(dbSession, serviceName="QuotaService")
 
     def getUserQuota(self, users: list[User], actionIds: list[int], limit: int = 1) -> list[UserQuota]:

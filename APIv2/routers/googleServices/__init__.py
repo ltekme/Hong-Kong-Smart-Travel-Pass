@@ -36,9 +36,19 @@ def speechToText(
     """
     Transcribe base64 audio data 
     """
-    logger.debug(f"Performing transcribe for {request.audioData[10:]=}")
-    response = getGoogleService(dbSession, None).speechToText(request.audioData)
-    logger.debug(f"Respondign to transcribe {request.audioData[10:]=} - {response[10:]=}")
+    logger.debug(f"Performing transcribe for {request.audioData[:10]=}")
+    if not request.audioData or not request.audioData.startswith("data:audio"):
+        return SpeechToTextModel.Response(
+            message="No Audio"
+        )
+    dataSplit = request.audioData.split(",")
+    dataSection = len(dataSplit)
+    if dataSection > 2 or dataSection < 1:
+        return SpeechToTextModel.Response(
+            message="No Audio"
+        )
+    response = getGoogleService(dbSession, None).speechToText(dataSplit[1])
+    logger.debug(f"Respondign to transcribe {request.audioData[:10]=} - {response[:10]=}")
     return SpeechToTextModel.Response(
         message=response
     )

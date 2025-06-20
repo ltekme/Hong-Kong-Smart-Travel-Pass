@@ -2,9 +2,8 @@ import os
 import typing as t
 
 from pydantic.dataclasses import dataclass
-# from dotenv import load_dotenv, dotenv_values
 
-from .modules.exception import ConfigurationError
+from .logger import logger
 
 
 @dataclass
@@ -81,13 +80,14 @@ class Settings:
             return default
 
     @property
-    def cognitoConfig(self) -> CognitoConfigMap:
+    def cognitoConfig(self) -> t.Optional[CognitoConfigMap]:
         region = self.getAttr("AWS_REGION")
         userPoolId = self.getAttr("COGNITO_USER_POOL_ID")
         clientId = self.getAttr("COGNITO_CLIENT_ID")
 
         if not region or not userPoolId or not clientId:  # or not clientSecret:
-            raise ConfigurationError("Cognito configuration is incomplete. Please set all required environment variables.")
+            logger.warning("Cognito configuration is incomplete. Please set all required environment variables.")
+            return
 
         return CognitoConfigMap(
             region=region,
@@ -99,6 +99,10 @@ class Settings:
     def applicationSecret(self) -> str:
         """Application secret for totp"""
         return self.getAttr("APPLICATION_SECRET", "change_me")
+
+    @property
+    def applicationPublicUrl(self) -> str:
+        return self.getAttr("APPLICATION_PUBLIC_URL", "localhost:3000")
 
 
 settings = Settings()

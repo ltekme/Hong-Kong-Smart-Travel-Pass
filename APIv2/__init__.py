@@ -13,6 +13,7 @@ from .modules.exception import NotAuthorizedError
 from .modules.exception import InsufficientQoutaError
 from .modules.exception import AuthorizationError
 from .modules.exception import ChatLLMServiceError
+from .modules.exception import CognitoServiceError
 
 app = FastAPI(root_path="/api/v2")
 app.add_middleware(
@@ -80,4 +81,28 @@ async def handleChatLLMServiceError(request: Request, exeception: ChatLLMService
     return JSONResponse(
         status_code=500,
         content={"detail": "There is an error processing your request" if not exeception.args else exeception.args[0]},
+    )
+
+
+@app.exception_handler(CognitoServiceError.InvalidTokenError)
+async def handleCognitoServiceError_InvalidTokenError(request: Request, exeception: CognitoServiceError.InvalidTokenError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "The provided token is invalid"},
+    )
+
+
+@app.exception_handler(CognitoServiceError.NotAvalableError)
+async def handleCognitoServiceError_NotAvalableError(request: Request, exeception: CognitoServiceError.NotAvalableError) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Cognito Authentaion is not avalable"},
+    )
+
+
+@app.exception_handler(CognitoServiceError.TokenExpiredError)
+async def handleCognitoServiceError_TokenExpiredError(request: Request, exeception: CognitoServiceError.TokenExpiredError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "The provided token has been expired"},
     )

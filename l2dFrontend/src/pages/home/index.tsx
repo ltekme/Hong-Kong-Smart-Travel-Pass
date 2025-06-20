@@ -3,19 +3,19 @@ import { useState, useEffect } from "react";
 import { UserChatList } from '../../components/ChatMessages';
 import { InputControls } from '../../components/Input';
 import { Hello } from "../../components/Hello";
-import { chatLLMApiUrl, geolocationApiUrl, pingUserSessionApiUrl } from "../../Config";
+import { geolocationApiUrl } from "../../Config";
 import './index.css'
 import { IFacebookProfile } from "../../components/Interface";
 import { userMenuActivationCommand } from "../../Config";
 
 import Swal from "sweetalert2";
 import { userMenu } from "../../components/Menu";
-import { getChatId, getSessionInfo, setChatId } from "../../components/ParamStore";
+import { getSessionInfo } from "../../components/ParamStore";
 
-import { callChatLLMApi, configAnynmousSession, refreshSession } from "../../components/APIService";
+import { callChatLLMApi, configAnynmousSession } from "../../components/APIService";
 
 import { IMessage } from "../../components/Interface";
-import { redirect, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export interface IHome {
     confirmAgree: boolean,
@@ -26,7 +26,7 @@ export interface IHome {
 
 const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
     const [messageList, setMessageList] = useState<IMessage[]>([]);
     const [lastUserMessageMedia, setLastUserMessageMedia] = useState<string[]>([]);
     const [displayHello, setDisplayHello] = useState(true);
@@ -252,6 +252,11 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
             // 使用 Google Maps Geocoding API
             let addressOutput;
             try {
+                if (localStorage.getItem("location")){
+                    setLocationError(false);
+                    setUserLocationLegent(localStorage.getItem("location"));
+                    return;
+                }
                 const location = await getLocation();
                 const addressResponse = await fetch(geolocationApiUrl, {
                     method: 'POST',
@@ -319,8 +324,8 @@ const Home = ({ confirmAgree, l2dSpeak }: IHome) => {
                 <p className="subtitle">How can I help you today?</p>
             </div>)}
             {/* Skip for Innoex Demo */}
-            {/* <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} /> */}
-
+            {/* {localStorage.getItem('demo')  !== "true" ? <Hello confirmAgree={confirmAgree} setFacebookProfile={setFacebookProfile} /> : null} */}
+            
             <Hello confirmAgree={false} setFacebookProfile={setFacebookProfile} />
             {confirmAgree && !locationError && userLocationLegent !== "" ? <div className="address">用戶位置: {userLocationLegent}</div> : null}
         </>

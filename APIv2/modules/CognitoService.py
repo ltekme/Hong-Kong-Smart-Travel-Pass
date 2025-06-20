@@ -1,5 +1,6 @@
 import jwt
 import requests
+import typing as t
 
 from urllib.parse import urlencode
 
@@ -33,7 +34,12 @@ class CognitoService(ServiceWithLogging):
             jwks_uri: str
             userinfo_endpoint: str
 
+        metadata: t.Optional[Metadata]
+
         def __init__(self):
+            if settings.cognitoConfig is None:
+                self.metadata = None
+                return
             logger.debug(f"Fetching Metadata @{settings.cognitoConfig.serverMetadataUrl}")
             data = requests.get(
                 settings.cognitoConfig.serverMetadataUrl,
@@ -44,6 +50,8 @@ class CognitoService(ServiceWithLogging):
     def __init__(self, cognitoMetadata: CognitoMetadata) -> None:
         super().__init__(serviceName="CognitoService")
         self.metadata = cognitoMetadata.metadata
+        if self.metadata is None:
+            return
 
     def getLoginUrl(self, callbackUrl: str) -> str:
         """
@@ -52,6 +60,8 @@ class CognitoService(ServiceWithLogging):
         :param redirectUrl: The URL to redirect to after login.
         """
         self.setLoggerAdditionalPrefix(f"getLoginUrl")
+        if self.metadata is None or settings.cognitoConfig is None:
+            raise CognitoServiceError.NotAvalableError()
         self.loggerDebug(f"Constructing login URL with callbackUrl: {callbackUrl}")
         self.loggerDebug(f"Using Cognito authorization endpoint: {self.metadata.authorization_endpoint}")
         redirectUrl = f"{self.metadata.authorization_endpoint}?" + urlencode({
@@ -68,6 +78,8 @@ class CognitoService(ServiceWithLogging):
         self.setLoggerAdditionalPrefix(f"validateAccessToken][{token[-10:]=}")
         if not token:
             raise CognitoServiceError.InvalidTokenError("Access token is empty or None.")
+        if self.metadata is None or settings.cognitoConfig is None:
+            raise CognitoServiceError.NotAvalableError()
         client = jwt.PyJWKClient(self.metadata.jwks_uri)
         publicKey = client.get_signing_key_from_jwt(token).key
         try:
@@ -100,6 +112,8 @@ class CognitoService(ServiceWithLogging):
             raise CognitoServiceError.InvalidTokenError("Invalid JWT token format.")
 
     def fetchUserInfo(self, token: str) -> dict[str, str]:
+        if self.metadata is None:
+            raise CognitoServiceError.NotAvalableError()
         return requests.get(self.metadata.userinfo_endpoint, headers={
             "Authorization": f"Bearer {token}"
         }).json()

@@ -12,3 +12,7 @@ class TotpService(ServiceWithLogging):
         currentTotp = TOTP(settings.applicationSecret).now()
         self.loggerDebug(f"Verifying TOTP {currentTotp} == {totp}")
         return currentTotp == totp
+
+    @property
+    def currentValue(self) -> str:
+        return TOTP(settings.applicationSecret).now()

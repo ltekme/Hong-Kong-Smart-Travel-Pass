@@ -12,7 +12,7 @@ from APIv2.dependence import getCognitoServiceDepend
 from APIv2.dependence import getUserServiceDepend
 from APIv2.dependence import getUserSessionServiceDepend
 from APIv2.modules.exception import AuthorizationError
-
+from APIv2.config import settings
 from ..models import AuthDataModel
 
 
@@ -51,6 +51,6 @@ async def cognitoLoginRedirect(
     getCognitoService: getCognitoServiceDepend,
 ) -> RedirectResponse:
     """Redirect to Cognito login page"""
-    redirectUrl = getCognitoService().getLoginUrl(f"{request.url.scheme}://{request.url.netloc}/auth/callback")
+    redirectUrl = getCognitoService().getLoginUrl(f"{settings.applicationPublicUrl}/auth/callback")
     logger.debug(f"Constructed redirectUrl {redirectUrl}")
     return RedirectResponse(url=redirectUrl)

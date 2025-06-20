@@ -2,7 +2,7 @@ import { useState, useRef, ReactElement } from "react";
 import { sttApiUrl } from "../Config";
 import Swal from 'sweetalert2'
 import withReactContent from 'sweetalert2-react-content'
-import { setChatId } from "./ParamStore";
+import { clearChatId } from "./ParamStore";
 
 const MySwal = withReactContent(Swal);
 
@@ -28,7 +28,6 @@ export const InputControls = ({
     const clearCurrentState = () => {
         setText("");
         // inputRef.current.blur();
-        setChatId(undefined);
     }
 
     const handleSendMessage = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -48,7 +47,7 @@ export const InputControls = ({
     const handleClearMessage = () => {
         clearCurrentState();
         clearMessages();
-        
+        clearChatId();
     }
 
     const handleSTT = async (e: React.MouseEvent<HTMLSpanElement>) => {

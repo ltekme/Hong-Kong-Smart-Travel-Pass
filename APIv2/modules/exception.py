@@ -29,6 +29,8 @@ class CognitoServiceError(Exception):
     class InvalidTokenError(Exception):
         """Exception raised when the JWT token is invalid."""
 
+    class NotAvalableError(Exception):
+        """Exception raised when Auth is not avalable"""
 
 class ServiceDisabledError(Exception):
     """Exception raised when a service is disabled."""
