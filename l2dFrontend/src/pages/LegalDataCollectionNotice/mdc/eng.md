@@ -15,5 +15,3 @@
 **Access to Personal Data**
 
 ##### Rights to Access and Correct Information: Under the Personal Data (Privacy) Ordinance, Cap. 486 of Hong Kong law, you have the right to request access to and correction of the personal data you provided during your inquiry.
-
-##### Access Fees: A fee of HKD 1.5 per page will be charged for accessing the requested data, or according to the fee standards as published by the Director of Accounting Services. You have the right to obtain a copy of the personal data you provided during your inquiry.

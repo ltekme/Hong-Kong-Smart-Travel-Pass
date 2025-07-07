@@ -1,11 +1,10 @@
-version: '3'
 services:
   nginx:
     image: nginx:latest
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
-      - 80:80
+      - 8080:80
     depends_on:
       - frontend
       - api
@@ -15,26 +14,31 @@ services:
 
   api:
     build: .
-    depends_on:
-      - db
+    # depends_on:
+    #   - db
     env_file:
       - .env
     environment:
-      - CHATLLM_DB_URL=postgresql://postgres:password@db/myapp
+      - AWS_REGION=${AWS_REGION}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+      # - CHATLLM_DB_URL=postgresql://postgres:password@db/myapp
     volumes:
       - ./${GCP_AI_SA_CREDENTIAL_PATH:-gcp_cred-ai.json}:/app/gcp_cred-ai.json
       - ./chroma_db:/app/chroma_db
       - ./data:/app/data
       - ./chat_data:/app/chat_data
 
-  db:
-    image: postgres
-    environment:
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=myapp
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+  # db:
+  #   image: postgres
+  #   ports:
+  #     - "5432:5432" # only required when directly interacting with DB
+  #   environment:
+  #     - POSTGRES_PASSWORD=password
+  #     - POSTGRES_DB=myapp
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
 
-volumes:
-  postgres_data:
-  chat_data:
+# volumes:
+  # postgres_data:
+  # chat_data:

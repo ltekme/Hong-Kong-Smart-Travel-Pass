@@ -18,9 +18,7 @@ export const App = () => {
     });
 
     return (<>
-        {/* Skip for Innoex Demo */}
-        {/* <LegalDataCollectionNotice setConfirmAgree={setConfirmAgree} /> */}
-
+        {localStorage.getItem("demo") === "true"? (<></>): <LegalDataCollectionNotice setConfirmAgree={setConfirmAgree} />}
         <Home l2dSpeak={speak} confirmAgree={confirmAgree} />
 
         {/* Make Canvise for Live 2d Model */}

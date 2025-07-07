@@ -1,17 +1,19 @@
 import typing as t
-from fastapi import (
-    FastAPI,
-    Request,
-)
+
+from fastapi import FastAPI
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import (
-    chatLLM,
-    googleServices,
-    profile,
-)
 
+from .routers import chatLLM
+from .routers import googleServices
+from .routers import profile
+from .modules.exception import NotAuthorizedError
+from .modules.exception import InsufficientQoutaError
+from .modules.exception import AuthorizationError
+from .modules.exception import ChatLLMServiceError
+from .modules.exception import CognitoServiceError
 
 app = FastAPI(root_path="/api/v2")
 app.add_middleware(
@@ -42,9 +44,65 @@ async def handleNotFound(request: Request, exeception: t.Any) -> JSONResponse:
     )
 
 
+@app.exception_handler(AuthorizationError)
+async def handleAuthorizationError(request: Request, exeception: AuthorizationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "Authorization Failed"},
+    )
+
+
 @app.exception_handler(RequestValidationError)
 async def handleValidationError(request: Request, exeception: RequestValidationError) -> JSONResponse:
     return JSONResponse(
         status_code=422,
         content={"detail": "Mailformed Request"},
+    )
+
+
+@app.exception_handler(NotAuthorizedError)
+async def handlePermissionError(request: Request, exeception: NotAuthorizedError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": f"You do not have permission to perform \"{exeception.action}\""},
+    )
+
+
+@app.exception_handler(InsufficientQoutaError)
+async def handleQuotaExceededError(request: Request, exeception: InsufficientQoutaError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "Quota Exceeded"},
+    )
+
+
+@app.exception_handler(ChatLLMServiceError)
+async def handleChatLLMServiceError(request: Request, exeception: ChatLLMServiceError) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "There is an error processing your request" if not exeception.args else exeception.args[0]},
+    )
+
+
+@app.exception_handler(CognitoServiceError.InvalidTokenError)
+async def handleCognitoServiceError_InvalidTokenError(request: Request, exeception: CognitoServiceError.InvalidTokenError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "The provided token is invalid"},
+    )
+
+
+@app.exception_handler(CognitoServiceError.NotAvalableError)
+async def handleCognitoServiceError_NotAvalableError(request: Request, exeception: CognitoServiceError.NotAvalableError) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Cognito Authentaion is not avalable"},
+    )
+
+
+@app.exception_handler(CognitoServiceError.TokenExpiredError)
+async def handleCognitoServiceError_TokenExpiredError(request: Request, exeception: CognitoServiceError.TokenExpiredError) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "The provided token has been expired"},
     )

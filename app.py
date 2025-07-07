@@ -2,13 +2,13 @@ import os
 import uvicorn
 from dotenv import load_dotenv
 
-from APIv2 import app
-from APIv2.dependence import dbEngine
-from APIv2.modules import ApplicationModel
-from fastapi.staticfiles import StaticFiles
-
 load_dotenv('.env')
 
+if True:
+    from APIv2 import app
+    from APIv2.dependence import dbEngine
+    from APIv2.modules import ApplicationModel
+    from fastapi.staticfiles import StaticFiles
 
 currentFilePath = os.path.dirname(os.path.realpath(__file__))
 frontedFilePath = os.path.join(currentFilePath, "l2dFrontend")

@@ -4,7 +4,7 @@ import requests
 import facebook  # type: ignore
 from dataclasses import dataclass
 
-from ..config import logger
+from ..logger import logger
 
 
 @dataclass

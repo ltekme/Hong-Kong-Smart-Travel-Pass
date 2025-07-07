@@ -1,31 +1,29 @@
 import os
-import logging
 import typing as t
 
-from dotenv import load_dotenv, dotenv_values
+from pydantic.dataclasses import dataclass
+
+from .logger import logger
+
+
+@dataclass
+class CognitoConfigMap:
+    region: str
+    userPoolId: str
+    clientId: str
+
+    @property
+    def authority(self) -> str:
+        return f"https://cognito-idp.{self.region}.amazonaws.com/{self.userPoolId}"
+
+    @property
+    def serverMetadataUrl(self) -> str:
+        return f"{self.authority}/.well-known/openid-configuration"
 
 
 class Settings:
-    useEnvFile = False
-    envFilePath = ""
-
-    def __init__(self, envFilePath: t.Optional[str] = None):
-        if envFilePath and os.path.exists(envFilePath):
-            self.useEnvFile = True
-            self.envFilePath = envFilePath
-            load_dotenv(envFilePath)
-
-    def getAttr(self, attr: str, default: str = "", checkSystemEnvIfFileValNone: t.Optional[bool] = True) -> str:
-        val = None
-        if self.useEnvFile:
-            val = dotenv_values(self.envFilePath).get(attr)
-            if val is not None:
-                return val
-            if checkSystemEnvIfFileValNone:
-                val = os.environ.get(attr)
-        if val is None:
-            val = default
-        return val
+    def getAttr(self, attr: str, default: t.Optional[str] = None) -> str:
+        return os.environ.get(attr, default) or ""
 
     @property
     def googleCSEId(self) -> t.Optional[str]:
@@ -77,24 +75,47 @@ class Settings:
         """How long untill user sesion expire"""
         default = 7200
         try:
-            return int(os.environ.get("USER_SESSION_EXPIRE_SECONDS", default))
+            return int(self.getAttr("USER_SESSION_EXPIRE_SECONDS", str(default)))
         except ValueError:
             return default
 
     @property
-    def anonymousUserQouta(self) -> int:
-        """How long untill user sesion expire"""
-        default = 10
-        try:
-            return int(os.environ.get("ANONYMOUS_USER_MESSAGE_QOUTER", default))
-        except ValueError:
-            return default
+    def cognitoConfig(self) -> t.Optional[CognitoConfigMap]:
+        region = self.getAttr("AWS_REGION")
+        userPoolId = self.getAttr("COGNITO_USER_POOL_ID")
+        clientId = self.getAttr("COGNITO_CLIENT_ID")
+
+        if not region or not userPoolId or not clientId:  # or not clientSecret:
+            logger.warning("Cognito configuration is incomplete. Please set all required environment variables.")
+            return
+
+        return CognitoConfigMap(
+            region=region,
+            userPoolId=userPoolId,
+            clientId=clientId,
+        )
+
+    @property
+    def applicationSecret(self) -> str:
+        """Application secret for totp"""
+        return self.getAttr("APPLICATION_SECRET", "change_me")
+
+    @property
+    def applicationPublicUrl(self) -> str:
+        return self.getAttr("APPLICATION_PUBLIC_URL", "localhost:3000")
 
 
-# uvicorn only stdout uvicorn.asgi, uvicorn.access, uvicorn.error
-# see site-packages/uvicorn/config.py: 383-393
-logger = logging.getLogger("uvicorn.asgi")
-settings = Settings(".env")
+settings = Settings()
+
+
+def setSettings(setting: Settings) -> None:
+    """
+    Set the global settings for the application.
+    :param setting: The Settings instance to set.
+    """
+    global settings
+    settings = setting
+
 
 animals = [
     "alligator",

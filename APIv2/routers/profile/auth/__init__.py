@@ -1,34 +1,48 @@
 import time
 import typing as t
-from fastapi import (
-    APIRouter,
-    HTTPException,
-    Header
-)
+from fastapi import APIRouter, Header
+
+from . import cognito
+
 from .models import AuthDataModel
-from ....dependence import (
-    dbSessionDepend,
-    userServiceDepend,
-    userSessionServiceDepend
-)
-from ....config import (
-    logger,
-)
+from APIv2.dependence import dbSessionDepend
+from APIv2.dependence import getUserServiceDepend
+from APIv2.dependence import getUserSessionServiceDepend
+from APIv2.dependence import getConfigServiceDepend
+from APIv2.dependence import getTotpServiceDepend
+from APIv2.logger import logger
+from APIv2.modules.exception import AuthorizationError
+from APIv2.modules.Services.ServiceDefination import REQUIRE_TOTP_FOR_ANNY
 
 router = APIRouter(prefix="/auth")
+router.include_router(cognito.router)
 
 
 @router.get("", response_model=AuthDataModel.Response)
 async def auth(
     dbSession: dbSessionDepend,
-    userService: userServiceDepend,
-    userSessionService:  userSessionServiceDepend,
+    getUserService: getUserServiceDepend,
+    getTotpService: getTotpServiceDepend,
+    getConfigService: getConfigServiceDepend,
+    getUserSessionService: getUserSessionServiceDepend,
+    authorizationHeader: t.Annotated[str, Header(alias="Authorization")] = ""
 ) -> AuthDataModel.Response:
     """Get sessionToken for anonymous user"""
-    anonymousUser = userService(dbSession).createAnonymous()
-    anonymousUserSession = userSessionService(dbSession).createForUserProfile(anonymousUser)
-    logger.info(f"Created session for anonymous user {anonymousUser.username=}")
+    configService = getConfigService(dbSession)
+    totpService = getTotpService()
+
+    # verification if Application have require totp enabled
+    if configService.actionEndabled(REQUIRE_TOTP_FOR_ANNY):
+        if not authorizationHeader.startswith("TOTP"):
+            raise AuthorizationError("Invalid Access Code")
+        accessCode = authorizationHeader.split(" ")[1]
+        if not totpService.verify(accessCode):
+            raise AuthorizationError("Invalid Access Code")
+
+    anonymousUser = getUserService(dbSession).createAnonymous()
+    anonymousUserSession = getUserSessionService(dbSession).createForUser(anonymousUser)
     dbSession.commit()
+    logger.info(f"Created session for anonymous user {anonymousUser.id=}")
     return AuthDataModel.Response(
         sessionToken=anonymousUserSession.sessionToken,
         expireEpoch=int(time.mktime(anonymousUserSession.expire.timetuple())),
@@ -39,25 +53,15 @@ async def auth(
 @router.get("/ping", response_model=AuthDataModel.Response)
 async def ping(
     dbSession: dbSessionDepend,
-    userSessionService: userSessionServiceDepend,
+    getUserSessionService:  getUserSessionServiceDepend,
     x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> AuthDataModel.Response:
     """Get sessionToken info for a user"""
-    if x_SessionToken is None or not x_SessionToken.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="No Session Found"
-        )
-    session = userSessionService(dbSession).updateExpiration(x_SessionToken)
-    if session is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Session Expired or invalid"
-        )
+    session = getUserSessionService(dbSession).validateSessionToken(x_SessionToken)
     dbSession.commit()
-    logger.info(f"Updated session {x_SessionToken[:10]=} for {session.profile.username=}")
+    logger.info(f"Updated session {session.sessionToken[:10]=} for {session.user.username=}")
     return AuthDataModel.Response(
-        sessionToken=x_SessionToken,
+        sessionToken=session.sessionToken,
         expireEpoch=int(time.mktime(session.expire.timetuple())),
-        username="",
+        username=session.user.username,
     )

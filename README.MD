@@ -17,7 +17,51 @@
 
 All path above are relative to /app.py in the project root.
 
+see [Setup Cognito for Authentation](#setup-cognito-for-authentation)
+
 ## Deployment
+
+### Setup Cognito for Authentation
+
+This step is required if authentation is needed
+
+Before continuing, you account need to be bootstrapped with cdk
+
+Please refer to: [https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html)
+
+```sh
+cd Cognito
+cdk deploy
+```
+
+After resource successfully deployed, you should see the following example output
+
+```text
+CognitoStack.ClientID = 203211un1239nexahiask0cv
+CognitoStack.Region = us-east-1
+CognitoStack.UserPoolID = us-east-1_f4iauhsdib
+```
+
+replace each attribute according to the following table as env
+
+| attribute               | env                  |
+| ----------------------- | -------------------- |
+| CognitoStack.ClientID   | COGNITO_CLIENT_ID    |
+| CognitoStack.Region     | AWS_REGION           |
+| CognitoStack.UserPoolID | COGNITO_USER_POOL_ID |
+
+```sh
+# Example resault
+AWS_REGION=us-east-1
+COGNITO_CLIENT_ID=203211un1239nexahiask0cv
+COGNITO_USER_POOL_ID=us-east-1_f4iauhsdib
+```
+
+setup the env as shown above
+
+After deploying the rest of the application, you should enter the console and add your callback url to the app client.
+
+The callback path for the react frontend is /auth/callback
 
 ### Create Google Maps API
 

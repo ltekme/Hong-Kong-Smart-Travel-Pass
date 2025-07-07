@@ -1,5 +1,3 @@
-let sessionInfo = {}
-
 export const setTTS = (val: boolean) => {
     sessionStorage.setItem("enableTTS", val === true ? 'true' : 'false')
 }
@@ -7,7 +5,14 @@ export const getTTS = () => {
     return sessionStorage.getItem("enableTTS") !== "false"
 }
 
+export const clearChatId = () => {
+    console.log("[ParamStore] Clearing Chat ID")
+    sessionStorage.removeItem("chatId")
+}
 export const setChatId = (val: string) => {
+    if (!val){
+        throw Error("cannot use set chat id to clear")
+    }
     sessionStorage.setItem("chatId", val)
 }
 

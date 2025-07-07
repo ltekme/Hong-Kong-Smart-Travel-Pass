@@ -1,6 +1,6 @@
 import random
 
-from ...config import animals
+from APIv2.config import animals
 
 
 def getRandomAnimal():

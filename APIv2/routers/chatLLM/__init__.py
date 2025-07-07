@@ -1,136 +1,71 @@
 import typing as t
-from fastapi import (
-    APIRouter,
-    HTTPException,
-    Header
-)
+
+from fastapi import APIRouter
+from fastapi import HTTPException
+from fastapi import Header
+
+from .models import chatLLMDataModel
+from .models import ChatRecallModel
+from .models import ChatIdResponse
+
+from APIv2.config import settings
+from APIv2.logger import logger
+from APIv2.dependence import dbSessionDepend
+from APIv2.dependence import getGoogleServiceDepend
+from APIv2.dependence import getUserSessionServiceDepend
+from APIv2.dependence import getChatLLMServiceDepend
+
 from ChatLLMv2 import DataHandler
 from ChatLLMv2.ChatModel.Property import InvokeContextValues
-
-from .models import (
-    chatLLMDataModel,
-    ChatRecallModel,
-    ChatIdResponse
-)
-from ...config import (
-    settings,
-    logger,
-)
-from ...dependence import (
-    googleServicesDepend,
-    dbSessionDepend,
-    llmModel,
-    userChatRecordServiceDepend,
-    userSessionServiceDepend,
-    chatControllerDepend,
-)
-from ...modules.Services.user import UserChatRecordService, UserSessionService
 
 router = APIRouter(prefix="/chatLLM")
 
 
-def checkSessionTokenChatIdAssociation(
-    chatId: str,
-    sessionToken: t.Optional[str],
-    userChatRecordService: UserChatRecordService,
-    userSessionService: UserSessionService,
-) -> bool:
-    """
-    Check if the session token is associated with the chatId.
-
-    :param chatId: The chatId.
-    :param sessionToken: The session token.
-    :param dbSession: The database session to use.
-
-    :return: True if the session token is associated with the chatId.
-    """
-    if sessionToken is None or not sessionToken.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="No Session Found"
-        )
-    sessionTokenSession = userSessionService.getSessionFromSessionToken(
-        sessionToken=sessionToken,
-        bypassExpire=False
-    )
-    if sessionTokenSession is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Session Expired or invalid"
-        )
-    logger.info(f"Getting {chatId=} associated profile")
-    chatIdProfileRecord = userChatRecordService.getByChatId(chatId)
-    if chatIdProfileRecord is None:
-        raise HTTPException(
-            status_code=403,
-            detail="Converstation No Longer Valid"
-        )
-    logger.debug(f"Validating {chatIdProfileRecord.profile.id=} == {sessionTokenSession.profile.id=}")
-    if chatIdProfileRecord.profile != sessionTokenSession.profile:
-        raise HTTPException(
-            status_code=403,
-            detail="The requested chatId does not belong to your session"
-        )
-    return True
-
-
 @router.post("", response_model=chatLLMDataModel.Response)
 async def chatLLM(
-    googleServices: googleServicesDepend,
+    getGoogleService: getGoogleServiceDepend,
     messageRequest: chatLLMDataModel.Request,
     dbSession: dbSessionDepend,
-    userSessionServiceDepend: userSessionServiceDepend,
-    userChatRecordServiceDepend: userChatRecordServiceDepend,
-    chatControllerDepend: chatControllerDepend,
+    getUserSessionService: getUserSessionServiceDepend,
+    getChatLLMService: getChatLLMServiceDepend,
     x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> chatLLMDataModel.Response:
     """
     Invoke the language model with a user message and get the response.
     """
     requestChatId = messageRequest.chatId
-    requestMessageText = messageRequest.content.message
-    requestAttachmentList = messageRequest.content.media
     requestDisableTTS = messageRequest.disableTTS
-    userSessionService = userSessionServiceDepend(dbSession)
-    userChatRecordService = userChatRecordServiceDepend(dbSession)
-
     logger.info(f"Validating chatLLM request {messageRequest=}")
-    checkSessionTokenChatIdAssociation(
-        chatId=requestChatId,
-        sessionToken=x_SessionToken,
-        userSessionService=userSessionService,
-        userChatRecordService=userChatRecordService,
-    )
-
+    session = getUserSessionService(dbSession).validateSessionToken(x_SessionToken)
     logger.debug(f"Parcing {requestChatId=} chat message")
     try:
         attachments = list(map(
             lambda url: DataHandler.MessageAttachment(url, settings.applicationChatLLMMessageAttachmentPath),
-            requestAttachmentList
-        )) if requestAttachmentList is not None else []
+            messageRequest.content.media
+        )) if messageRequest.content.media is not None else []
     except:
         raise HTTPException(status_code=400, detail="Invalid Image Provided")
 
-    message = DataHandler.ChatMessage("user", requestMessageText, attachments)
+    message = DataHandler.ChatMessage("user", messageRequest.content.message, attachments)
     contextValues = InvokeContextValues(
         location=messageRequest.location if messageRequest.location else "unknown",
     )
     logger.debug(f"Invoking {requestChatId=} controller")
-    chatController = chatControllerDepend(dbSession, llmModel, requestChatId)
-    response = chatController.invokeLLM(message, contextValues=contextValues)
+    chatLLMService = getChatLLMService(dbSession, session.user)
+    response: DataHandler.ChatMessage = chatLLMService.invokeChatModel(requestChatId, message, contextValues)
 
+    ttsAudio = ""
     if not requestDisableTTS:
         try:
-            ttsAudio = googleServices.textToSpeech(response.text)
+            ttsAudio = getGoogleService(dbSession, session.user).textToSpeech(response.text)
         except Exception as e:
             logger.error(f"cannot perform tts {e}")
             ttsAudio = ""
-    else:
-        ttsAudio = ""
+
     dbSession.commit()
     return chatLLMDataModel.Response(
         message=response.text,
-        chatId=chatController.chatId,
+        chatId=requestChatId,
         ttsAudio=ttsAudio,
     )
 
@@ -139,28 +74,22 @@ async def chatLLM(
 async def chatRecall(
     chatId: str,
     dbSession: dbSessionDepend,
-    userSessionServiceDepend: userSessionServiceDepend,
-    userChatRecordServiceDepend: userChatRecordServiceDepend,
-    chatControllerDepend: chatControllerDepend,
+    getUserSessionService: getUserSessionServiceDepend,
+    getChatLLMService: getChatLLMServiceDepend,
     x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> ChatRecallModel.Response:
     """
     Recall a chat session and return the session.
     """
     logger.info(f"Recalling {chatId=} controller")
-    checkSessionTokenChatIdAssociation(
-        chatId=chatId,
-        sessionToken=x_SessionToken,
-        userSessionService=userSessionServiceDepend(dbSession),
-        userChatRecordService=userChatRecordServiceDepend(dbSession),
-    )
-    chatController = chatControllerDepend(dbSession, llmModel, chatId)
-    messages = chatController.currentChatRecords.messages
-    responseMessageList = [ChatRecallModel.ResponseMessage(
+    session = getUserSessionService(dbSession).validateSessionToken(x_SessionToken)
+    chatLLMService = getChatLLMService(dbSession, session.user)
+    messages: t.List[DataHandler.ChatMessage] = chatLLMService.recall(chatId)
+    responseMessageList = list(map(lambda i: ChatRecallModel.ResponseMessage(
         role=i.role,
         message=i.text,
         dateTime=str(i.dateTime)
-    ) for i in messages if i.role != "system"]
+    ), filter(lambda i: i.role != "system", messages)))
     logger.debug(f"Recalled {chatId=} messages")
     return ChatRecallModel.Response(
         chatId=chatId,
@@ -171,37 +100,15 @@ async def chatRecall(
 @router.get("/request", response_model=ChatIdResponse)
 async def chatRequest(
     dbSession: dbSessionDepend,
-    userSessionServiceDepend: userSessionServiceDepend,
-    userChatRecordServiceDepend: userChatRecordServiceDepend,
-    chatControllerDepend: chatControllerDepend,
+    getUserSessionService: getUserSessionServiceDepend,
+    getChatLLMService: getChatLLMServiceDepend,
     x_SessionToken: t.Annotated[str | None, Header()] = None,
 ) -> ChatIdResponse:
-    """
-    Create a new chat session and return the chat ID.
-    """
-    userSessionService = userSessionServiceDepend(dbSession)
-    userChatRecordService = userChatRecordServiceDepend(dbSession)
-    logger.info(f"Creating new chat session")
-    if x_SessionToken is None or not x_SessionToken.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="No Session Found"
-        )
-    userSession = userSessionService.getSessionFromSessionToken(
-        sessionToken=x_SessionToken,
-        bypassExpire=False
-    )
-    if userSession is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Session Expired or invalid"
-        )
-    chatController = chatControllerDepend(dbSession, llmModel, None)
-    chatId = chatController.chatId
-    userChatRecordService.associateChatIdWithUserProfile(
-        chatId=chatId,
-        userProfile=userSession.profile,
-    )
-    logger.debug(f"Returning {chatId=} to {userSession.id=}")
+    """Create a new chat session and return the chat ID."""
+    session = getUserSessionService(dbSession).validateSessionToken(x_SessionToken)
+    logger.info(f"Creating new chat session for {session.user.id=} with {session.id=}")
+    chatLLMService = getChatLLMService(dbSession, session.user)
+    chatId: str = chatLLMService.createChat()
+    logger.debug(f"Returning {chatId=} to {session.id=}")
     dbSession.commit()
     return ChatIdResponse(chatId=chatId)
